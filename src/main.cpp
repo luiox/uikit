@@ -25,23 +25,28 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    markdown::Parser parser(tokens);
-    parser.parse();
-
-    markdown::HtmlCodeGenerator  htmlGenerator;
-    auto html = htmlGenerator.generate(parser.getAst());
-    if (html.empty()) {
-        cerr << "HTML generation failed." << std::endl;
-        return -1;
+    // Print tokens
+    for (const auto& token : tokens) {
+        cout << token->toString() << endl;
     }
 
-    ofstream ofs("D:/desktop/MyMarkdownParser/test.html");
-    if (!ofs.is_open()) {
-        cerr << "Failed to open output file for writing." << std::endl;
-        return -1;
-    }
-    ofs << html;
-    ofs.close();
+    // markdown::Parser parser(tokens);
+    // parser.parse();
+
+    // markdown::HtmlCodeGenerator  htmlGenerator;
+    // auto html = htmlGenerator.generate(parser.getAst());
+    // if (html.empty()) {
+    //     cerr << "HTML generation failed." << std::endl;
+    //     return -1; 
+    // }
+
+    // ofstream ofs("D:/desktop/MyMarkdownParser/test.html");
+    // if (!ofs.is_open()) {
+    //     cerr << "Failed to open output file for writing." << std::endl;
+    //     return -1;
+    // }
+    // ofs << html;
+    // ofs.close();
 
     return 0;
 }
