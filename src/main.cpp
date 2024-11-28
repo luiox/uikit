@@ -17,6 +17,8 @@ int main(int argc, char** argv)
     ifs.close();
     string content = ss.str();
 
+    cout << content << endl;
+
     markdown::Lexer lexer(content);
     lexer.tokenize();
     auto tokens = lexer.getTokens();

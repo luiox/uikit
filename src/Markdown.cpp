@@ -1,4 +1,6 @@
 #include "Markdown.hpp"
+
+#include <cctype>
 #include <sstream>
 
 namespace markdown {
@@ -120,6 +122,29 @@ std::string UnknownToken::toString() const
     return "type:UnknownToken, m_text:";
 }
 
+DfaInputType DfaInputType::getType(char c)
+{
+    if(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'){
+        return DfaInputType::Letter;
+    }
+    if(c >= '0' && c <= '9'){
+        return DfaInputType::Number;
+    }
+    if(c == ' '){
+        return DfaInputType::Space;
+    }
+    if(c == '\n'){
+        return DfaInputType::Newline;
+    }
+    if(c == '#'){
+        return DfaInputType::Sharp;
+    }
+    if(c== '*'){
+        return DfaInputType::Asterisk;
+    }
+    return DfaInputType::End;
+}
+
 Lexer::Lexer(const std::string& text)
     : m_text(text)
     , m_pos(0)
@@ -127,28 +152,36 @@ Lexer::Lexer(const std::string& text)
     , m_line(0)
 {
     m_tokens.clear();
+
+    m_stateMap[DfaState::Start] = {
+        {[](char c){ return c == '#';}, DfaState::Sharp}
+    };
+
+    
 }
 
 // 获取下一个token
 Token* Lexer::getNextToken()
 {
-    // 先读一个
-    if (m_text[m_pos] == '#') {
+    // 先读一个，根据不同情况来判断
+    int pos = m_pos;
+    if (m_text[pos] == '#') {
         // 如果是#，则读取一个或多个#，直到不是#为止
         int count = 0;
-        while (m_text[m_pos] == '#') {
+        while (m_text[pos] == '#') {
             count++;
-            m_pos++;
+            pos++;
         }
         // 如果后面是空格，则说明是标题
-        if (m_text[m_pos] == ' ') {
-            m_pos++;
+        if (m_text[pos] == ' ') {
+            pos++;
             std::string title;
             // 往后查找到换行
-            while (m_text[m_pos] != '\n') {
-                title += m_text[m_pos];
-                m_pos++;
+            while (m_text[pos] != '\n') {
+                title += m_text[pos];
+                pos++;
             }
+            m_pos = pos;
             return new TitleToken(count, title, m_line, m_column);
         }
     }
@@ -210,21 +243,38 @@ Token* Lexer::getNextToken()
             m_pos++;
         }
     }
+    
 
     return nullptr;
 }
 
 void Lexer::tokenize()
 {
-    // 只要没有到字符串末尾，就不断获取下一个token
-    while (m_pos < m_text.length()) {
-        Token* token = getNextToken();
-        if (token == nullptr) {
-            break;
+    // 初始状态机
+    auto state = DfaState(DfaState::Start);
+    // 遍历文本
+    for(auto ch : m_text) {
+        // 根据当前状态获取此状态下可能的所有状态转移函数
+        auto rules = m_stateMap[state];
+        // 遍历状态转移函数
+        for(auto rule : rules){
+            // 如果当前字符符合某个转移函数，则状态转移
+            if(rule.first(ch)){
+                state = rule.second;
+                break;
+            }
         }
-        // 将token添加到token列表中
-        m_tokens.push_back(token);
     }
+
+    // // 只要没有到字符串末尾，就不断获取下一个token
+    // while (m_pos < m_text.length()) {
+    //     Token* token = getNextToken();
+    //     if (token == nullptr) {
+    //         break;
+    //     }
+    //     // 将token添加到token列表中
+    //     m_tokens.push_back(token);
+    // }
 }
 
 std::vector<Token*>& Lexer::getTokens()
@@ -238,6 +288,8 @@ void TitleAstNode::accept(AstVisitor* visitor)
 {
     visitor->visit(this);
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 std::string HtmlCodeGenerator::generate(const std::shared_ptr<AstNode> ast)
 {

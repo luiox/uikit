@@ -10,6 +10,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
+#include <functional>
+
 
 namespace markdown {
 
@@ -19,14 +22,14 @@ namespace markdown {
 enum class TokenType
 {
     Text, // 普通文本
-    Title, // # text or ## text
-    FortmattedText, // *text* or _text_
-    Reference,  // > text
-    Link, // [text](link)
-    Image, // ![text](link)
-    List, // + text or - text or 1. text
-    CodeBlock, // ``` text``` or ```java xxx ````
-    InlineCode, // `text`
+    Title, // # text or ## text, 正则表达式#+\s+.*\n
+    FortmattedText, // *text* or _text_，正则表达式\*.*?\*|\_.+?\_，
+    Reference,  // > text，正则表达式>\s+.*\n
+    Link, // [text](link)，正则表达式\[(.*?)\]\((.*?)\)
+    Image, // ![text](link)，正则表达式!\[(.*?)\]\((.*?)\)
+    List, // + text or - text or 1. text，正则表达式\+|\-|\d+\.\s+.*\n
+    CodeBlock, // ``` text``` or ```java xxx ````，正则表达式```.*?```，需要判断语言
+    InlineCode, // `text`，正则表达式\`.*?\`，
 
     Unknown,
     End
@@ -129,8 +132,55 @@ private:
     std::string m_text;
 };
 
+class DfaState
+{
+public:
+    enum State{
+        Start, // start state
+        Space, // space
+        Number, // number
+        Letter, // letter
+        Sharp, // #
+        Asterisk, // *
+        Hyphen, // -
+        Add, // +
+        Backtick, // `
+        Unknown, // unknown
+        List, // list
+        CodeBlock, // code block
+    };
+    DfaState(State state): m_state(state){};
+    State m_state;
+};
+
+class DfaInputType{
+public:
+    enum InputType{
+        Space, // ' '
+        Number, // '0'-'9'
+        Letter, // 'a'-'z' or 'A'-'Z'
+        Sharp, // '#'
+        Asterisk, // '*'    
+        Hyphen, // '-'
+        Add, // '+'
+        Backtick, // '`'
+        Newline, // '\n'
+        End // EOF
+    };
+
+    InputType m_state;
+    DfaInputType(InputType state): m_state(state){}
+
+    static DfaInputType getType(char c);
+
+};
+
+// 一个字符是否满足条件
+using DfaCondition = std::function<bool(char ch)>;
+
 class Lexer{
 public:
+
     Lexer(const std::string& text);
     Token* getNextToken();
 
@@ -143,6 +193,8 @@ private:
     int m_line;
     int m_column;
     std::vector<Token*> m_tokens;
+    // 当前状态，<输入字符的条件, 下一个状态>
+    std::map<DfaState, std::map<DfaCondition, DfaState>> m_stateMap;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
