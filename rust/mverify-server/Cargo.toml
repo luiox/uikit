@@ -1,0 +1,10 @@
+[package]
+name = "mverify-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", features = ["rt", "net"] }
+log = "0.4"
+simple_logger = "5.0.0"
+ini= "1.3.0"
