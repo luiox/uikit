@@ -2,7 +2,6 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/opencv.hpp>
 
-
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -28,7 +27,7 @@ int main(int argc, char **argv) {
   cv::resize(image, resizedImage, newSize, 0, 0, cv::INTER_LINEAR);
 
   // 显示原始图像和缩放后的图像
-//   cv::imshow("Original Image", image);
+  //   cv::imshow("Original Image", image);
   cv::imshow("Resized Image", resizedImage);
   cv::waitKey(0);
   return 0;

@@ -1,8 +1,4 @@
-add_rules("mode.debug", "mode.release")
 
-set_languages("c++17") 
-
-add_requires("opencv 4.10.0")
 target("cv_proj")
     set_kind("binary")
     add_files("src/*.cpp")
