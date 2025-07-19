@@ -4,3 +4,6 @@
 [submodule "libca"]
 	path = libca
 	url = https://github.com/luiox/libca
+[submodule "morpher"]
+	path = morpher
+	url = https://github.com/luiox/morpher.git
