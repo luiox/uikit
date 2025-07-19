@@ -3,6 +3,18 @@
 
 
 
+添加子项目
+
+```bash
+git submodule add <url> <repo_name>
+```
+
+移除子项目
+
+```bash
+git rm --cached morpher
+```
+
 克隆项目
 
 ```bash
