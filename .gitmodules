@@ -7,3 +7,6 @@
 [submodule "morpher"]
 	path = morpher
 	url = https://github.com/luiox/morpher.git
+[submodule "morpher-api"]
+	path = morpher-api
+	url = https://github.com/luiox/morpher-api.git
