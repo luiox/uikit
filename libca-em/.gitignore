@@ -36,3 +36,6 @@ code/.xmake/
 code/build/
 code/compile_commands.json
 .vscode/
+.xmake/
+build/
+compile_commands.json
