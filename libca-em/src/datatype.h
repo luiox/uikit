@@ -10,15 +10,26 @@ typedef uint32_t u32;
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
+typedef volatile u8 vu8;
+typedef volatile u16 vu16;
+typedef volatile u32 vu32;
+typedef volatile s8 vs8;
+typedef volatile s16 vs16;
+typedef volatile s32 vs32;
 #ifdef HAS_INT64
 typedef uint64_t u64;
 typedef int64_t s64;
+typedef volatile u64 vu64;
+typedef volatile s64 vs64;
 #endif
 // 浮点数
 typedef float f32;
 typedef double f64;
+typedef volatile f32 vf32;
+typedef volatile f64 vf64;
 // size
 typedef size_t usize;
+typedef volatile size_t vsize;
 
 // 对于仅需要存位级别的数据，但是不需要很精准控制高低位的情况下可以使用下面这个
 // 8个位
