@@ -2,6 +2,7 @@
 #define DATATYPE_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 // 整数
 typedef uint8_t u8;
