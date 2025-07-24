@@ -10,3 +10,6 @@
 [submodule "morpher-api"]
 	path = morpher-api
 	url = https://github.com/luiox/morpher-api.git
+[submodule "mrecaf4plugin"]
+	path = mrecaf4plugin
+	url = https://github.com/luiox/mrecaf4plugin.git
