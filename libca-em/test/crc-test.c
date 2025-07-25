@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "crc32.h"  
+#include "crc.h"
 
 int main()
 {

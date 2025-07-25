@@ -22,7 +22,7 @@ typedef uint32_t     u32;
 typedef volatile u8  vu8;
 typedef volatile u16 vu16;
 typedef volatile u32 vu32;
-typedef int8_t       s8, i32;
+typedef int8_t       s8, i8;
 typedef int16_t      s16, i16;
 typedef int32_t      s32, i32;
 typedef volatile s8  vs8, vi32;

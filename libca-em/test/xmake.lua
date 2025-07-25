@@ -1,7 +1,7 @@
-target("crc32-test")
+target("crc-test")
     set_kind("binary")
     add_deps("libca-em")
-    add_files("crc32-test.c")
+    add_files("crc-test.c")
 
 target("pid-test")
     set_kind("binary")
