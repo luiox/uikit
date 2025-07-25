@@ -103,4 +103,7 @@ typedef union
 // 检查某一位是否为1
 #define bits_check_bit(bits, n) (((bits) & (1U << (n))) != 0)
 
+// 获取数组元素个数
+#define array_size(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 #endif   // !DATATYPE_H
