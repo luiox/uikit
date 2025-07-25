@@ -4,9 +4,9 @@
  * @brief 基础类型的定义
  * @version 0.1
  * @date 2025-07-21
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #ifndef DATATYPE_H
 #define DATATYPE_H
@@ -105,5 +105,12 @@ typedef union
 
 // 获取数组元素个数
 #define array_size(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+// 判断一个变量是否为无符号类型
+#define is_unsigned_v(a) (a >= 0 && ~a >= 0)
+
+// 判断一个类型是否为无符号类型
+#define is_unsigned_t(type) ((type)0 - 1 > 0)
+
 
 #endif   // !DATATYPE_H
