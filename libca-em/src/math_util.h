@@ -1,7 +1,17 @@
+/**
+ * @file math_util.h
+ * @author canrad (1517807724@qq.com)
+ * @brief 数学相关的工具函数，补充标准库的不足
+ * @version 0.1
+ * @date 2025-07-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef MATH_UTIL_H
 #define MATH_UTIL_H
 
-#include <stdint.h>
+#include "datatype.h"
 
 typedef struct {
   float x;
@@ -14,7 +24,6 @@ typedef struct {
   float z;
 } vec3f_t;
 
-int32_t pow32i(int32_t base, int32_t exp);
 // 最小值
 #define math_min(a, b) ((a) < (b) ? (a) : (b))
 // 最大值
@@ -27,5 +36,23 @@ int32_t pow32i(int32_t base, int32_t exp);
 #define math_align_up(x, align) (((x) + (align) - 1) & ~((align) - 1))
 // 向下对齐
 #define math_align_down(x, align) ((x) & ~((align) - 1))
+
+/**
+ * @brief 计算整数的幂
+ * 
+ * @param base 底数
+ * @param exp 指数
+ * @return int32_t 底数的指数次幂
+ */
+i32 pow32i(i32 base, i32 exp);
+/**
+ * @brief 限幅函数，将输入值限制在min和max之间
+ * 
+ * @param value 输入值
+ * @param min 最大值
+ * @param max 最小值
+ * @return 限幅后的值 
+ */
+float clampf(float value, float min, float max);
 
 #endif // !MATH_UTIL_H

@@ -112,22 +112,4 @@ inline static void pid_incremental_set_target(pid_incremental_t* pid, float targ
  */
 float pid_incremental_calculate(pid_incremental_t* pid, float current_value);
 
-/**
- * @brief 限幅函数，将输入值限制在min和max之间
- * 
- * @param value 输入值
- * @param min 最大值
- * @param max 最小值
- * @return 限幅后的值 
- */
-static inline float clamp(float value, float min, float max)
-{
-    if (value < min) {
-        return min;
-    } else if (value > max) {
-        return max;
-    }
-    return value;
-}
-
 #endif   // !MYLIB_UTILITY_PID_H

@@ -1,3 +1,13 @@
+/**
+ * @file datatype.h
+ * @author canrad (1517807724@qq.com)
+ * @brief 基础类型的定义
+ * @version 0.1
+ * @date 2025-07-21
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef DATATYPE_H
 #define DATATYPE_H
 

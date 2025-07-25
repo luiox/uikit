@@ -1,3 +1,13 @@
+/**
+ * @file crc.h
+ * @author canrad (1517807724@qq.com)
+ * @brief 常用的CRC校验算法实现，包含朴素实现，打表法实现
+ * @version 0.1
+ * @date 2025-07-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef CRC_H
 #define CRC_H
 

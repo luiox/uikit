@@ -15,3 +15,13 @@ int32_t pow32i(int32_t base, int32_t exp)
     }
     return result;
 }
+
+float clampf(float value, float min, float max)
+{
+    if (value < min) {
+        return min;
+    } else if (value > max) {
+        return max;
+    }
+    return value;
+}
