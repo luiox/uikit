@@ -2,74 +2,79 @@
 #define DATATYPE_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 // 整数
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef volatile u8 vu8;
+typedef uint8_t      u8;
+typedef uint16_t     u16;
+typedef uint32_t     u32;
+typedef volatile u8  vu8;
 typedef volatile u16 vu16;
 typedef volatile u32 vu32;
-typedef volatile s8 vs8;
-typedef volatile s16 vs16;
-typedef volatile s32 vs32;
+typedef int8_t       s8, i32;
+typedef int16_t      s16, i16;
+typedef int32_t      s32, i32;
+typedef volatile s8  vs8, vi32;
+typedef volatile s16 vs16, vi16;
+typedef volatile s32 vs32vi32;
 #ifdef HAS_INT64
-typedef uint64_t u64;
-typedef int64_t s64;
+typedef uint64_t     u64;
 typedef volatile u64 vu64;
-typedef volatile s64 vs64;
+typedef int64_t      s64, i64;
+typedef volatile s64 vs64, vi64;
 #endif
 // 浮点数
-typedef float f32;
-typedef double f64;
+typedef float        f32;
+typedef double       f64;
 typedef volatile f32 vf32;
 typedef volatile f64 vf64;
 // size
-typedef size_t usize;
+typedef size_t          usize;
 typedef volatile size_t vsize;
 
 // 对于仅需要存位级别的数据，但是不需要很精准控制高低位的情况下可以使用下面这个
 // 8个位
-typedef union {
-    struct {
-        u8 b0 : 1; // 位0
-        u8 b1 : 1; // 位1
-        u8 b2 : 1; // 位2
-        u8 b3 : 1; // 位3
-        u8 b4 : 1; // 位4
-        u8 b5 : 1; // 位5
-        u8 b6 : 1; // 位6
-        u8 b7 : 1; // 位7
+typedef union
+{
+    struct
+    {
+        u8 b0 : 1;   // 位0
+        u8 b1 : 1;   // 位1
+        u8 b2 : 1;   // 位2
+        u8 b3 : 1;   // 位3
+        u8 b4 : 1;   // 位4
+        u8 b5 : 1;   // 位5
+        u8 b6 : 1;   // 位6
+        u8 b7 : 1;   // 位7
     } u;
-    u8 val; // 整体值
-}bits8_t;
+    u8 val;   // 整体值
+} bits8_t;
 
 // 16个位
-typedef union {
-    struct {
-        u8 b0 : 1; // 位0
-        u8 b1 : 1; // 位1
-        u8 b2 : 1; // 位2
-        u8 b3 : 1; // 位3
-        u8 b4 : 1; // 位4
-        u8 b5 : 1; // 位5
-        u8 b6 : 1; // 位6
-        u8 b7 : 1; // 位7
-        u8 b8 : 1; // 位8
-        u8 b9 : 1; // 位9
-        u8 b10: 1; // 位10
-        u8 b11: 1; // 位11
-        u8 b12: 1; // 位12
-        u8 b13: 1; // 位13
-        u8 b14: 1; // 位14
-        u8 b15: 1; // 位15
+typedef union
+{
+    struct
+    {
+        u8 b0 : 1;    // 位0
+        u8 b1 : 1;    // 位1
+        u8 b2 : 1;    // 位2
+        u8 b3 : 1;    // 位3
+        u8 b4 : 1;    // 位4
+        u8 b5 : 1;    // 位5
+        u8 b6 : 1;    // 位6
+        u8 b7 : 1;    // 位7
+        u8 b8 : 1;    // 位8
+        u8 b9 : 1;    // 位9
+        u8 b10 : 1;   // 位10
+        u8 b11 : 1;   // 位11
+        u8 b12 : 1;   // 位12
+        u8 b13 : 1;   // 位13
+        u8 b14 : 1;   // 位14
+        u8 b15 : 1;   // 位15
     } u;
-    u16 val; // 整体值
-}bits16_t;
+    u16 val;   // 整体值
+} bits16_t;
 
 // 对于需要精准控制高低位的情况下使用下面的宏
 // 其中bits是一个整数类型的变量，一般是u8、u16、u32等
@@ -81,5 +86,11 @@ typedef union {
 #define bits_set(bits, n, val) ((bits) = ((bits) & ~(1 << (n))) | ((val) << (n)))
 // 反转一个位上的值
 #define bits_toggle(bits, n) ((bits) ^= (1 << (n)))
+// 获取第n位的掩码
+#define bits_mask(n) (1U << (n))
+// 获取低n位的掩码
+#define bits_mask_low(n) ((1U << (n)) - 1)
+// 检查某一位是否为1
+#define bits_check_bit(bits, n) (((bits) & (1U << (n))) != 0)
 
-#endif // !DATATYPE_H
+#endif   // !DATATYPE_H
