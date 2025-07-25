@@ -6,6 +6,7 @@ set_languages("cxx17")
 
 add_rules("mode.debug", "mode.release")
 add_rules("plugin.compile_commands.autoupdate", { outputdir = "." })
+set_encodings("utf-8")
 
 target("libca-em")
     set_kind("static")
