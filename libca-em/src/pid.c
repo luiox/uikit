@@ -70,9 +70,9 @@ float pid_incremental_calculate(pid_incremental_t* pid, float current_value)
     // 注意pid_incremental_calculate这个函数计算的是△u(k)，也就是增量，而不是u(k)
 
     float error  = pid->target - current_value;   // 当前误差 = 目标值 - 当前值
-    float output = pid->kp * error                // E[k]
-                   - pid->ki * pid->last_error    // - E[k-1]
-                   + pid->kd * pid->prev_error;   // + E[k-2]
+    float output = pid->kp * (error - pid->last_error)     // Kp[e(k)-e(k-1)]
+                   + pid->ki * error                       // +Ki*e(k)
+                   + pid->kd * (error - 2 * pid->last_error + pid->prev_error); // +Kd[e(k)-2e(k-1)+e(k-2)]
     pid->prev_error = pid->last_error;
     pid->last_error = error;
 
