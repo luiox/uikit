@@ -1,14 +1,14 @@
-target("crc-test")
+target("test-crc")
     set_kind("binary")
     add_deps("libca-em")
     add_files("crc-test.c")
 
-target("pid-test")
+target("test-pid")
     set_kind("binary")
     add_deps("libca-em")
     add_files("pid-test.c")
 
-target("ping_pong_buffer-test")
+target("test-ping_pong_buffer")
     set_kind("binary")
     add_deps("libca-em")
     add_files("ping_pong_buffer-test.c")
