@@ -51,18 +51,6 @@ typedef struct{
 
 // 转字符串
 void ini_to_str(ini_t* ini, u8* buf);
-void f()
-{
-    ini_kv_t lpid_kvs[3];
-    ini_kv_t rpid_kvs[3];
-    ini_section_t lpid_section = {"lpid", lpid_kvs};
-    ini_section_t rpid_section = {"rpid", rpid_kvs};
-    ini_section_t sections[] = {lpid_section, rpid_section};
-    ini_t ini = {sections, array_size(sections)};
-    u8 buf[1024];
-    ini_to_str(&ini, buf);
-
-}
 
 // // 解析
 // void ini_parse(u8* buf, ini_section_t** sections, u32* section_num);
