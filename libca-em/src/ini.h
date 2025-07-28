@@ -23,12 +23,25 @@ void ini_write_str_size(u32 size);
 // 写入配置字符串
 void ini_write_str(u8* buf);
 
+//
+// 设计思路
+// 用户定义一个ini_kv_t数组存储一个section的kv，
+// 因为用户可以确定自己的每个section有多少kv
+// 其次，用户需要定义ini_section_t表示节
+// 最后需要一个ini_t来管理这些section_t
+//
 #define INI_MAX_KEY_LEN 16
 #define INI_MAX_VALUE_LEN 16
+#define INI_MAX_SECTION_NAME_LEN 16
 
 typedef struct{
     char key[INI_MAX_KEY_LEN];
     char value[INI_MAX_VALUE_LEN];
+}ini_kv_t;
+
+typedef struct{
+    char name[INI_MAX_SECTION_NAME_LEN];
+    ini_kv_t* kvs;
 }ini_section_t;
 
 typedef struct{
@@ -36,14 +49,29 @@ typedef struct{
     u32 section_num;
 }ini_t;
 
-// 解析
-void ini_parse(u8* buf, ini_section_t** sections, u32* section_num);
-// 获取
-u8* ini_get(ini_section_t* sections, u32 section_num, char* key);
-// 设置
-void ini_set(ini_section_t* sections, u32 section_num, char* key, char* value);
 // 转字符串
-void ini_to_str(ini_section_t* sections, u32 section_num, u8* buf);
+void ini_to_str(ini_t* ini, u8* buf);
+void f()
+{
+    ini_kv_t lpid_kvs[3];
+    ini_kv_t rpid_kvs[3];
+    ini_section_t lpid_section = {"lpid", lpid_kvs};
+    ini_section_t rpid_section = {"rpid", rpid_kvs};
+    ini_section_t sections[] = {lpid_section, rpid_section};
+    ini_t ini = {sections, array_size(sections)};
+    u8 buf[1024];
+    ini_to_str(&ini, buf);
+
+}
+
+// // 解析
+// void ini_parse(u8* buf, ini_section_t** sections, u32* section_num);
+// // 获取
+// u8* ini_get(ini_section_t* sections, u32 section_num, char* key);
+// // 设置
+// void ini_set(ini_section_t* sections, u32 section_num, char* key, char* value);
+
+
 
 
 #endif // !INI_H
