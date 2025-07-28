@@ -1,89 +1,88 @@
+
 #include "string_util.h"
-#include <stdio.h>
+#include "test_helper.h"
 #include <string.h>
 
-void test_str_len() {
-    printf("[str_len] ");
-    printf("%s\n", str_len("abc") == 3 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_len_case)
+    ASSERT_EQ(str_len("abc"), 3);
+    ASSERT_EQ(str_len(""), 0);
+TEST_CASE_END(test_str_len_case)
 
-void test_str_cpy() {
+TEST_CASE_BEGIN(test_str_cpy_case)
     char buf[10];
     str_cpy(buf, "hello", sizeof(buf));
-    printf("[str_cpy] %s\n", strcmp(buf, "hello") == 0 ? "PASS" : "FAIL");
-}
+    ASSERT_STR_EQ(buf, "hello");
+TEST_CASE_END(test_str_cpy_case)
 
-void test_str_cmp() {
-    printf("[str_cmp] %s\n", str_cmp("abc", "abc", 3) == 0 ? "PASS" : "FAIL");
-    printf("[str_cmp] %s\n", str_cmp("abc", "abd", 3) < 0 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_cmp_case)
+    ASSERT_EQ(str_cmp("abc", "abc", 3), 0);
+    ASSERT_TRUE(str_cmp("abc", "abd", 3) < 0);
+TEST_CASE_END(test_str_cmp_case)
 
-void test_str_chr() {
-    printf("[str_chr] %s\n", str_chr("hello", 'e') != NULL ? "PASS" : "FAIL");
-    printf("[str_chr] %s\n", str_chr("hello", 'z') == NULL ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_chr_case)
+    ASSERT_TRUE(str_chr("hello", 'e') != NULL);
+    ASSERT_TRUE(str_chr("hello", 'z') == NULL);
+TEST_CASE_END(test_str_chr_case)
 
-void test_str_str() {
-    printf("[str_str] %s\n", str_str("abcdef", "cd") != NULL ? "PASS" : "FAIL");
-    printf("[str_str] %s\n", str_str("abcdef", "gh") == NULL ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_str_case)
+    ASSERT_TRUE(str_str("abcdef", "cd") != NULL);
+    ASSERT_TRUE(str_str("abcdef", "gh") == NULL);
+TEST_CASE_END(test_str_str_case)
 
-void test_str_tok() {
-    char buf[32] = "a,b,c";
-    char* token = str_tok(buf, ",");
-    int pass = 1;
-    if (!token || strcmp(token, "a") != 0) pass = 0;
+TEST_CASE_BEGIN(test_str_tok_case)
+    char buf2[32] = "a,b,c";
+    char* token = str_tok(buf2, ",");
+    ASSERT_STR_EQ(token, "a");
     token = str_tok(NULL, ",");
-    if (!token || strcmp(token, "b") != 0) pass = 0;
+    ASSERT_STR_EQ(token, "b");
     token = str_tok(NULL, ",");
-    if (!token || strcmp(token, "c") != 0) pass = 0;
+    ASSERT_STR_EQ(token, "c");
     token = str_tok(NULL, ",");
-    if (token != NULL) pass = 0;
-    printf("[str_tok] %s\n", pass ? "PASS" : "FAIL");
-}
+    ASSERT_TRUE(token == NULL);
+TEST_CASE_END(test_str_tok_case)
 
-void test_str_to_upper() {
-    char buf[16] = "abcDEF";
-    str_to_upper(buf);
-    printf("[str_to_upper] %s\n", strcmp(buf, "ABCDEF") == 0 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_to_upper_case)
+    char buf3[16] = "abcDEF";
+    str_to_upper(buf3);
+    ASSERT_STR_EQ(buf3, "ABCDEF");
+TEST_CASE_END(test_str_to_upper_case)
 
-void test_str_to_lower() {
-    char buf[16] = "ABCdef";
-    str_to_lower(buf);
-    printf("[str_to_lower] %s\n", strcmp(buf, "abcdef") == 0 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_to_lower_case)
+    char buf4[16] = "ABCdef";
+    str_to_lower(buf4);
+    ASSERT_STR_EQ(buf4, "abcdef");
+TEST_CASE_END(test_str_to_lower_case)
 
-void test_str_reverse() {
-    char buf[16] = "abcdef";
-    str_reverse(buf);
-    printf("[str_reverse] %s\n", strcmp(buf, "fedcba") == 0 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_str_reverse_case)
+    char buf5[16] = "abcdef";
+    str_reverse(buf5);
+    ASSERT_STR_EQ(buf5, "fedcba");
+TEST_CASE_END(test_str_reverse_case)
 
-void test_hex_str_to_uint() {
+TEST_CASE_BEGIN(test_hex_str_to_uint_case)
     u32 val = 0;
-    int pass = hex_str_to_uint("1A3F", &val) && val == 0x1A3F;
-    pass = pass && !hex_str_to_uint("xyz", &val);
-    printf("[hex_str_to_uint] %s\n", pass ? "PASS" : "FAIL");
-}
+    ASSERT_TRUE(hex_str_to_uint("1A3F", &val));
+    ASSERT_EQ(val, 0x1A3F);
+    ASSERT_TRUE(!hex_str_to_uint("xyz", &val));
+TEST_CASE_END(test_hex_str_to_uint_case)
 
-void test_uint_to_hex_str() {
-    char buf[9];
-    uint_to_hex_str(0x1A3F, buf, sizeof(buf));
-    printf("[uint_to_hex_str] %s\n", strcmp(buf, "1A3F") == 0 ? "PASS" : "FAIL");
-}
+TEST_CASE_BEGIN(test_uint_to_hex_str_case)
+    char buf6[9];
+    uint_to_hex_str(0x1A3F, buf6, sizeof(buf6));
+    ASSERT_STR_EQ(buf6, "1A3F");
+TEST_CASE_END(test_uint_to_hex_str_case)
 
 int main() {
-    test_str_len();
-    test_str_cpy();
-    test_str_cmp();
-    test_str_chr();
-    test_str_str();
-    test_str_tok();
-    test_str_to_upper();
-    test_str_to_lower();
-    test_str_reverse();
-    test_hex_str_to_uint();
-    test_uint_to_hex_str();
+    test_str_len_case();
+    test_str_cpy_case();
+    test_str_cmp_case();
+    test_str_chr_case();
+    test_str_str_case();
+    test_str_tok_case();
+    test_str_to_upper_case();
+    test_str_to_lower_case();
+    test_str_reverse_case();
+    test_hex_str_to_uint_case();
+    test_uint_to_hex_str_case();
     return 0;
 }
