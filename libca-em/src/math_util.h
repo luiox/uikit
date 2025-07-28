@@ -12,6 +12,7 @@
 #define MATH_UTIL_H
 
 #include "datatype.h"
+#include <stdbool.h>
 
 typedef struct {
   float x;
@@ -54,5 +55,10 @@ i32 pow32i(i32 base, i32 exp);
  * @return 限幅后的值 
  */
 float clampf(float value, float min, float max);
+
+// 是否是小端序
+bool is_little_endian();
+// 是否是大端序
+bool is_big_endian();
 
 #endif // !MATH_UTIL_H
