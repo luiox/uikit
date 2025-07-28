@@ -1,3 +1,13 @@
+/**
+ * @file string_util.h
+ * @author canrad (1517807724@qq.com)
+ * @brief 字符串工具函数的实现
+ * @version 0.2
+ * @date 2025-07-28
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef STRING_UTIL_H
 #define STRING_UTIL_H
 
@@ -17,6 +27,9 @@ char* str_chr(const char* str, char c);
 
 // 查找子串（类似 strstr）
 char* str_str(const char* haystack, const char* needle);
+
+// 字符串分割（类似 strtok）
+char* str_tok(char* str, const char* delim);
 
 // 字符串转大写
 void str_to_upper(char* str);
