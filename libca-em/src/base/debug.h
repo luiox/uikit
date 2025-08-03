@@ -42,4 +42,20 @@ void debug_print(const char* fmt, ...);
 #    define MYLIB_DEBUG_ASSERT(expr)
 #endif
 
+#define USE_PARAM_CHECK 1
+#if USE_PARAM_CHECK
+
+#    define CA_PARAM_CHECK(expr)                                            \
+        if (!(expr)) {                                                      \
+            debug_print("param check failed: %s:%d\n", __FILE__, __LINE__); \
+        }
+
+#else
+
+#    define CA_PARAM_CHECK(expr) \
+        {}
+
+#endif
+
+
 #endif   // !MYLIB_BASE_DEBUG_H
