@@ -12,8 +12,6 @@
 #define DATATYPE_H
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
 
 // 整数
 typedef uint8_t      u8;
@@ -111,13 +109,6 @@ typedef union
 
 // 判断一个类型是否为无符号类型
 #define is_unsigned_t(type) ((type)0 - 1 > 0)
-
-///////////////////////////////////////////////////////////////////////////////
-// 定义编译器相关的一些宏
-// 建议内联的宏
-#define CA_SUGGEST_INLINE inline
-// 强制内联的宏
-#define CA_FORCE_INLINE __attribute__((always_inline))
 
 
 

@@ -1,6 +1,5 @@
 #include "debug.h"
 #include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
 
 // 定义一个缓冲区大小

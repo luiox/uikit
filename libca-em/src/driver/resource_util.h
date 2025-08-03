@@ -94,4 +94,9 @@ void gpio_toggle_pin(resource_id_t id);
 //     void (*set_frequency)(void* handle, u32 frequency);
 // } pwm_interface_t;
 
+// 低电平有效
+#define VALID_ON_LOW_LEVEL 0
+// 高电平有效
+#define VALID_ON_HIGH_LEVEL 1
+
 #endif

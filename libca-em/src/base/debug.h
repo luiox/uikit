@@ -11,7 +11,7 @@
 #ifndef MYLIB_UTILITY_DEBUG_H
 #define MYLIB_UTILITY_DEBUG_H
 
-#include "datatype.h"
+#include "base_config.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // initialize
@@ -42,7 +42,6 @@ void debug_print(const char* fmt, ...);
 #    define MYLIB_DEBUG_ASSERT(expr)
 #endif
 
-#define USE_PARAM_CHECK 1
 #if USE_PARAM_CHECK
 
 #    define CA_PARAM_CHECK(expr)                                            \
@@ -57,5 +56,17 @@ void debug_print(const char* fmt, ...);
 
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+// debug assert
+
+#if USE_DEBUG_ASSERT
+#    define LIBCA_DEBUG_ASSERT(expr)                                   \
+        if (!(expr)) {                                                 \
+            debug_print("assert failed: %s:%d\n", __FILE__, __LINE__); \
+        }
+#else
+#    define LIBCA_DEBUG_ASSERT(expr) \
+        {}
+#endif
 
 #endif   // !MYLIB_BASE_DEBUG_H
