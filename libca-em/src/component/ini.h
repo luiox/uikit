@@ -11,7 +11,7 @@
 #ifndef INI_H
 #define INI_H 
 
-#include "datatype.h"
+#include "../base/datatype.h" 
 
 // 需要移植的部分
 // 读取配置字符串大小

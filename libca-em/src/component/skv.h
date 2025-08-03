@@ -13,7 +13,7 @@
 #ifndef SKV_H
 #define SKV_H
 
-#include "datatype.h"
+#include "../base/datatype.h" 
 #include <stdbool.h>
 
 #define SKV_MAX_KEY_LEN 16

@@ -10,7 +10,7 @@
  */
 
 #include "ini.h"
-#include "string_util.h"
+#include "../base/string_util.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

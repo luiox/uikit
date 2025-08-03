@@ -1,5 +1,4 @@
-#include <mylib/utility/debug.h>
-#include <mylib/driver/uart.h>
+#include "debug.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -11,7 +10,7 @@ static uint32_t g_uart;
 
 static inline void usart_send_string(const char* str)
 {
-    uart_send(g_uart, (void*)str, strlen(str));
+    // uart_send(g_uart, (void*)str, strlen(str));
 }
 
 void debug_init(uint32_t uart)

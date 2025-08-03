@@ -10,7 +10,7 @@
  */
 
 #include "skv.h"
-#include "string_util.h"
+#include "../base/string_util.h"
 
 void skv_init(skv_t* skv, skv_kv_t* kvs, u32 num) {
     skv->kvs = kvs;
