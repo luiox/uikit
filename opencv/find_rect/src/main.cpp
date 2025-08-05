@@ -13,6 +13,7 @@ int       morphSize        = 3;
 int       preprocessMethod = 0;   // 0: GaussianBlur, 1: MedianBlur, 2: BilateralFilter
 int       edgeMethod       = 0;   // 0: Canny, 1: Sobel, 2: Scharr, 3: Laplacian, 4: Auto-Canny
 int       cannyRatio       = 3;
+int       minRectArea      = 1000;   // 新增：矩形最小面积阈值
 const int max_lowThreshold = 200;
 const int max_maxThreshold = 300;
 const int max_blurSize     = 20;
@@ -180,6 +181,8 @@ int method1()
     createTrackbar(
         "Preprocess: 0=Gauss,1=Median,2=Bilateral", "Controls", &preprocessMethod, 2, processImage);
     createTrackbar("Edge Method: 0-4", "Controls", &edgeMethod, 4, processImage);
+    createTrackbar(
+        "Min Rect Area:", "Controls", &minRectArea, 5000, processImage);   // 添加最小矩形面积控制
 
     // 初始化处理
     processImage(0, 0);
@@ -190,44 +193,54 @@ int method1()
     return 0;
 }
 
-void method2()
-{
-    // 1. 图像预处理：灰度 + 二值化
-
-    // 转为灰度图
+void method2() {
+    // 1. 图像预处理：灰度 + 反转二值化（因为目标是黑色）
+    Mat gray, binary;
     cvtColor(image, gray, COLOR_BGR2GRAY);
-    namedWindow("1. after gray", WINDOW_NORMAL);
-    imshow("1. after gray", gray);
+    threshold(gray, binary, 120, 255, THRESH_BINARY_INV);
 
-    Mat binary;
-    threshold(gray, binary, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
-
-    // 2. 闭运算消除孔洞
-    Mat kernel = getStructuringElement(MORPH_RECT, Size(5, 5));
-    morphologyEx(binary, binary, MORPH_CLOSE, kernel);
+    // 2. 闭运算消除孔洞（核大小增大）
+    Mat morphKernel = getStructuringElement(MORPH_RECT, Size(50, 50));
+    morphologyEx(binary, binary, MORPH_CLOSE, morphKernel);
 
     // 3. 查找并筛选矩形轮廓
     vector<vector<Point>> contours;
     findContours(binary, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     vector<vector<Point>> rectContours;
+    vector<double> rectAreas;
+    
     for (const auto& cnt : contours) {
         double area = contourArea(cnt);
-        if (area < 500)
-            continue;   // 过滤小噪声
+        if (area < 500) continue; // 过滤小噪声
 
         vector<Point> approx;
-        double        peri = arcLength(cnt, true);
+        double peri = arcLength(cnt, true);
         approxPolyDP(cnt, approx, 0.02 * peri, true);
 
-        if (approx.size() == 4) {   // 判断是否为四边形
-            rectContours.push_back(approx);
+        // 允许 4 或 5 个顶点，并检查凸性
+        if ((approx.size() >= 4 && approx.size() <= 5) && isContourConvex(approx)) {
+            Rect bbox = boundingRect(approx);
+            double aspectRatio = (double)bbox.width / bbox.height;
+            
+            if (aspectRatio > 0.2 && aspectRatio < 5.0) {
+                rectContours.push_back(approx);
+                rectAreas.push_back(area);
+            }
         }
     }
 
-    // 4. 解算中心点
+    // 4. 如果检测到多个矩形，找出面积最大的（假设是外框）
+    vector<vector<Point>> finalRectContours;
+    if (!rectContours.empty()) {
+        auto maxIt = max_element(rectAreas.begin(), rectAreas.end());
+        int maxIndex = distance(rectAreas.begin(), maxIt);
+        finalRectContours.push_back(rectContours[maxIndex]);
+    }
+
+    // 5. 解算中心点
     vector<Point2f> centers;
-    for (const auto& rect : rectContours) {
+    for (const auto& rect : finalRectContours) {
         Moments M = moments(rect);
         if (M.m00 != 0) {
             Point2f center(M.m10 / M.m00, M.m01 / M.m00);
@@ -235,20 +248,29 @@ void method2()
         }
     }
 
-    // 5. 目标筛选（这里简单地假设筛选所有矩形）
     // 6. 结果绘制
     Mat resultImage = image.clone();
-    for (const auto& rect : rectContours) {
-        polylines(resultImage, rect, true, Scalar(0, 255, 0), 2);   // 绿色轮廓
+    for (size_t i = 0; i < finalRectContours.size(); i++) {
+        polylines(resultImage, finalRectContours[i], true, Scalar(0, 255, 0), 2);
     }
     for (const auto& center : centers) {
-        circle(resultImage, center, 5, Scalar(0, 0, 255), -1);   // 红色中心点
+        circle(resultImage, center, 5, Scalar(255, 0, 0), -1);
     }
-
-    // 显示结果
+    
+    // 显示中间结果
+    namedWindow("1. Original Image", WINDOW_NORMAL);
+    imshow("1. Original Image", image);
+    namedWindow("2. Binary Image", WINDOW_NORMAL);
+    imshow("2. Binary Image", binary);
+    
+    // 显示最终结果
     namedWindow("Method2 Result", WINDOW_NORMAL);
     imshow("Method2 Result", resultImage);
+    
+    waitKey(0);
+    destroyAllWindows();
 }
+
 
 int main()
 {
@@ -259,9 +281,10 @@ int main()
         return -1;
     }
 
-    method2();
+    // 转为灰度图
+    cvtColor(image, gray, COLOR_BGR2GRAY);
 
-    waitKey(0);
+    method2();
 
     return 0;
 }
