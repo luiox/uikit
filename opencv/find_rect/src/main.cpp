@@ -193,11 +193,15 @@ int method1()
     return 0;
 }
 
-void method2() {
+void method2()
+{
+    // 转为灰度图
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+
     // 1. 图像预处理：灰度 + 反转二值化（因为目标是黑色）
     Mat gray, binary;
     cvtColor(image, gray, COLOR_BGR2GRAY);
-    threshold(gray, binary, 120, 255, THRESH_BINARY_INV);
+    threshold(gray, binary, 120, 255, THRESH_BINARY_INV | THRESH_OTSU);
 
     // 2. 闭运算消除孔洞（核大小增大）
     Mat morphKernel = getStructuringElement(MORPH_RECT, Size(50, 50));
@@ -208,21 +212,22 @@ void method2() {
     findContours(binary, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
     vector<vector<Point>> rectContours;
-    vector<double> rectAreas;
-    
+    vector<double>        rectAreas;
+
     for (const auto& cnt : contours) {
         double area = contourArea(cnt);
-        if (area < 500) continue; // 过滤小噪声
+        if (area < 500)
+            continue;   // 过滤小噪声
 
         vector<Point> approx;
-        double peri = arcLength(cnt, true);
+        double        peri = arcLength(cnt, true);
         approxPolyDP(cnt, approx, 0.02 * peri, true);
 
         // 允许 4 或 5 个顶点，并检查凸性
         if ((approx.size() >= 4 && approx.size() <= 5) && isContourConvex(approx)) {
-            Rect bbox = boundingRect(approx);
+            Rect   bbox        = boundingRect(approx);
             double aspectRatio = (double)bbox.width / bbox.height;
-            
+
             if (aspectRatio > 0.2 && aspectRatio < 5.0) {
                 rectContours.push_back(approx);
                 rectAreas.push_back(area);
@@ -233,8 +238,8 @@ void method2() {
     // 4. 如果检测到多个矩形，找出面积最大的（假设是外框）
     vector<vector<Point>> finalRectContours;
     if (!rectContours.empty()) {
-        auto maxIt = max_element(rectAreas.begin(), rectAreas.end());
-        int maxIndex = distance(rectAreas.begin(), maxIt);
+        auto maxIt    = max_element(rectAreas.begin(), rectAreas.end());
+        int  maxIndex = distance(rectAreas.begin(), maxIt);
         finalRectContours.push_back(rectContours[maxIndex]);
     }
 
@@ -256,21 +261,118 @@ void method2() {
     for (const auto& center : centers) {
         circle(resultImage, center, 5, Scalar(255, 0, 0), -1);
     }
-    
+
     // 显示中间结果
     namedWindow("1. Original Image", WINDOW_NORMAL);
     imshow("1. Original Image", image);
     namedWindow("2. Binary Image", WINDOW_NORMAL);
     imshow("2. Binary Image", binary);
-    
+
     // 显示最终结果
     namedWindow("Method2 Result", WINDOW_NORMAL);
     imshow("Method2 Result", resultImage);
-    
-    waitKey(0);
-    destroyAllWindows();
 }
 
+
+void detectBlackTapeRectangle(Mat& image)
+{
+    // 1. 转为灰度图
+    Mat gray;
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+
+    // 2. 反转二值化（目标黑色变白色）
+    Mat binary;
+    threshold(gray, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
+
+    // 3. 形态学闭运算（连接断裂区域）
+    Mat morphKernel = getStructuringElement(MORPH_RECT, Size(50, 50));
+    morphologyEx(binary, binary, MORPH_CLOSE, morphKernel);
+
+    // 4. 查找轮廓（带层次结构）
+    vector<vector<Point>> contours;
+    vector<Vec4i>         hierarchy;
+    findContours(binary, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+
+    // 5. 遍历轮廓，记录符合条件的内外框
+    int    maxOuterIndex = -1;
+    int    maxInnerIndex = -1;
+    double maxOuterArea  = 0;
+    double maxInnerArea  = 0;
+
+    for (size_t i = 0; i < contours.size(); i++) {
+        double area = contourArea(contours[i]);
+        if (area < 100)
+            continue;   // 跳过小轮廓
+
+        bool isInner = hierarchy[i][3] != -1;
+
+        // 近似多边形
+        vector<Point> approx;
+        double        peri = arcLength(contours[i], true);
+        approxPolyDP(contours[i], approx, 0.02 * peri, true);
+
+        // 筛选条件：4个顶点 + 凸性
+        if (approx.size() == 4 && isContourConvex(approx)) {
+            if (isInner) {
+                if (area > maxInnerArea) {
+                    maxInnerArea  = area;
+                    maxInnerIndex = i;
+                }
+            }
+            else {
+                if (area > maxOuterArea) {
+                    maxOuterArea  = area;
+                    maxOuterIndex = i;
+                }
+            }
+        }
+    }
+
+    // 6. 只绘制最大的一组内外框
+    if (maxOuterIndex != -1) {
+        drawContours(image, contours, maxOuterIndex, Scalar(0, 0, 255), 2);   // 红色外框
+
+        // 计算外接矩形
+        Rect  boundRect = boundingRect(contours[maxOuterIndex]);
+        Point topLeft   = boundRect.tl();                         // 左上角
+        Point topRight(topLeft.x + boundRect.width, topLeft.y);   // 右上角
+
+        // 为了让文字不贴边，可以稍微偏移
+        Point textPos(topRight.x - 50, topRight.y - 15);   // 向左偏移50，向下偏移20
+
+        // 绘制中心点
+        Moments m = moments(contours[maxOuterIndex]);
+        Point   center(m.m10 / m.m00, m.m01 / m.m00);
+        circle(image, center, 5, Scalar(255, 0, 0), -1);
+
+        // 在右上角绘制文字
+        putText(image, "Outer", textPos, FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+    }
+
+    if (maxInnerIndex != -1) {
+        drawContours(image, contours, maxInnerIndex, Scalar(0, 255, 0), 2);   // 绿色内框
+
+        // 计算外接矩形
+        Rect  boundRect = boundingRect(contours[maxInnerIndex]);
+        Point topLeft   = boundRect.tl();                         // 左上角
+        Point topRight(topLeft.x + boundRect.width, topLeft.y);   // 右上角
+
+        // 为了让文字不贴边，可以稍微偏移
+        Point textPos(topRight.x - 50, topRight.y + 20);   // 向左偏移50，向下偏移20
+
+        // 绘制中心点
+        Moments m = moments(contours[maxInnerIndex]);
+        Point   center(m.m10 / m.m00, m.m01 / m.m00);
+        circle(image, center, 5, Scalar(255, 0, 0), -1);
+
+        // 在右上角绘制文字
+        putText(image, "Inner", textPos, FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+    }
+
+    // 显示结果
+    namedWindow("Result", WINDOW_NORMAL);
+    imshow("Result", image);
+}
 
 int main()
 {
@@ -281,10 +383,10 @@ int main()
         return -1;
     }
 
-    // 转为灰度图
-    cvtColor(image, gray, COLOR_BGR2GRAY);
+    detectBlackTapeRectangle(image);
 
-    method2();
+    waitKey(0);
+    destroyAllWindows();
 
     return 0;
 }
