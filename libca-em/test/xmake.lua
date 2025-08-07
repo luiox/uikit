@@ -28,3 +28,7 @@ target("test-skv")
     add_deps("libca-em")
     add_files("test-skv.c")
 
+target("test-co")
+    set_kind("binary")
+    -- add_deps("libca-em")
+    add_files("test-co.c")

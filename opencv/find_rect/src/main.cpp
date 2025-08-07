@@ -283,10 +283,14 @@ void detectBlackTapeRectangle(Mat& image)
     // 2. 反转二值化（目标黑色变白色）
     Mat binary;
     threshold(gray, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
+    namedWindow("threshold", WINDOW_NORMAL);
+    imshow("threshold", binary);
 
     // 3. 形态学闭运算（连接断裂区域）
     Mat morphKernel = getStructuringElement(MORPH_RECT, Size(50, 50));
     morphologyEx(binary, binary, MORPH_CLOSE, morphKernel);
+    namedWindow("morphologyEx", WINDOW_NORMAL);
+    imshow("morphologyEx", binary);
 
     // 4. 查找轮廓（带层次结构）
     vector<vector<Point>> contours;
