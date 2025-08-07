@@ -1,14 +1,16 @@
 #include "filter.h"
+#include "../base/datatype.h"
+#include "../base/math_util.h"
 
 /***************************************************
-º¯ÊıÃû: float LPButterworth(float curr_input,lpf_buf *buf,lpf_param *params)
-ËµÃ÷:	¶ş½×°ÍÌØÎÖË¹µÍÍ¨ÂË²¨Æ÷
-Èë¿Ú:	float curr_input-µ±Ç°ÂË²¨Æ÷ÊäÈë
-			lpf_buf *buf-ÂË²¨Æ÷ÖĞ¼ä×´Ì¬
-			lpf_param *params-ÂË²¨Æ÷²ÎÊı
-³ö¿Ú:	float ÂË²¨Æ÷Êä³öÖµ
-±¸×¢:	ÎŞ
-×÷Õß:	ÎŞÃû´´ĞÂ
+å‡½æ•°å: float LPButterworth(float curr_input,lpf_buf *buf,lpf_param *params)
+è¯´æ˜:	äºŒé˜¶å·´ç‰¹æ²ƒæ–¯ä½é€šæ»¤æ³¢å™¨
+å…¥å£:	float curr_input-å½“å‰æ»¤æ³¢å™¨è¾“å…¥
+			lpf_buf *buf-æ»¤æ³¢å™¨ä¸­é—´çŠ¶æ€
+			lpf_param *params-æ»¤æ³¢å™¨å‚æ•°
+å‡ºå£:	float æ»¤æ³¢å™¨è¾“å‡ºå€¼
+å¤‡æ³¨:	æ— 
+ä½œè€…:	æ— ååˆ›æ–°
 ****************************************************/
 float LPButterworth(float curr_input,lpf_buf *buf,lpf_param *params)
 {
@@ -28,19 +30,19 @@ float LPButterworth(float curr_input,lpf_buf *buf,lpf_param *params)
 		return curr_input;
 	}
 	
-  /* ¼ÓËÙ¶È¼ÆButterworthÂË²¨ */
-  /* »ñÈ¡×îĞÂx(n) */
+  /* åŠ é€Ÿåº¦è®¡Butterworthæ»¤æ³¢ */
+  /* è·å–æœ€æ–°x(n) */
   buf->input[2]=curr_input;
-  /* ButterworthÂË²¨ */
+  /* Butterworthæ»¤æ³¢ */
   buf->output[2]=params->b[0] * buf->input[2]
 													+params->b[1] * buf->input[1]
 													+params->b[2] * buf->input[0]
 													-params->a[1] * buf->output[1]
 													-params->a[2] * buf->output[0];
-  /* x(n) ĞòÁĞ±£´æ */
+  /* x(n) åºåˆ—ä¿å­˜ */
   buf->input[0]=buf->input[1];
   buf->input[1]=buf->input[2];
-  /* y(n) ĞòÁĞ±£´æ */
+  /* y(n) åºåˆ—ä¿å­˜ */
   buf->output[0]=buf->output[1];
   buf->output[1]=buf->output[2];
 	
@@ -62,14 +64,14 @@ float LPButterworth(float curr_input,lpf_buf *buf,lpf_param *params)
 }
 
 /***************************************************
-º¯ÊıÃû: void set_cutoff_frequency(float sample_frequent, float cutoff_frequent,lpf_param *LPF)
-ËµÃ÷:	¶ş½×°ÍÌØÎÖË¹µÍÍ¨ÂË²¨Æ÷²ÎÊıÉè¼Æ
-Èë¿Ú:	float sample_frequent-²ÉÑùÆµÂÊ
-			float cutoff_frequent-½ØÖ¹ÆµÂÊ
-			lpf_param *LPF-ÂË²¨Æ÷²ÎÊı
-³ö¿Ú:	ÎŞ
-±¸×¢:	ÎŞ
-×÷Õß:	ÎŞÃû´´ĞÂ
+å‡½æ•°å: void set_cutoff_frequency(float sample_frequent, float cutoff_frequent,lpf_param *LPF)
+è¯´æ˜:	äºŒé˜¶å·´ç‰¹æ²ƒæ–¯ä½é€šæ»¤æ³¢å™¨å‚æ•°è®¾è®¡
+å…¥å£:	float sample_frequent-é‡‡æ ·é¢‘ç‡
+			float cutoff_frequent-æˆªæ­¢é¢‘ç‡
+			lpf_param *LPF-æ»¤æ³¢å™¨å‚æ•°
+å‡ºå£:	æ— 
+å¤‡æ³¨:	æ— 
+ä½œè€…:	æ— ååˆ›æ–°
 ****************************************************/
 void set_cutoff_frequency(float sample_frequent, float cutoff_frequent,lpf_param *LPF)
 {

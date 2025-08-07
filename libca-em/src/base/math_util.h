@@ -13,6 +13,7 @@
 
 #include "datatype.h"
 #include <stdbool.h>
+#include <math.h>
 
 typedef struct {
   float x;
@@ -60,5 +61,40 @@ float clampf(float value, float min, float max);
 bool is_little_endian();
 // 是否是大端序
 bool is_big_endian();
+
+
+#ifndef M_PI_F
+ #define M_PI_F 3.141592653589793f
+#endif
+
+#ifndef PI
+ # define PI M_PI_F
+#endif
+
+
+#define DEG2RAD (PI / 180.0f)
+#define RAD2DEG (180.0f / PI)
+
+
+
+float constrain_float(float amt, float low, float high); 
+float sq(float v);
+float safe_sqrt(float v);
+
+
+float invSqrt(float x);
+
+void FastSinCos(float x, float *sinVal, float *cosVal);
+float FastSin(float x);
+float FastCos(float x);
+
+
+float FastSqrtI(float x);
+float FastSqrt(float x);
+
+int16_t constrain_int16(int16_t amt, int16_t low, int16_t high);
+
+
+#define sq2(sq) (((float)sq) * ((float)sq))
 
 #endif // !MATH_UTIL_H
