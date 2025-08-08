@@ -7,7 +7,7 @@ for (;;) {
     sc_yield();
     printf("t2\n");
     sc_yield();
-    // SC_DELAY_MS(1000);
+    // sc_delay_ms(1000);
     printf("t3\n");
     sc_yield();
 }
