@@ -15,6 +15,7 @@
 #include "datatype.h"
 #include <stdbool.h>
 #include <math.h>
+#include "debug.h"  
 
 typedef struct
 {
@@ -70,17 +71,6 @@ CA_FORCE_INLINE float fast_sinf(float x);
 
 CA_FORCE_INLINE float math_fabs(float x);
 
-#if DETECT_MODE
-sttatic int is_ieee754()
-{
-    float    f = 1.0f;
-    uint32_t u;
-    memcpy(&u, &f, sizeof(f));
-    return u == 0x3F800000;   // IEEE 754 中 1.0 的位模式
-}
-
-#endif
-
 #ifndef M_PI_F
 #    define M_PI_F 3.141592653589793f
 #endif
@@ -114,5 +104,44 @@ int16_t constrain_int16(int16_t amt, int16_t low, int16_t high);
 
 
 #define sq2(sq) (((float)sq) * ((float)sq))
+
+#if DETECT_MODE
+
+// 检查 float 是否符合 IEEE 754
+static int is_float_ieee754() {
+    float f = -1.0f;
+    uint32_t u;
+    memcpy(&u, &f, sizeof(f));
+    return u == 0xBF800000; // -1.0 的 IEEE 754 单精度表示
+}
+
+// 检查 double 是否符合 IEEE 754
+static int is_double_ieee754() {
+    double d = -1.0;
+    uint64_t u;
+    memcpy(&u, &d, sizeof(d));
+    return u == 0xBFF0000000000000ULL; // -1.0 的 IEEE 754 双精度表示
+}
+
+// 检查 NaN 和 Inf 的位模式
+static int test_special_values() {
+    float inf = 1.0f / 0.0f;
+    float nan = 0.0f / 0.0f;
+    uint32_t u_inf, u_nan;
+    memcpy(&u_inf, &inf, sizeof(inf));
+    memcpy(&u_nan, &nan, sizeof(nan));
+    return (u_inf == 0x7F800000) && (u_nan != 0x7F800000);
+}
+
+static void ieee754_check(void)
+{
+   if (is_float_ieee754() && is_double_ieee754() && test_special_values()) {
+        debug_print("This platform supports IEEE 754 standard.\n");
+    } else {
+        debug_print("This platform does NOT support IEEE 754 standard.\n");
+    }
+}
+
+#endif
 
 #endif   // !MATH_UTIL_H
