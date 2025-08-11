@@ -56,7 +56,7 @@ bool is_big_endian()
 }
 
 // 快速sin(x)（5阶泰勒展开法）
-CA_FORCE_INLINE static float fast_sinf(float x)
+CA_FORCE_INLINE float fast_sinf(float x)
 {
     // const float B = 4.0f / 3.14159265f;
     // const float C = -4.0f / (3.14159265f * 3.14159265f);
