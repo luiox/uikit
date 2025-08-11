@@ -4,9 +4,9 @@
  * @brief 数学相关的工具函数，补充标准库的不足
  * @version 0.1
  * @date 2025-07-25
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #ifndef MATH_UTIL_H
 #define MATH_UTIL_H
@@ -16,15 +16,17 @@
 #include <stdbool.h>
 #include <math.h>
 
-typedef struct {
-  float x;
-  float y;
+typedef struct
+{
+    float x;
+    float y;
 } vec2f;
 
-typedef struct {
-  float x;
-  float y;
-  float z;
+typedef struct
+{
+    float x;
+    float y;
+    float z;
 } vec3f_t;
 
 // 最小值
@@ -42,7 +44,7 @@ typedef struct {
 
 /**
  * @brief 计算整数的幂
- * 
+ *
  * @param base 底数
  * @param exp 指数
  * @return int32_t 底数的指数次幂
@@ -50,11 +52,11 @@ typedef struct {
 i32 pow32i(i32 base, i32 exp);
 /**
  * @brief 限幅函数，将输入值限制在min和max之间
- * 
+ *
  * @param value 输入值
  * @param min 最大值
  * @param max 最小值
- * @return 限幅后的值 
+ * @return 限幅后的值
  */
 float clampf(float value, float min, float max);
 
@@ -68,13 +70,23 @@ CA_FORCE_INLINE float fast_sinf(float x);
 
 CA_FORCE_INLINE float math_fabs(float x);
 
+#if DETECT_MODE
+sttatic int is_ieee754()
+{
+    float    f = 1.0f;
+    uint32_t u;
+    memcpy(&u, &f, sizeof(f));
+    return u == 0x3F800000;   // IEEE 754 中 1.0 的位模式
+}
+
+#endif
 
 #ifndef M_PI_F
- #define M_PI_F 3.141592653589793f
+#    define M_PI_F 3.141592653589793f
 #endif
 
 #ifndef PI
- # define PI M_PI_F
+#    define PI M_PI_F
 #endif
 
 
@@ -83,14 +95,14 @@ CA_FORCE_INLINE float math_fabs(float x);
 
 
 
-float constrain_float(float amt, float low, float high); 
+float constrain_float(float amt, float low, float high);
 float sq(float v);
 float safe_sqrt(float v);
 
 
 float invSqrt(float x);
 
-void FastSinCos(float x, float *sinVal, float *cosVal);
+void  FastSinCos(float x, float* sinVal, float* cosVal);
 float FastSin(float x);
 float FastCos(float x);
 
@@ -103,4 +115,4 @@ int16_t constrain_int16(int16_t amt, int16_t low, int16_t high);
 
 #define sq2(sq) (((float)sq) * ((float)sq))
 
-#endif // !MATH_UTIL_H
+#endif   // !MATH_UTIL_H
