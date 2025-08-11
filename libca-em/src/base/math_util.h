@@ -66,6 +66,8 @@ bool is_big_endian();
 // 快速sin(x)（5阶泰勒展开法）
 CA_FORCE_INLINE float fast_sinf(float x);
 
+CA_FORCE_INLINE float math_fabs(float x);
+
 
 #ifndef M_PI_F
  #define M_PI_F 3.141592653589793f
