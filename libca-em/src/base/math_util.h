@@ -11,6 +11,7 @@
 #ifndef MATH_UTIL_H
 #define MATH_UTIL_H
 
+#include "base_config.h"
 #include "datatype.h"
 #include <stdbool.h>
 #include <math.h>
@@ -61,6 +62,9 @@ float clampf(float value, float min, float max);
 bool is_little_endian();
 // 是否是大端序
 bool is_big_endian();
+
+// 快速sin(x)（5阶泰勒展开法）
+CA_FORCE_INLINE static float fast_sinf(float x);
 
 
 #ifndef M_PI_F

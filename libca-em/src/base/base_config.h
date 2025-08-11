@@ -40,7 +40,11 @@
 // 建议内联的宏
 #define CA_SUGGEST_INLINE inline
 // 强制内联的宏
-#define CA_FORCE_INLINE __attribute__((always_inline))
+#if defined(__GNUC__) || defined(__clang__)
+#define CA_FORCE_INLINE inline __attribute__((always_inline))
+#else
+#define CA_FORCE_INLINE inline
+#endif
 
 // 对于尽可能inline的情况下使用
 #if defined(__GNUC__) // GNU编译器
@@ -50,6 +54,7 @@
 #else
     #define LIKELY_INLINE inline
 #endif
+
 
 
 #endif   // !LIBCA_BASE_CONFIG_H
