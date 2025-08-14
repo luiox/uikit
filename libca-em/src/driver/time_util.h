@@ -2,7 +2,7 @@
 #ifndef TIMEUTIL_H
 #define TIMEUTIL_H
 
-#include <stdint.h>
+#include "../base/datatype.h"   
 #include <stdbool.h>
 
 // 阻塞延时函数
@@ -12,6 +12,11 @@ void delay_ms(uint32_t ms);
 // 非阻塞延时函数（单位：毫秒）
 void delay_us_noblock(uint32_t us);
 void delay_ms_noblock(uint32_t ms);
+
+void ms_timer_irq_handler(void);
+
+// 这个时间差不多在49天以后溢出
+u32 time_get_current_tick(void);
 
 // 获取当前时间戳（单位：毫秒）
 //uint32_t get_current_timestamp();

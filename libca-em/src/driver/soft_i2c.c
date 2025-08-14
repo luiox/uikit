@@ -1,4 +1,5 @@
 #include "soft_i2c.h"
+#include "vhil.h"
 
 #define i2c_sda_out(soft_i2c) soft_i2c->gpio_set_output_mode(soft_i2c->sda)
 #define i2c_sda_in(soft_i2c) soft_i2c->gpio_set_input_mode(soft_i2c->sda)
@@ -92,7 +93,7 @@ void soft_i2c_stop(soft_i2c_t* soft_i2c)
 *	返 回 值: 无
 *********************************************************************************************************
 */
-void soft_i2c_send_byte(soft_i2c_t* soft_i2c, uint8_t byte)
+u8 soft_i2c_send_byte(soft_i2c_t* soft_i2c, uint8_t byte)
 {
     uint8_t i;
     i2c_sda_out(soft_i2c);
@@ -116,7 +117,7 @@ void soft_i2c_send_byte(soft_i2c_t* soft_i2c, uint8_t byte)
         }
         soft_i2c_delay();
     }
-    soft_i2c_wait_ack(soft_i2c);
+    return soft_i2c_wait_ack(soft_i2c);
 }
 
 /*
@@ -265,4 +266,152 @@ uint8_t soft_i2c_check_device(soft_i2c_t* soft_i2c, uint8_t address)
     soft_i2c_stop(soft_i2c); /* 发送停止信号 */
 
     return ack;
+}
+
+vhil_state_type_t soft_i2c_master_write(soft_i2c_t* soft_i2c, u16 dev_addr, u8* data, u16 data_size,
+                                        u32 timeout)
+{
+    soft_i2c_start(soft_i2c);
+    // 发送设备地址
+    if (soft_i2c_send_byte(soft_i2c, dev_addr & 0xff) == 1) {
+        // 无响应
+        return VHAL_ERROR;
+    }
+    // 发送数据
+    for (u16 i = 0; i < data_size; i++) {
+        if (soft_i2c_send_byte(soft_i2c, data[i]) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+    // 停止
+    soft_i2c_stop(soft_i2c);
+
+    return VHAL_OK;
+}
+vhil_state_type_t soft_i2c_master_read(soft_i2c_t* soft_i2c, u16 dev_addr, u8* data, u16 data_size,
+                                       u32 timeout)
+{
+    soft_i2c_start(soft_i2c);
+
+    if (soft_i2c_send_byte(soft_i2c, dev_addr) == 1) {
+        return VHAL_ERROR;
+    }
+
+    soft_i2c_start(soft_i2c);
+
+    // 循环读数据
+    for (u16 i = 0; i < data_size - 1; i++) {
+        data[i] = soft_i2c_read_byte(soft_i2c, i == data_size - 1);
+        // 发应答位
+        soft_i2c_ack(soft_i2c);
+    }
+    // 接收最后一个
+    data[data_size - 1] = soft_i2c_read_byte(soft_i2c, 1);
+    // nack
+    soft_i2c_nack(soft_i2c);
+
+    soft_i2c_stop(soft_i2c);
+    return VHAL_OK;
+}
+vhil_state_type_t soft_i2c_slave_write(soft_i2c_t* soft_i2c, u16 dev_addr, u8* data, u16 data_size,
+                                       u32 timeout)
+{
+    return VHAL_OK;
+}
+vhil_state_type_t soft_i2c_slave_read(soft_i2c_t* soft_i2c, u16 dev_addr, u8* data, u16 data_size,
+                                      u32 timeout)
+{
+    return VHAL_OK;
+}
+vhil_state_type_t soft_i2c_mem_write(soft_i2c_t* soft_i2c, u16 dev_addr, u16 mem_addr,
+                                     u16 mem_addr_size, u8* data, u16 data_size, u32 timeout)
+{
+    soft_i2c_start(soft_i2c);
+    // 发送设备地址
+    if (soft_i2c_send_byte(soft_i2c, dev_addr & 0xff) == 1) {
+        // 无响应
+        return VHAL_ERROR;
+    }
+    // 发送寄存器地址
+    if (data_size == I2C_MEM_ADDR_SIZE_8BIT) {
+        if (soft_i2c_send_byte(soft_i2c, mem_addr & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+    else {
+        // 拆分为两个字节发，先发高位
+        if (soft_i2c_send_byte(soft_i2c, (mem_addr >> 8) & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+        // 再发低位
+        if (soft_i2c_send_byte(soft_i2c, mem_addr & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+    // 发送数据
+    for (u16 i = 0; i < data_size; i++) {
+        if (soft_i2c_send_byte(soft_i2c, data[i]) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+    // 停止
+    soft_i2c_stop(soft_i2c);
+
+    return VHAL_OK;
+}
+vhil_state_type_t soft_i2c_mem_read(soft_i2c_t* soft_i2c, u16 dev_addr, u16 mem_addr,
+                                    u16 mem_addr_size, u8* data, u16 data_size, u32 timeout)
+{
+    soft_i2c_start(soft_i2c);
+
+    // 发设备地址
+    if (soft_i2c_send_byte(soft_i2c, dev_addr) == 1) {
+        return VHAL_ERROR;
+    }
+    // 发送寄存器地址
+    if (data_size == I2C_MEM_ADDR_SIZE_8BIT) {
+        if (soft_i2c_send_byte(soft_i2c, mem_addr & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+    else {
+        // 拆分为两个字节发，先发高位
+        if (soft_i2c_send_byte(soft_i2c, (mem_addr >> 8) & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+        // 再发低位
+        if (soft_i2c_send_byte(soft_i2c, mem_addr & 0xff) == 1) {
+            // 无响应
+            return VHAL_ERROR;
+        }
+    }
+
+    soft_i2c_start(soft_i2c);
+
+    // 循环读数据
+    for (u16 i = 0; i < data_size - 1; i++) {
+        data[i] = soft_i2c_read_byte(soft_i2c, i == data_size - 1);
+        // 发应答位
+        soft_i2c_ack(soft_i2c);
+    }
+    // 接收最后一个
+    data[data_size - 1] = soft_i2c_read_byte(soft_i2c, 1);
+    // nack
+    soft_i2c_nack(soft_i2c);
+
+    soft_i2c_stop(soft_i2c);
+    return VHAL_OK;
+}
+
+vhil_state_type_t soft_i2c_is_device_ready(soft_i2c_t* soft_i2c, u16 dev_addr, u32 trials,
+                                           u32 timeout)
+{
+    return VHAL_OK;
 }

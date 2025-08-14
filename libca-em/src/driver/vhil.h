@@ -28,6 +28,9 @@ typedef void (*gpio_output_func_t)(void* gpio_extra_data, u8 value);
 
 // i2c
 
+#define I2C_MEM_ADDR_SIZE_8BIT            0x01
+#define I2C_MEM_ADDR_SIZE_16BIT           0x010
+
 typedef vhil_state_type_t (*i2c_master_write_func_t)(void* i2c_extra_data, u16 dev_addr, u8* data,
                                                      u16 data_size, u32 timeout);
 typedef vhil_state_type_t (*i2c_master_read_func_t)(void* i2c_extra_data, u16 dev_addr, u8* data,
@@ -42,7 +45,7 @@ typedef vhil_state_type_t (*i2c_mem_write_func_t)(void* i2c_extra_data, u16 dev_
 typedef vhil_state_type_t (*i2c_mem_read_func_t)(void* i2c_extra_data, u16 dev_addr, u16 mem_addr,
                                                  u16 mem_addr_size, u8* data, u16 data_size,
                                                  u32 timeout);
-typedef vhil_state_type_t (*i2c_is_device_ready)(void* i2c_extra_dat, u16 dev_addr, u32 trials,
+typedef vhil_state_type_t (*i2c_is_device_ready_func_t)(void* i2c_extra_dat, u16 dev_addr, u32 trials,
                                                  u32 timeout);
 
 
