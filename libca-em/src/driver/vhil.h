@@ -14,7 +14,6 @@
 
 #include "../base/datatype.h"
 
-// i2c
 typedef enum
 {
     VHAL_OK      = 0x00U,
@@ -22,6 +21,12 @@ typedef enum
     VHAL_BUSY    = 0x02U,
     VHAL_TIMEOUT = 0x03U
 } vhil_state_type_t;
+
+// gpio
+
+typedef void (*gpio_output_func_t)(void* gpio_extra_data, u8 value);
+
+// i2c
 
 typedef vhil_state_type_t (*i2c_master_write_func_t)(void* i2c_extra_data, u16 dev_addr, u8* data,
                                                      u16 data_size, u32 timeout);
