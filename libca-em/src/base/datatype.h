@@ -2,7 +2,8 @@
  * @file datatype.h
  * @author canrad (1517807724@qq.com)
  * @brief 基础类型的定义
- * @version 0.1
+ * 位，字节，字节序相关的操作
+ * @version 0.2
  * @date 2025-07-21
  *
  * @copyright Copyright (c) 2025
@@ -21,17 +22,29 @@ typedef uint32_t     u32;
 typedef volatile u8  vu8;
 typedef volatile u16 vu16;
 typedef volatile u32 vu32;
-typedef int8_t       s8, i8;
-typedef int16_t      s16, i16;
-typedef int32_t      s32, i32;
-typedef volatile s8  vs8, vi32;
-typedef volatile s16 vs16, vi16;
-typedef volatile s32 vs32vi32;
+typedef int8_t       s8;
+typedef int16_t      s16;
+typedef int32_t      s32;
+typedef volatile s8  vs8;
+typedef volatile s16 vs16;
+typedef volatile s32 vs32;
+#if USE_RUST_STYLE_INT
+typedef s8   i8;
+typedef s16  i16;
+typedef s32  i32;
+typedef vs8  vi8;
+typedef vs16 vi16;
+typedef vs32 vi32;
+#endif
 #ifdef HAS_INT64
 typedef uint64_t     u64;
 typedef volatile u64 vu64;
-typedef int64_t      s64, i64;
-typedef volatile s64 vs64, vi64;
+typedef int64_t      s64;
+typedef volatile s64 vs64;
+#    if USE_RUST_STYLE_INT
+typedef i64  i64;
+typedef vi64 vi64;
+#    endif
 #endif
 // 浮点数
 typedef float        f32;

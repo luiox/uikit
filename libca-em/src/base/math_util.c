@@ -1,7 +1,7 @@
 #include "math_util.h"
 #include <stdbool.h>
 
-int32_t pow32i(int32_t base, int32_t exp)
+int32_t math_pow_s32(int32_t base, int32_t exp)
 {
     // 计算思路是每次将指数右移一位，底数平方，直到指数为0
     // 这样速度会比直接循环快很多

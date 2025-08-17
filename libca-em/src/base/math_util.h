@@ -50,7 +50,7 @@ typedef struct
  * @param exp 指数
  * @return int32_t 底数的指数次幂
  */
-i32 pow32i(i32 base, i32 exp);
+s32 math_pow_s32(s32 base, s32 exp);
 /**
  * @brief 限幅函数，将输入值限制在min和max之间
  *
