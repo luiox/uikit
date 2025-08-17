@@ -1,36 +1,39 @@
 #include "debug.h"
+#include "../base/printer.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 // 定义一个缓冲区大小
 #define DEBUG_BUFFER_SIZE 256
 
 static uint32_t g_uart;
+static printer_t g_debug_printer;
+static u8 g_debug_buffer[DEBUG_BUFFER_SIZE];
 
-static inline void usart_send_string(const char* str)
+// 串口发送函数
+static void usart_send_buffer(u8* buf, usize size)
 {
-    // uart_send(g_uart, (void*)str, strlen(str));
+    // 这里应该实现实际的串口发送功能
+    // uart_send(g_uart, buf, size);
+    // 作为示例，暂时留空，实际使用时需要实现具体的串口发送逻辑
 }
 
 void debug_init(uint32_t uart)
 {
     g_uart = uart;
+    printer_init(&g_debug_printer, g_debug_buffer, DEBUG_BUFFER_SIZE, usart_send_buffer);
 }
 
 // 平台无关，无需修改
 void debug_print(const char* fmt, ...)
 {
-    va_list args;                     // 定义一个 va_list 类型的变量，用来存放参数
-    char buffer[DEBUG_BUFFER_SIZE];   // 定义一个字符数组，用来存放格式化后的字符串
+    va_list args;
 
-    va_start(args, fmt);   // 初始化 args，fmt 是最后一个固定参数
+    va_start(args, fmt);
 
-    // 使用 vsprintf 将参数格式化到 buffer 中
-    vsprintf(buffer, fmt, args);
+    // 使用printer_vprintf来输出格式化字符串
+    printer_vprintf(&g_debug_printer, fmt, args);
 
-    va_end(args);   // 清理 args
-
-    // 输出格式化后的字符串
-    // 这里是发送到串口
-    usart_send_string(buffer);
+    va_end(args);
 }
