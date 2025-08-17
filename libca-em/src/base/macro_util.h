@@ -1,14 +1,6 @@
 #ifndef MACRO_UTIL_H
 #define MACRO_UTIL_H 
 
-#define __PLOOC_VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, \
-                                 _11, _12, _13, _14, _15, _16, __N, ...)      \
-  __N
-
-#define __PLOOC_VA_NUM_ARGS(...)                                               \
-  __PLOOC_VA_NUM_ARGS_IMPL(0, ##__VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, \
-                           7, 6, 5, 4, 3, 2, 1, 0)
-
 // 各种数量的连接宏
 #define __CONNECT2(__A, __B) __A##__B
 #define __CONNECT3(__A, __B, __C) __A##__B##__C
@@ -32,6 +24,15 @@
 #define CONNECT8(__A, __B, __C, __D, __E, __F, __G, __H) \
   __CONNECT8(__A, __B, __C, __D, __E, __F, __G, __H)
 #define CONNECT9(__A, __B, __C, __D, __E, __F, __G, __H, __I)
+
+
+#define __PLOOC_VA_NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, \
+                                 _11, _12, _13, _14, _15, _16, __N, ...)      \
+  __N
+
+#define __PLOOC_VA_NUM_ARGS(...)                                               \
+  __PLOOC_VA_NUM_ARGS_IMPL(0, ##__VA_ARGS__, 16, 15, 14, 13, 12, 11, 10, 9, 8, \
+                           7, 6, 5, 4, 3, 2, 1, 0)
 
 /**
  * @brief 获取可变参数个数
@@ -192,5 +193,19 @@
  */
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-/************** 语法糖 END *********************/
+// 编译时断言验证特定表达式。
+// 如果表达式求值为零，编译将失败
+// 只能用于整数类型
+#define COMPILE_TIME_ASSERT_IMPL(exp, random_variable_name)                                                          \
+    typedef char random_variable_name[!(exp) ? -1 : 1];
+
+#define COMPILE_TIME_ASSERT(exp)                                                          \
+    COMPILE_TIME_ASSERT_IMPL(exp, SAFE_NAME(assert_var))
+// demo
+// void f()
+// {
+//   COMPILE_TIME_ASSERT(0==0);
+
+// }
+
 #endif // !MACRO_UTIL_H
