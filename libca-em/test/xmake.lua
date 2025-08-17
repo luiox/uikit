@@ -37,3 +37,8 @@ target("test-sco")
     set_kind("binary")
     add_deps("libca-em")
     add_files("test-scoroutine.c")
+
+target("test-datatype")
+    set_kind("binary")
+    add_deps("libca-em")
+    add_files("test-datatype.c")
