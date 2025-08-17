@@ -115,6 +115,11 @@ typedef union
 // 例: unused_param(a);
 #define unused_param(param) (void)(param)
 
+// 是否是小端序
+bool is_little_endian();
+// 是否是大端序
+bool is_big_endian();
+
 // 以大端的方式解释一个数组
 
 // 大端方式解释字节数组到u16

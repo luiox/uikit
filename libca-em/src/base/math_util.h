@@ -61,11 +61,6 @@ i32 pow32i(i32 base, i32 exp);
  */
 float clampf(float value, float min, float max);
 
-// 是否是小端序
-bool is_little_endian();
-// 是否是大端序
-bool is_big_endian();
-
 // 快速sin(x)（5阶泰勒展开法）
 CA_FORCE_INLINE float fast_sinf(float x);
 
