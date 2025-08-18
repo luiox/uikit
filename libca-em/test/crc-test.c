@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "crc.h"
+#include "util/crc.h"
 
 int main()
 {

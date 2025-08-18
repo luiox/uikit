@@ -9,8 +9,8 @@
  * 
  */
 
-#include "ini.h"
-#include "string_util.h"
+#include "component/ini.h"
+#include "base/string_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <locale.h>
