@@ -42,3 +42,8 @@ target("test-datatype")
     set_kind("binary")
     add_deps("libca-em")
     add_files("test-datatype.c")
+
+target("log-test")
+    set_kind("binary")
+     add_deps("libca-em")
+    add_files("test-log.c")
