@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 mod config;
 pub use config::*;
 use tauri::State;
