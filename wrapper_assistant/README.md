@@ -10,3 +10,8 @@ This template should help get you started developing with Tauri, React and Types
 ```
 npm run tauri dev
 ```
+
+tauri文档
+https://v2.tauri.org.cn/develop/calling-rust/
+winapi包
+https://crates.io/crates/winapi/
