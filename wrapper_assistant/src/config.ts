@@ -29,6 +29,22 @@ const config: Config = {
       "Arguments": "",
       "Count": 0
     }
+  ],
+  "IDE": [
+    {
+        "Name": "qt6",
+        "TargetPath": "%rr%\\Qt\\Tools\\QtCreator\\bin\\qtcreator.exe",
+        "IconLocation": "%rr%\\Qt\\Tools\\QtCreator\\bin\\qtcreator.exe",
+        "Arguments": "",
+        "Count": 87
+    },
+    {
+        "Name": "Visual Studio 2022",
+        "TargetPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe",
+        "IconLocation": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\IDE\\devenv.exe",
+        "Arguments": "",
+        "Count": 432
+    }
   ]
 };
 
