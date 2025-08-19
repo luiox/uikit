@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "ping_pong_buffer.h"
+#include "util/ping_pong_buffer.h"
 
 #define BUFFER_SIZE 256
 

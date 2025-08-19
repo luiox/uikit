@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <locale.h>
-#include "pid.h"
+#include "util/pid.h"
 
 void test_pid_position() {
     pid_position_t pid;

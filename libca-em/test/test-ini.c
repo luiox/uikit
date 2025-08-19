@@ -145,6 +145,6 @@
 
 int main() {
     setlocale(LC_ALL, "zh_CN.UTF-8");
-    test_ini();
+    // test_ini();
     return 0;
 }
