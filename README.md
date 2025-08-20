@@ -6,7 +6,7 @@
 添加子项目
 
 ```bash
-git submodule add <url> <repo_name>
+git submodule add <remote_url> <destination_folder>
 ```
 
 移除子项目
