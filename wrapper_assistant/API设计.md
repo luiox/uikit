@@ -1,7 +1,7 @@
 # 启动项配置前后端接口设计
 
 ## 1. 配置数据结构（Rust端/前端通用）
-```jsonc
+```json
 {
   "categories": [
     "Embedded",

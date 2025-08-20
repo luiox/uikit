@@ -6,11 +6,13 @@ fn sample_config_path() -> &'static str {
 }
 
 fn sample_config() -> LaunchConfig {
-    LaunchConfig {
-        categories: vec!["IDE".to_string(), "Embedded".to_string()],
-        items: vec![
+    use std::collections::HashMap;
+    let mut map = HashMap::new();
+    map.insert(
+        "IDE".to_string(),
+        vec![
             LaunchItem {
-                category: "IDE".to_string(),
+                category: Some("IDE".to_string()),
                 name: "VSCode".to_string(),
                 target_path: "C:/Program Files/VSCode/Code.exe".to_string(),
                 icon_location: "C:/Program Files/VSCode/Code.exe".to_string(),
@@ -19,20 +21,22 @@ fn sample_config() -> LaunchConfig {
                 icon_base64: None,
             },
         ],
-    }
+    );
+    map.insert("Embedded".to_string(), vec![]);
+    map
 }
 
 #[test]
 fn test_save_and_load_config() {
     let config = sample_config();
     let path = sample_config_path();
-    config.save(path).unwrap();
-    let loaded = LaunchConfig::load(path).unwrap();
-    assert_eq!(loaded.categories, config.categories);
-    assert_eq!(loaded.items.len(), 1);
-    assert_eq!(loaded.items[0].name, "VSCode");
+    wrapper_assistant_lib::save_config(&config, path).unwrap();
+    let loaded = wrapper_assistant_lib::load_config(path).unwrap();
+    assert!(loaded.contains_key("IDE"));
+    assert_eq!(loaded["IDE"].len(), 1);
+    assert_eq!(loaded["IDE"][0].name, "VSCode");
     // 清理
-    let _ = fs::remove_file(path);
+    // let _ = fs::remove_file(path);
 }
 
 #[test]
