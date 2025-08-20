@@ -88,7 +88,7 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
     // 获取图标信息
     let mut icon_info = unsafe { std::mem::zeroed() };
     if unsafe { GetIconInfo(hicon, &mut icon_info) }.is_err() {
-        unsafe { DestroyIcon(hicon) };
+        unsafe { let _ = DestroyIcon(hicon); };
         return None;
     }
 
@@ -96,9 +96,9 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
     let mut bmp: BITMAP = unsafe { std::mem::zeroed() };
     if unsafe { GetObjectW(HGDIOBJ::from(icon_info.hbmColor), std::mem::size_of::<BITMAP>() as i32, Some(&mut bmp as *mut _ as *mut _)) } == 0 {
         unsafe {
-            DestroyIcon(hicon);
-            DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
-            DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
+            let _ = DestroyIcon(hicon);
+            let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
+            let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
         }
         return None;
     }
@@ -126,7 +126,16 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
     unsafe {
         SelectObject(hdc, HGDIOBJ::from(icon_info.hbmColor));
         GetDIBits(hdc, icon_info.hbmColor, 0, height as u32, Some(pixels.as_mut_ptr() as *mut _), &mut bi, DIB_RGB_COLORS);
-        DeleteDC(hdc);
+        let _ = DeleteDC(hdc);
+    }
+    
+    // 因为通道顺序不一样，需要调整
+    // BGRA -> RGBA
+    for chunk in pixels.chunks_exact_mut(4) {
+        let b = chunk[0];
+        let r = chunk[2];
+        chunk[0] = r;
+        chunk[2] = b;
     }
 
     // 转为 RGBA
@@ -134,9 +143,9 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
         Some(img) => img,
         None => {
             unsafe {
-                DestroyIcon(hicon);
-                DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
-                DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
+                let _ = DestroyIcon(hicon);
+                let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
+                let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
             }
             return None;
         }
@@ -145,17 +154,17 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
     let mut png_bytes = std::io::Cursor::new(Vec::new());
     if dyn_img.write_to(&mut png_bytes, image::ImageFormat::Png).is_err() {
         unsafe {
-            DestroyIcon(hicon);
-            DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
-            DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
+            let _ = DestroyIcon(hicon);
+            let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
+            let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
         }
         return None;
     }
 
     unsafe {
-        DestroyIcon(hicon);
-        DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
-        DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
+        let _ = DestroyIcon(hicon);
+        let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmColor));
+        let _ = DeleteObject(HGDIOBJ::from(icon_info.hbmMask));
     }
 
     let b64 = BASE64.encode(&png_bytes.into_inner());
