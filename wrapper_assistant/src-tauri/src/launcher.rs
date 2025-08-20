@@ -8,6 +8,8 @@ pub struct LaunchProgramRequest {
 }
 
 pub fn launch_program_impl(req: LaunchProgramRequest) -> Result<(), String> {
+    // 启动前修复路径
+    let fixed_path = fix_path(&req.target_path);
     if req.run_as_admin {
         // Windows下用ShellExecuteW实现管理员提权启动
         #[cfg(target_os = "windows")]
@@ -19,7 +21,7 @@ pub fn launch_program_impl(req: LaunchProgramRequest) -> Result<(), String> {
             use std::os::windows::ffi::OsStrExt;
             use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-            let exe: Vec<u16> = OsStr::new(&req.target_path).encode_wide().chain(Some(0)).collect();
+            let exe: Vec<u16> = OsStr::new(&fixed_path).encode_wide().chain(Some(0)).collect();
             let args: Vec<u16> = req.arguments.as_deref().map(|s| OsStr::new(s).encode_wide().chain(Some(0)).collect()).unwrap_or_else(|| vec![0]);
             let verb: Vec<u16> = OsStr::new("runas").encode_wide().chain(Some(0)).collect();
 
@@ -44,7 +46,7 @@ pub fn launch_program_impl(req: LaunchProgramRequest) -> Result<(), String> {
         }
     } else {
         // 普通启动
-        let mut cmd = std::process::Command::new(&req.target_path);
+    let mut cmd = std::process::Command::new(&fixed_path);
         if let Some(args) = &req.arguments {
             // 简单分割参数，复杂场景可用 shell-words crate
             for arg in args.split_whitespace() {
@@ -104,8 +106,10 @@ pub fn extract_icon_base64(exe_path: &str) -> Option<String> {
     use base64::engine::general_purpose::STANDARD as BASE64;
     use base64::Engine;
 
+    // 路径修复
+    let exe_path = fix_path(exe_path);
     // 转换路径为宽字符串
-    let wide: Vec<u16> = OsStr::new(exe_path).encode_wide().chain(Some(0)).collect();
+    let wide: Vec<u16> = OsStr::new(&exe_path).encode_wide().chain(Some(0)).collect();
     // 获取主图标
     let hicon = unsafe { ExtractIconW(windows::Win32::Foundation::HINSTANCE(std::ptr::null_mut()), PCWSTR(wide.as_ptr()), 0) };
     if hicon.0.is_null() {
