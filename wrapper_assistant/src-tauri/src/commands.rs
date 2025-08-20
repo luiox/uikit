@@ -1,5 +1,6 @@
+use crate::config::{load_config, save_config as save_config_file, LaunchConfig};
+use crate::launcher::{extract_icon_base64, LaunchProgramRequest};
 use serde::Deserialize;
-use crate::launcher::LaunchProgramRequest;
 
 /// 启动程序
 /// 参数: target_path - 可执行文件路径
@@ -10,7 +11,6 @@ use crate::launcher::LaunchProgramRequest;
 pub fn launch_program(req: LaunchProgramRequest) -> Result<(), String> {
     crate::launcher::launch_program_impl(req)
 }
-use crate::config::{LaunchConfig, extract_icon_base64, load_config, save_config as save_config_file};
 
 const CONFIG_PATH: &str = "config.json";
 
