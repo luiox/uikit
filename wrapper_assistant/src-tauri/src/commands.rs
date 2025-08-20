@@ -1,5 +1,8 @@
 use crate::config::{load_config, save_config as save_config_file, LaunchConfig};
 use crate::launcher::{extract_icon_base64, LaunchProgramRequest};
+use image::{ImageBuffer, Rgba};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::Engine;
 use serde::Deserialize;
 
 /// 启动程序
@@ -19,12 +22,22 @@ pub fn get_all_launch_items() -> Result<LaunchConfig, String> {
     load_config(CONFIG_PATH).map_err(|e| e.to_string())
 }
 
+
 #[tauri::command]
 pub fn get_icon_base64(path: String) -> Result<String, String> {
     match extract_icon_base64(&path) {
         Some(b64) => Ok(b64),
-        None => Err("Failed to extract icon".to_string()),
+        None => Ok(empty_png_base64()),
     }
+}
+
+// 生成32x32透明png的base64
+fn empty_png_base64() -> String {
+    let img = ImageBuffer::<Rgba<u8>, _>::from_pixel(32, 32, Rgba([0, 0, 0, 0]));
+    let mut png_bytes = std::io::Cursor::new(Vec::new());
+    let _ = image::DynamicImage::ImageRgba8(img).write_to(&mut png_bytes, image::ImageFormat::Png);
+    let b64 = BASE64.encode(&png_bytes.into_inner());
+    format!("data:image/png;base64,{}", b64)
 }
 
 #[tauri::command]
