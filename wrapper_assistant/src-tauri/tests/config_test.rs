@@ -12,7 +12,6 @@ fn sample_config() -> LaunchConfig {
         "IDE".to_string(),
         vec![
             LaunchItem {
-                category: Some("IDE".to_string()),
                 name: "VSCode".to_string(),
                 target_path: "C:/Program Files/VSCode/Code.exe".to_string(),
                 icon_location: "C:/Program Files/VSCode/Code.exe".to_string(),
@@ -36,12 +35,14 @@ fn test_save_and_load_config() {
     assert_eq!(loaded["IDE"].len(), 1);
     assert_eq!(loaded["IDE"][0].name, "VSCode");
     // 清理
-    // let _ = fs::remove_file(path);
+    let _ = fs::remove_file(path);
 }
 
 #[test]
 fn test_extract_icon_base64_none() {
     // 目前未实现，返回None
-    let result = extract_icon_base64("not_exist.exe");
-    assert!(result.is_none());
+    let result = 
+        extract_icon_base64(r#"D:\Program Files\Microsoft VS Code\Code.exe"#);
+    println!("Extracted icon base64: {:?}", result);
+    assert!(result.is_some());
 }
