@@ -5,7 +5,9 @@
 mod config;
 pub use config::*;
 mod commands;
-
+mod launcher;
+pub use launcher::*; 
+   
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

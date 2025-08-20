@@ -43,6 +43,10 @@
 - **获取**：`invoke('get_config')` → 返回完整 config.json 内容
 - **保存**：`invoke('save_config', { config })` → Rust端写入 config.json
 
+### 2.5 启动程序
+
+`invoke('launch_program',)`
+
 ## 3. 说明
 - 图标字段 icon_location 前端传递 exe 路径，Rust端负责解析并返回 base64。
 - 前端所有数据变更都通过 invoke 通知 Rust，Rust端负责持久化。

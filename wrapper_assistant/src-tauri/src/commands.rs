@@ -1,3 +1,15 @@
+use serde::Deserialize;
+use crate::launcher::LaunchProgramRequest;
+
+/// 启动程序
+/// 参数: target_path - 可执行文件路径
+///      arguments - 命令行参数（可选）
+///      run_as_admin - 是否以管理员权限运行
+/// 返回: Result<(), String>
+#[tauri::command]
+pub fn launch_program(req: LaunchProgramRequest) -> Result<(), String> {
+    crate::launcher::launch_program_impl(req)
+}
 use crate::config::{LaunchConfig, extract_icon_base64, load_config, save_config as save_config_file};
 
 const CONFIG_PATH: &str = "config.json";
