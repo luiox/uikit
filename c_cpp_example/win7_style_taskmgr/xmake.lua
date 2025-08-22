@@ -22,10 +22,10 @@ target("taskmgr")
     -- 强制 32 位，64位下无内联汇编
     set_arch("x86")
 
-    add_includedirs(".")
-    add_files("*.cpp")
-    add_files("main/*.cpp")
-    add_files("taskmgr.rc")
+    add_includedirs("src")
+    add_files("src/*.cpp")
+    add_files("src/main/*.cpp")
+    add_files("src/taskmgr.rc")
     
     add_defines("WIN32")
     add_defines("NDEBUG")
