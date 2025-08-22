@@ -2432,8 +2432,8 @@ HRESULT CTaskPage::UpdateTaskListview()
     // them as needed
     //
 
-
-    for (INT iCurrent = 0; 
+    INT iCurrent = 0;
+    for (; 
          iCurrent < cListViewItems && iCurrent < CTaskArrayItems; 
          iCurrent++)
     {

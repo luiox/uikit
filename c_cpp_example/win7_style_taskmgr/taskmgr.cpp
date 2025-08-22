@@ -780,7 +780,7 @@ BOOL LoadGlobalResources()
                                                     LR_DEFAULTCOLOR) );
     }
 
-    for (i = 0; i < ARRAYSIZE(g_aStrings); i++)
+    for (int i = 0; i < ARRAYSIZE(g_aStrings); i++)
     {
         if (FALSE == LoadString(g_hInstance, 
                                 g_aStrings[i].id, 

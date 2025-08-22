@@ -112,6 +112,9 @@ extern HRGN      g_hrgnClip;
 extern HBRUSH    g_hbrWindow;
 extern HWND      g_hStatusWnd;
 extern BOOL      g_fMenuTracking;
+
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+
 //----------------------------------------------------------------------------
 // ASSERT(f)
 //

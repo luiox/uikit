@@ -104,7 +104,7 @@ Revision History:
 
 --*/
 
-static const _aIDColNames[NUM_COLUMN] =
+static const int _aIDColNames[NUM_COLUMN] =
 {
     IDS_COL_IMAGENAME,     
     IDS_COL_PID,
@@ -910,7 +910,7 @@ INT_PTR CALLBACK ColSelectDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM
 
             // Then turn on the ones for the columns we have active
 
-            for (i = 0; i < NUM_COLUMN + 1; i++)
+            for (int i = 0; i < NUM_COLUMN + 1; i++)
             {
                 if (g_Options.m_ActiveProcCol[i] == -1)
                 {
@@ -2474,7 +2474,7 @@ BOOL CProcPage::RecursiveKill(DWORD pid)
     //
 
     bDeferKill=FALSE;
-    for (i=0; i<numTasks; i++) {        
+    for (int i=0; i<numTasks; i++) {        
         if (tlist[i].flags) {
 
             //
@@ -3377,9 +3377,9 @@ HRESULT CProcPage::UpdateProcListview ()
 
     CProcInfo * pSelected = GetSelectedProcess();
 
+    int iCurrent = 0, iCurrListViewItem = 0;
 
-
-    for (int iCurrent = 0, iCurrListViewItem = 0;
+    for (;
           iCurrListViewItem < cListViewItems  && iCurrent < cProcArrayItems;
          iCurrent++) // for each process
     {

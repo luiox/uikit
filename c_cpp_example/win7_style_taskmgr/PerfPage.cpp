@@ -280,8 +280,8 @@ void DrawGraphPaper(HDC hdcGraph, RECT * prcGraph, int Width)
     HPEN hPen = CreatePen(PS_SOLID, 1, GRAPH_LINE_COLOR);
 
     HGDIOBJ hOld = SelectObject(hdcGraph, hPen);
-
-    for (int i = GRAPHPAPERSIZE - 1; i < prcGraph->bottom - prcGraph->top; i+= GRAPHPAPERSIZE)
+    int i;
+    for ( i = GRAPHPAPERSIZE - 1; i < prcGraph->bottom - prcGraph->top; i+= GRAPHPAPERSIZE)
     {
         MoveToEx(hdcGraph,
                  Leftside,
@@ -1170,7 +1170,7 @@ void CPerfPage::DrawCPUGraph(LPDRAWITEMSTRUCT lpdi, UINT iPane)
             {
                 dwSum = 0;
 
-                for (iCPU = 0; iCPU < g_cProcessors; iCPU++)
+                for (int iCPU = 0; iCPU < g_cProcessors; iCPU++)
                 {
                     dwSum += g_pKernelHistory[iCPU][i];
                 }
@@ -1207,7 +1207,7 @@ void CPerfPage::DrawCPUGraph(LPDRAWITEMSTRUCT lpdi, UINT iPane)
         {
             dwSum = 0;
 
-            for (iCPU = 0; iCPU < g_cProcessors; iCPU++)
+            for (int iCPU = 0; iCPU < g_cProcessors; iCPU++)
             {
                 dwSum += g_pCPUHistory[iCPU][i];
             }
@@ -1813,7 +1813,7 @@ void CPerfPage::SizePerfPage()
     Width /= cPanes;
     Width = Width >= 0 ? Width : 0;
 
-    for (i = 0; i < cPanes; i++)
+    for (int i = 0; i < cPanes; i++)
     {
         HWND hwndButton = GetDlgItem(m_hPage, IDC_CPUGRAPH + i);
 
@@ -1938,7 +1938,7 @@ void CPerfPage::UpdateGraphs()
 
     // Hide/show everything but the CPU meters when we're in notitle/title mode
 
-    for (i = 0; i < ARRAYSIZE(aPerfControls); i++)
+    for (int i = 0; i < ARRAYSIZE(aPerfControls); i++)
     {
         ShowWindow(GetDlgItem(m_hPage, aPerfControls[i]), g_Options.m_fNoTitle ? SW_HIDE : SW_SHOW);
     }
