@@ -41,10 +41,11 @@ export const TitleBar: React.FC = () => {
   };
 
   return (
-    <div className="titlebar" onMouseDown={handleDrag} data-tauri-drag-region>
+    <div className="titlebar">
       <div className="titlebar-menu">
-        {/* <Menu mode="horizontal" items={menuItems} /> */}
+        <Menu mode="horizontal" items={menuItems} />
       </div>
+      <div className="titlebar-drag" onMouseDown={handleDrag} data-tauri-drag-region></div>
       <div className="titlebar-actions">
         <button className="titlebar-btn" onClick={() => win.minimize()} title="最小化">─</button>
         <button className="titlebar-btn" onClick={() => win.toggleMaximize()} title="最大化/还原">☐</button>

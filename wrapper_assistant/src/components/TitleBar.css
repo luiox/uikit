@@ -5,13 +5,18 @@
   background: #222d3a;
   color: #fff;
   user-select: none;
-  -webkit-app-region: drag;
 }
 
 .titlebar-menu {
-  flex: 1;
-  min-width: 0;
+  flex: none;
   -webkit-app-region: no-drag;
+}
+
+.titlebar-drag {
+  flex: 1;
+  height: 100%;
+  cursor: grab;
+  -webkit-app-region: drag;
 }
 
 .titlebar-actions {
