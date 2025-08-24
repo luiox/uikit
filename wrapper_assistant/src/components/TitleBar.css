@@ -1,3 +1,125 @@
+.ant-menu-submenu-popup .ant-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.ant-menu-submenu-popup,
+.ant-menu-submenu-popup .ant-menu,
+.ant-menu-submenu-popup .ant-menu-root {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  border-top: none !important;
+  box-shadow: none !important;
+}
+.ant-menu-submenu-popup .ant-menu-item {
+  margin-top: 0 !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+.ant-menu-submenu-popup .ant-menu-item:first-child {
+  margin-top: 0 !important;
+  padding-top: 8px !important;
+}
+.ant-menu-submenu-popup .ant-menu,
+.ant-menu-submenu-popup .ant-menu-root {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+.ant-menu-submenu-popup .ant-menu-item {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+.ant-menu-submenu-popup .ant-menu-item:first-child {
+  margin-top: 0 !important;
+  padding-top: 4px !important;
+}
+.ant-menu-submenu-popup .ant-menu,
+.ant-menu-submenu-popup .ant-menu-root {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+.ant-menu-submenu-popup .ant-menu-item:first-child {
+  margin-top: 0 !important;
+  padding-top: 4px !important;
+}
+.ant-menu-submenu-popup {
+  top: 32px !important; /* 标题栏高度，确保紧贴主菜单按钮下沿 */
+  left: 0 !important;
+  margin-top: 0 !important;
+  transform: none !important;
+  z-index: 9999 !important;
+}
+.ant-menu-submenu-popup,
+.ant-menu-submenu-popup .ant-menu {
+  border-radius: 0 !important;
+}
+/* 全局强制覆盖Antd弹出菜单颜色，确保无论挂载到哪里都生效 */
+.ant-menu-submenu-popup,
+.ant-menu-submenu-popup .ant-menu,
+.ant-menu-submenu-popup .ant-menu-item,
+.ant-menu-submenu-popup .ant-menu-submenu-title {
+  background: #222d3a !important;
+  color: #fff !important;
+  border: none !important;
+}
+.ant-menu-submenu-popup .ant-menu-item-selected,
+.ant-menu-submenu-popup .ant-menu-item-active {
+  background: #3a475a !important;
+  color: #fff !important;
+}
+.titlebar-menu .ant-menu-submenu-popup {
+  top: 32px !important;
+  margin-top: 0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  padding-top: 0 !important;
+  background: #222d3a !important;
+  color: #fff !important;
+  min-width: unset !important;
+  width: max-content !important;
+}
+.ant-menu-submenu-popup {
+  left: var(--popup-left, auto) !important;
+}
+.ant-menu-submenu-popup .ant-menu {
+  min-width: unset !important;
+  width: max-content !important;
+}
+.ant-menu-submenu-popup .ant-menu-item {
+  width: 100% !important;
+  min-width: unset !important;
+  box-sizing: border-box !important;
+}
+
+.titlebar-menu .ant-menu-submenu-popup .ant-menu,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-item,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-submenu-title {
+  background: #222d3a !important;
+  color: #fff !important;
+}
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-item-selected,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-item-active {
+  background: #3a475a !important;
+  color: #fff !important;
+}
+
+.titlebar-menu .ant-menu-submenu {
+  position: relative;
+}
+.titlebar-menu .ant-motion,
+.titlebar-menu .ant-menu-submenu-popup {
+  animation: none !important;
+  transition: none !important;
+}
+.titlebar-menu .ant-menu-submenu .ant-menu {
+  transition: none !important;
+}
 .titlebar {
   display: flex;
   align-items: center;
@@ -50,4 +172,46 @@
 .titlebar-btn.close:hover {
   background: #e06c75;
   color: #fff;
+}
+
+/* 让Antd菜单和标题栏背景一致 */
+.titlebar-menu .ant-menu,
+.titlebar-menu .ant-menu-horizontal {
+  background: #222d3a !important;
+  color: #fff !important;
+  border-bottom: none !important;
+}
+.titlebar-menu .ant-menu-horizontal > .ant-menu-item,
+.titlebar-menu .ant-menu-horizontal > .ant-menu-submenu {
+  color: #fff !important;
+}
+.titlebar-menu .ant-menu-horizontal > .ant-menu-item-selected {
+  background: #3a475a !important;
+  color: #fff !important;
+}
+
+/* 保证所有菜单文本为白色 */
+.titlebar-menu .ant-menu,
+.titlebar-menu .ant-menu * {
+  color: #fff !important;
+}
+.titlebar-menu .ant-menu-item:hover,
+.titlebar-menu .ant-menu-submenu-title:hover {
+  color: #fff !important;
+  background: #3a475a !important;
+}
+.titlebar-menu .ant-menu-item-selected,
+.titlebar-menu .ant-menu-submenu-selected {
+  color: #fff !important;
+  background: #3a475a !important;
+}
+
+/* 强制弹出菜单背景和主菜单一致 */
+.titlebar-menu .ant-menu-submenu-popup,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-item,
+.titlebar-menu .ant-menu-submenu-popup .ant-menu-submenu-title {
+  background: #222d3a !important;
+  color: #fff !important;
+  border: none !important;
 }
