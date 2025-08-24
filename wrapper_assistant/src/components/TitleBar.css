@@ -178,10 +178,41 @@
   color: #fff !important;
   border-bottom: none !important;
 }
-.titlebar-menu .ant-menu-horizontal > .ant-menu-item,
+
 .titlebar-menu .ant-menu-horizontal > .ant-menu-submenu {
   color: #fff !important;
+  min-width: 56px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  padding: 0 20px !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
 }
+
+/* 让主菜单项内的span撑满整个按钮区域 */
+.titlebar-menu .ant-menu-horizontal > .ant-menu-item > span,
+.titlebar-menu .ant-menu-horizontal > .ant-menu-submenu > span {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 强制主菜单 hover/active 整块高亮 */
+.titlebar-menu .ant-menu-horizontal > .ant-menu-item:hover,
+.titlebar-menu .ant-menu-horizontal > .ant-menu-submenu:hover,
+.titlebar-menu .ant-menu-horizontal > .ant-menu-item-active,
+.titlebar-menu .ant-menu-horizontal > .ant-menu-submenu-active {
+  background: #3a475a !important;
+  color: #fff !important;
+}
+
 .titlebar-menu .ant-menu-horizontal > .ant-menu-item-selected {
   background: #3a475a !important;
   color: #fff !important;
