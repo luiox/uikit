@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Menu } from 'antd';
 import { Window } from '@tauri-apps/api/window';
 import './TitleBar.css';
@@ -40,10 +40,43 @@ export const TitleBar: React.FC = () => {
     }
   };
 
+  // refs for each top menu button
+  const menuRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  // 菜单弹出时动态设置弹出层left
+  const handleOpenChange = (openKeys: string[]) => {
+    if (openKeys.length > 0) {
+      const key = openKeys[openKeys.length - 1];
+      const idx = menuItems.findIndex(item => item.key === key);
+      if (idx !== -1 && menuRefs.current[idx]) {
+        const btn = menuRefs.current[idx]!;
+        const left = btn.offsetLeft;
+        setTimeout(() => {
+          const popups = document.querySelectorAll('.ant-menu-submenu-popup');
+          popups.forEach(popup => {
+            (popup as HTMLElement).style.left = left + 'px';
+          });
+        }, 0);
+      }
+    }
+  };
+
+  // 生成 items 并加 ref（用 span）
+  const itemsWithRef = menuItems.map((item, idx) => ({
+    ...item,
+    label: (
+      <span ref={el => { menuRefs.current[idx] = el; }}>{item.label}</span>
+    ),
+  }));
+
   return (
     <div className="titlebar">
       <div className="titlebar-menu">
-        <Menu mode="horizontal" items={menuItems} />
+        <Menu
+          mode="horizontal"
+          items={itemsWithRef}
+          onOpenChange={handleOpenChange}
+        />
       </div>
       <div className="titlebar-drag" onMouseDown={handleDrag} data-tauri-drag-region></div>
       <div className="titlebar-actions">

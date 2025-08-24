@@ -51,7 +51,6 @@
 }
 .ant-menu-submenu-popup {
   top: 32px !important; /* 标题栏高度，确保紧贴主菜单按钮下沿 */
-  left: 0 !important;
   margin-top: 0 !important;
   transform: none !important;
   z-index: 9999 !important;
@@ -84,9 +83,7 @@
   min-width: unset !important;
   width: max-content !important;
 }
-.ant-menu-submenu-popup {
-  left: var(--popup-left, auto) !important;
-}
+
 .ant-menu-submenu-popup .ant-menu {
   min-width: unset !important;
   width: max-content !important;
