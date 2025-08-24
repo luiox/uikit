@@ -12,15 +12,21 @@
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2",
-    "antd": "^5.27.1",
-    "golden-layout": "^2.6.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vueup/vue-quill": "^1.2.0",
+    "echarts": "^5.5.1",
+    "element-plus": "^2.8.5",
+    "md-editor-v3": "^4.20.3",
+    "mockjs": "^1.1.0",
+    "pinia": "^2.2.4",
+    "pinia-plugin-persistedstate": "^4.1.1",
+    "sass": "^1.79.4",
+    "vue": "^3.5.11",
+    "vue-i18n": "^10.0.4",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "less": "^4.4.1",
     "typescript": "~5.8.3",
