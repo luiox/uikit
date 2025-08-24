@@ -14,6 +14,14 @@
   -webkit-app-region: no-drag;
 }
 
+.titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 0;
+  -webkit-app-region: no-drag;
+}
+
 .titlebar-btn {
   width: 45px;
   height: 32px;
@@ -21,14 +29,6 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.2s;
-  padding: 0;
-}
   border: none;
   color: #fff;
   font-size: 16px;
