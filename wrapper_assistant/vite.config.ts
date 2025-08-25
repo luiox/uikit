@@ -1,32 +1,42 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+/// <reference types="vitest" />
 
-// @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+import type { ConfigEnv, UserConfig } from 'vite';
 
-// https://vite.dev/config/
-export default defineConfig(async () => ({
-  plugins: [react()],
+import { createViteBuild } from './build/vite/build';
+import { createViteCSS } from './build/vite/css';
+import { createViteEsbuild } from './build/vite/esbuild';
+import { createViteOptimizeDeps } from './build/vite/optimizeDeps';
+import { createVitePlugins } from './build/vite/plugin';
+import { createViteResolve } from './build/vite/resolve';
+import { createViteServer } from './build/vite/server';
 
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-  //
-  // 1. prevent Vite from obscuring rust errors
-  clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
-  server: {
-    port: 1420,
-    strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-      : undefined,
-    watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
-    },
-  },
-}));
+// https://vitejs.dev/config/
+export default (configEnv: ConfigEnv): UserConfig => {
+  const { mode, command } = configEnv;
+  // const root = process.cwd();
+
+  // const env = loadEnv(mode, root);
+
+  const isBuild = command === 'build';
+
+  return {
+    // 设为 false 可以避免 Vite 清屏而错过在终端中打印某些关键信息。命令行模式下请通过 --clearScreen false 设置。
+    clearScreen: false,
+    logLevel: 'info',
+    envPrefix: ['VITE_', 'TAURI_'],
+    // esbuild
+    esbuild: createViteEsbuild(isBuild),
+    // 解析配置
+    resolve: createViteResolve(mode, __dirname),
+    // 插件配置
+    plugins: createVitePlugins(isBuild, configEnv),
+    // 服务配置
+    server: createViteServer(),
+    // 打包配置
+    build: createViteBuild(),
+    // 依赖优化配置
+    optimizeDeps: createViteOptimizeDeps(),
+    // css预处理配置
+    css: createViteCSS(),
+  };
+};
