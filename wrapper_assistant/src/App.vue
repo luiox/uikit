@@ -1,11 +1,12 @@
-<template>
-  <MainWindow />
-</template>
-
 <script setup lang="ts">
-import MainWindow from './components/MainWindow.vue';
+  import { ElConfigProvider } from 'element-plus';
+  import { deffElementLocale } from '@/hooks/web/useI18n';
+
+  const { tolocale } = deffElementLocale();
 </script>
 
-<style scoped>
-@import './App.css';
-</style>
+<template>
+  <ElConfigProvider :locale="tolocale">
+    <router-view />
+  </ElConfigProvider>
+</template>
