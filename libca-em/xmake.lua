@@ -8,7 +8,7 @@ add_rules("mode.debug", "mode.release")
 add_rules("plugin.compile_commands.autoupdate", { outputdir = "." })
 set_encodings("utf-8")
 
-target("libca-em")
+target("ca-base")
     set_kind("static")
     add_files("src/**.c")
     add_headerfiles("src/**.h")
