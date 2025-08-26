@@ -1,4 +1,4 @@
-use crate::config::{load_config, save_config as save_config_file, LaunchConfig, LaunchItem};
+use crate::config::{load_config_or_create, save_config as save_config_file, LaunchConfig, LaunchItem};
 use crate::launcher::{extract_icon_base64, LaunchProgramRequest};
 use image::{ImageBuffer, Rgba};
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -21,7 +21,7 @@ const CONFIG_PATH: &str = "config.json";
 
 #[tauri::command]
 pub fn get_all_launch_items() -> Result<LaunchConfig, String> {
-    load_config(CONFIG_PATH).map_err(|e| e.to_string())
+    load_config_or_create(CONFIG_PATH).map_err(|e| e.to_string())
 }
 
 
@@ -50,7 +50,7 @@ pub fn save_config_command(new_config: LaunchConfig) -> Result<(), String> {
 /// 新增启动项
 #[tauri::command]
 pub fn add_launch_item(category: String, mut item: LaunchItem) -> Result<(), String> {
-    let mut config = load_config(CONFIG_PATH).map_err(|e| e.to_string())?;
+    let mut config = load_config_or_create(CONFIG_PATH).map_err(|e| e.to_string())?;
     
     // 自动提取图标
     if item.icon_base64.is_none() && !item.target_path.is_empty() {
@@ -72,7 +72,7 @@ pub fn add_launch_item(category: String, mut item: LaunchItem) -> Result<(), Str
 /// 编辑启动项
 #[tauri::command]
 pub fn edit_launch_item(old_name: String, category: String, mut item: LaunchItem) -> Result<(), String> {
-    let mut config = load_config(CONFIG_PATH).map_err(|e| e.to_string())?;
+    let mut config = load_config_or_create(CONFIG_PATH).map_err(|e| e.to_string())?;
     
     if let Some(items) = config.get_mut(&category) {
         if let Some(pos) = items.iter().position(|x| x.name == old_name) {
@@ -100,7 +100,7 @@ pub fn edit_launch_item(old_name: String, category: String, mut item: LaunchItem
 /// 删除启动项
 #[tauri::command]
 pub fn remove_launch_item(name: String, category: String) -> Result<(), String> {
-    let mut config = load_config(CONFIG_PATH).map_err(|e| e.to_string())?;
+    let mut config = load_config_or_create(CONFIG_PATH).map_err(|e| e.to_string())?;
     
     if let Some(items) = config.get_mut(&category) {
         let original_len = items.len();
@@ -125,7 +125,7 @@ pub fn remove_launch_item(name: String, category: String) -> Result<(), String> 
 /// 更新启动项使用次数
 #[tauri::command]
 pub fn update_usage_count(name: String, category: String) -> Result<(), String> {
-    let mut config = load_config(CONFIG_PATH).map_err(|e| e.to_string())?;
+    let mut config = load_config_or_create(CONFIG_PATH).map_err(|e| e.to_string())?;
     
     if let Some(items) = config.get_mut(&category) {
         if let Some(item) = items.iter_mut().find(|x| x.name == name) {

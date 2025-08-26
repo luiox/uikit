@@ -43,6 +43,19 @@ pub fn save_shared_config(config: &State<SharedConfig>, path: &str) -> anyhow::R
 }
 
 
+/// 加载配置（如果文件不存在则返回空配置）
+pub fn load_config_or_create(path: &str) -> anyhow::Result<LaunchConfig> {
+    match load_config(path) {
+        Ok(cfg) => Ok(cfg),
+        Err(_) => {
+            // 文件不存在，创建空配置
+            let cfg: LaunchConfig = HashMap::new();
+            save_config(&cfg, path)?;
+            Ok(cfg)
+        }
+    }
+}
+
 /// 加载配置
 pub fn load_config(path: &str) -> anyhow::Result<LaunchConfig> {
     let content = fs::read_to_string(path)?;
