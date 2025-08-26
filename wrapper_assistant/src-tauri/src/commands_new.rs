@@ -5,26 +5,22 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::Path;
+
+const CONFIG_PATH: &str = "config.json";
 
 /// 启动程序
-/// 参数: target_path - 可执行文件路径
-///      arguments - 命令行参数（可选）
-///      run_as_admin - 是否以管理员权限运行
-/// 返回: Result<(), String>
 #[tauri::command]
 pub fn launch_program(req: LaunchProgramRequest) -> Result<(), String> {
     crate::launcher::launch_program_impl(req)
 }
 
-const CONFIG_PATH: &str = "config.json";
-
+/// 获取所有启动项配置
 #[tauri::command]
 pub fn get_all_launch_items() -> Result<LaunchConfig, String> {
     load_config(CONFIG_PATH).map_err(|e| e.to_string())
 }
 
-
+/// 获取程序图标的base64编码
 #[tauri::command]
 pub fn get_icon_base64(path: String) -> Result<String, String> {
     match extract_icon_base64(&path) {
@@ -33,15 +29,7 @@ pub fn get_icon_base64(path: String) -> Result<String, String> {
     }
 }
 
-// 生成32x32透明png的base64
-fn empty_png_base64() -> String {
-    let img = ImageBuffer::<Rgba<u8>, _>::from_pixel(32, 32, Rgba([0, 0, 0, 0]));
-    let mut png_bytes = std::io::Cursor::new(Vec::new());
-    let _ = image::DynamicImage::ImageRgba8(img).write_to(&mut png_bytes, image::ImageFormat::Png);
-    let b64 = BASE64.encode(&png_bytes.into_inner());
-    format!("data:image/png;base64,{}", b64)
-}
-
+/// 保存配置文件
 #[tauri::command]
 pub fn save_config_command(new_config: LaunchConfig) -> Result<(), String> {
     save_config_file(&new_config, CONFIG_PATH).map_err(|e| e.to_string())
@@ -153,6 +141,15 @@ pub fn scan_system_programs() -> Result<Vec<LaunchItem>, String> {
         return Err("当前仅支持 Windows 系统程序扫描".to_string());
     }
     
+    // 为每个程序提取图标（限制数量避免太慢）
+    for (i, program) in programs.iter_mut().enumerate() {
+        if i > 50 { break; } // 限制扫描前50个程序的图标
+        
+        if let Some(icon) = extract_icon_base64(&program.target_path) {
+            program.icon_base64 = Some(icon);
+        }
+    }
+    
     Ok(programs)
 }
 
@@ -169,7 +166,7 @@ fn scan_windows_programs(programs: &mut Vec<LaunchItem>) -> Result<(), String> {
     
     // 常见的可执行文件名模式（避免扫描所有exe）
     let common_programs = vec![
-        "chrome.exe", "firefox.exe", "msedge.exe",
+        "chrome.exe", "firefox.exe", "edge.exe",
         "notepad.exe", "calc.exe", "mspaint.exe",
         "code.exe", "devenv.exe", "idea64.exe",
         "winrar.exe", "7zFM.exe",
@@ -206,7 +203,7 @@ fn scan_program_directory(dir_path: &Path, programs: &mut Vec<LaunchItem>, commo
                 if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                     // 检查是否是常见程序或者exe文件
                     if common_programs.contains(&file_name.to_lowercase().as_str()) ||
-                       (file_name.to_lowercase().ends_with(".exe") && is_main_executable(&file_name)) {
+                       file_name.to_lowercase().ends_with(".exe") {
                         
                         let name = path.file_stem()
                             .and_then(|s| s.to_str())
@@ -229,30 +226,8 @@ fn scan_program_directory(dir_path: &Path, programs: &mut Vec<LaunchItem>, commo
 }
 
 #[cfg(target_os = "windows")]
-fn is_main_executable(file_name: &str) -> bool {
-    // 跳过一些系统或不重要的exe文件
-    let skip_patterns = vec![
-        "uninstall", "setup", "install", "update", "crash", "helper", 
-        "service", "daemon", "background", "launcher"
-    ];
-    
-    let lower_name = file_name.to_lowercase();
-    !skip_patterns.iter().any(|pattern| lower_name.contains(pattern))
-}
-
-#[cfg(target_os = "windows")]
 fn get_desktop_path() -> Option<std::path::PathBuf> {
-    use std::env;
-    
-    // 尝试获取用户桌面路径
-    if let Ok(userprofile) = env::var("USERPROFILE") {
-        let desktop_path = std::path::Path::new(&userprofile).join("Desktop");
-        if desktop_path.exists() {
-            return Some(desktop_path);
-        }
-    }
-    
-    None
+    dirs::desktop_dir()
 }
 
 #[cfg(target_os = "windows")]
@@ -281,4 +256,13 @@ fn scan_desktop_shortcuts(desktop_path: &Path, programs: &mut Vec<LaunchItem>) {
             }
         }
     }
+}
+
+// 生成32x32透明png的base64
+fn empty_png_base64() -> String {
+    let img = ImageBuffer::<Rgba<u8>, _>::from_pixel(32, 32, Rgba([0, 0, 0, 0]));
+    let mut png_bytes = std::io::Cursor::new(Vec::new());
+    let _ = image::DynamicImage::ImageRgba8(img).write_to(&mut png_bytes, image::ImageFormat::Png);
+    let b64 = BASE64.encode(&png_bytes.into_inner());
+    format!("data:image/png;base64,{}", b64)
 }
