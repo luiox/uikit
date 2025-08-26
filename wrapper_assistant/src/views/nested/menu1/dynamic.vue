@@ -1,5 +1,20 @@
 <template>
   <div class="launcher-container p-4">
+    <!-- 开发模式提示 -->
+    <el-alert
+      v-if="USE_MOCK_DATA"
+      title="🔧 开发模式 - 当前使用Mock数据"
+      type="info"
+      :closable="false"
+      show-icon
+      class="mb-4"
+    >
+      <template #default>
+        <p class="mb-1">当前运行在开发模式下，所有操作都是模拟的，不会调用真实的后端API。</p>
+        <p class="text-xs opacity-75">生产环境将自动切换到真实API模式。</p>
+      </template>
+    </el-alert>
+
     <!-- 顶部操作栏 -->
     <div class="toolbar mb-4">
       <el-row :gutter="16">
@@ -181,6 +196,8 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { 
   Document, VideoPlay, Key, Edit, Delete, Plus 
 } from '@element-plus/icons-vue'
+// 导入mock数据和API
+import { mockLauncherApi } from '@/mock/launcher.mock'
 
 // 接口定义
 interface LaunchItem {
@@ -199,6 +216,9 @@ interface LaunchProgramRequest {
 }
 
 type LaunchConfig = Record<string, LaunchItem[]>
+
+// 开发模式配置
+const USE_MOCK_DATA = import.meta.env.DEV // 开发环境使用mock数据
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -273,8 +293,18 @@ const totalPrograms = computed(() => allPrograms.value.length)
 const loadConfig = async () => {
   try {
     loading.value = true
-    const config = await invoke('get_all_launch_items') as LaunchConfig
-    launchConfig.value = config
+    
+    if (USE_MOCK_DATA) {
+      // 开发环境使用mock数据
+      console.log('🔧 开发模式：使用Mock数据')
+      const config = await mockLauncherApi.getAllLaunchItems()
+      launchConfig.value = config
+      ElMessage.success('Mock数据加载成功')
+    } else {
+      // 生产环境使用真实API
+      const config = await invoke('get_all_launch_items') as LaunchConfig
+      launchConfig.value = config
+    }
   } catch (error) {
     console.error('加载配置失败:', error)
     ElMessage.error('加载配置失败')
@@ -285,24 +315,42 @@ const loadConfig = async () => {
 
 const launchProgram = async (item: LaunchItem & { category: string }, runAsAdmin: boolean = false) => {
   try {
-    const request: LaunchProgramRequest = {
-      target_path: item.target_path,
-      arguments: item.arguments || undefined,
-      run_as_admin: runAsAdmin
+    if (USE_MOCK_DATA) {
+      // Mock模式：模拟启动
+      await mockLauncherApi.launchProgram({
+        target_path: item.target_path,
+        arguments: item.arguments || undefined,
+        run_as_admin: runAsAdmin
+      })
+      
+      // 更新使用次数
+      await mockLauncherApi.updateUsageCount(item.name, item.category)
+      
+      // 重新加载配置
+      await loadConfig()
+      
+      ElMessage.success(`Mock: ${runAsAdmin ? '以管理员权限' : ''}启动 ${item.name}`)
+    } else {
+      // 真实API调用
+      const request: LaunchProgramRequest = {
+        target_path: item.target_path,
+        arguments: item.arguments || undefined,
+        run_as_admin: runAsAdmin
+      }
+      
+      await invoke('launch_program', { req: request })
+      
+      // 更新使用次数
+      await invoke('update_usage_count', {
+        name: item.name,
+        category: item.category
+      })
+      
+      // 重新加载配置以更新使用次数
+      await loadConfig()
+      
+      ElMessage.success(`${runAsAdmin ? '以管理员权限' : ''}启动 ${item.name}`)
     }
-    
-    await invoke('launch_program', { req: request })
-    
-    // 更新使用次数
-    await invoke('update_usage_count', {
-      name: item.name,
-      category: item.category
-    })
-    
-    // 重新加载配置以更新使用次数
-    await loadConfig()
-    
-    ElMessage.success(`${runAsAdmin ? '以管理员权限' : ''}启动 ${item.name}`)
   } catch (error) {
     console.error('启动失败:', error)
     ElMessage.error(`启动失败: ${error}`)
@@ -317,28 +365,54 @@ const scanSystemPrograms = async () => {
     scanning.value = true
     ElMessage.info('正在扫描系统程序，请稍候...')
     
-    const programs = await invoke('scan_system_programs') as LaunchItem[]
-    
-    if (programs.length === 0) {
-      ElMessage.warning('未扫描到系统程序')
-      return
-    }
-    
-    // 添加到"系统程序"分类
-    for (const program of programs) {
-      try {
-        await invoke('add_launch_item', {
-          category: '系统程序',
-          item: program
-        })
-      } catch (error) {
-        // 忽略重复添加的错误
-        console.warn(`添加程序失败: ${program.name}`, error)
+    if (USE_MOCK_DATA) {
+      // Mock模式：模拟扫描
+      const programs = await mockLauncherApi.scanSystemPrograms()
+      
+      if (programs.length === 0) {
+        ElMessage.warning('未扫描到系统程序')
+        return
       }
+      
+      // 添加到"系统程序"分类
+      let addedCount = 0
+      for (const program of programs) {
+        try {
+          await mockLauncherApi.addLaunchItem('系统程序', program)
+          addedCount++
+        } catch (error) {
+          // 忽略重复添加的错误
+          console.warn(`添加程序失败: ${program.name}`, error)
+        }
+      }
+      
+      await loadConfig()
+      ElMessage.success(`Mock扫描完成，发现 ${programs.length} 个程序，新增 ${addedCount} 个`)
+    } else {
+      // 真实API调用
+      const programs = await invoke('scan_system_programs') as LaunchItem[]
+      
+      if (programs.length === 0) {
+        ElMessage.warning('未扫描到系统程序')
+        return
+      }
+      
+      // 添加到"系统程序"分类
+      for (const program of programs) {
+        try {
+          await invoke('add_launch_item', {
+            category: '系统程序',
+            item: program
+          })
+        } catch (error) {
+          // 忽略重复添加的错误
+          console.warn(`添加程序失败: ${program.name}`, error)
+        }
+      }
+      
+      await loadConfig()
+      ElMessage.success(`扫描完成，发现 ${programs.length} 个程序`)
     }
-    
-    await loadConfig()
-    ElMessage.success(`扫描完成，发现 ${programs.length} 个程序`)
     
   } catch (error) {
     console.error('扫描失败:', error)
@@ -408,14 +482,23 @@ const confirmAddProgram = async () => {
       icon_base64: undefined
     }
     
-    await invoke('add_launch_item', {
-      category: addDialog.form.category,
-      item
-    })
+    if (USE_MOCK_DATA) {
+      // Mock模式：使用mock API
+      await mockLauncherApi.addLaunchItem(addDialog.form.category, item)
+      await loadConfig()
+      ElMessage.success('Mock: 添加成功')
+    } else {
+      // 真实API调用
+      await invoke('add_launch_item', {
+        category: addDialog.form.category,
+        item
+      })
+      
+      await loadConfig()
+      ElMessage.success('添加成功')
+    }
     
-    await loadConfig()
     addDialog.show = false
-    ElMessage.success('添加成功')
     
   } catch (error) {
     console.error('添加失败:', error)
@@ -425,7 +508,7 @@ const confirmAddProgram = async () => {
   }
 }
 
-const editProgram = (item: LaunchItem & { category: string }) => {
+const editProgram = (_item: LaunchItem & { category: string }) => {
   // TODO: 实现编辑功能
   ElMessage.info('编辑功能待实现')
   contextMenu.show = false
@@ -437,13 +520,21 @@ const deleteProgram = async (item: LaunchItem & { category: string }) => {
       type: 'warning'
     })
     
-    await invoke('remove_launch_item', {
-      name: item.name,
-      category: item.category
-    })
-    
-    await loadConfig()
-    ElMessage.success('删除成功')
+    if (USE_MOCK_DATA) {
+      // Mock模式：使用mock API
+      await mockLauncherApi.removeLaunchItem(item.name, item.category)
+      await loadConfig()
+      ElMessage.success('Mock: 删除成功')
+    } else {
+      // 真实API调用
+      await invoke('remove_launch_item', {
+        name: item.name,
+        category: item.category
+      })
+      
+      await loadConfig()
+      ElMessage.success('删除成功')
+    }
     
   } catch (error) {
     if (error !== 'cancel') {

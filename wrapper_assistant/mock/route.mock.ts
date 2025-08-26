@@ -35,6 +35,10 @@ const power = [
             path: 'menu1-3',
             name: 'RtMenu1-3',
           },
+          {
+            path: 'dynamic',
+            name: 'RtProgramLauncher',
+          },
         ],
       },
       {
