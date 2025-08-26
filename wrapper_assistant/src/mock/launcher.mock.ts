@@ -224,6 +224,19 @@ export const mockLauncherApi = {
     });
   },
 
+  // 创建分组
+  async createCategory(name: string, description?: string): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    console.log(`Mock创建分组: ${name} (${description || '无描述'})`);
+
+    if (mockLaunchConfig[name]) {
+      throw new Error('分组已存在');
+    }
+
+    // 创建空分组
+    mockLaunchConfig[name] = [];
+  },
+
   // 删除启动项
   async removeLaunchItem(name: string, category: string): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 200));

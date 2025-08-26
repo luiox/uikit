@@ -18,16 +18,7 @@
     <!-- 顶部操作栏 -->
     <div class="toolbar mb-4">
       <el-row :gutter="16">
-        <el-col :span="12">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索程序..."
-            prefix-icon="Search"
-            size="large"
-            clearable
-          />
-        </el-col>
-        <el-col :span="8">
+        <el-col :span="6">
           <el-select
             v-model="selectedCategory"
             placeholder="选择分类"
@@ -43,16 +34,40 @@
             />
           </el-select>
         </el-col>
-        <el-col :span="4">
-          <el-button
-            type="primary"
+        <el-col :span="10">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索程序..."
+            prefix-icon="Search"
             size="large"
-            @click="scanSystemPrograms"
-            :loading="scanning"
-            style="width: 100%"
-          >
-            扫描系统程序
-          </el-button>
+            clearable
+          />
+        </el-col>
+        <el-col :span="8">
+          <div class="action-buttons">
+            <el-button
+              type="primary"
+              size="large"
+              @click="scanSystemPrograms"
+              :loading="scanning"
+            >
+              扫描系统程序
+            </el-button>
+            <el-button
+              type="success"
+              size="large"
+              @click="showAddCategoryDialog"
+            >
+              新建分组
+            </el-button>
+            <el-button
+              type="warning"
+              size="large"
+              @click="showAddDialog"
+            >
+              新建启动项
+            </el-button>
+          </div>
         </el-col>
       </el-row>
     </div>
@@ -169,16 +184,46 @@
       </template>
     </el-dialog>
 
-    <!-- 悬浮添加按钮 -->
-    <el-button
-      type="primary"
-      class="add-btn"
-      circle
-      size="large"
-      @click="showAddDialog"
+    <!-- 新建分组对话框 -->
+    <el-dialog
+      v-model="categoryDialog.show"
+      title="新建分组"
+      width="400px"
+      :before-close="handleCategoryDialogClose"
     >
-      <el-icon size="20px"><Plus /></el-icon>
-    </el-button>
+      <el-form
+        ref="categoryFormRef"
+        :model="categoryDialog.form"
+        :rules="categoryFormRules"
+        label-width="80px"
+      >
+        <el-form-item label="分组名称" prop="name">
+          <el-input
+            v-model="categoryDialog.form.name"
+            placeholder="请输入分组名称"
+            maxlength="20"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input
+            v-model="categoryDialog.form.description"
+            type="textarea"
+            placeholder="分组描述（可选）"
+            :rows="3"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="categoryDialog.show = false">取消</el-button>
+        <el-button type="primary" @click="confirmAddCategory" :loading="categoryDialog.loading">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 统计信息 -->
     <div class="stats-bar">
@@ -194,7 +239,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { 
-  Document, VideoPlay, Key, Edit, Delete, Plus 
+  Document, VideoPlay, Key, Edit, Delete 
 } from '@element-plus/icons-vue'
 // 导入mock数据和API
 import { mockLauncherApi } from '@/mock/launcher.mock'
@@ -247,11 +292,29 @@ const addDialog = reactive({
   }
 })
 
+// 新建分组对话框
+const categoryDialog = reactive({
+  show: false,
+  loading: false,
+  form: {
+    name: '',
+    description: ''
+  }
+})
+
 const addFormRef = ref<FormInstance>()
+const categoryFormRef = ref<FormInstance>()
 const addFormRules: FormRules = {
   name: [{ required: true, message: '请输入程序名称', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
   target_path: [{ required: true, message: '请输入程序路径', trigger: 'blur' }]
+}
+
+const categoryFormRules: FormRules = {
+  name: [
+    { required: true, message: '请输入分组名称', trigger: 'blur' },
+    { min: 1, max: 20, message: '长度在 1 到 20 个字符', trigger: 'blur' }
+  ]
 }
 
 // 计算属性
@@ -439,6 +502,16 @@ const showAddDialog = () => {
   addDialog.show = true
 }
 
+const showAddCategoryDialog = () => {
+  console.log('点击新建分组按钮') // 调试信息
+  categoryDialog.form = {
+    name: '',
+    description: ''
+  }
+  categoryDialog.show = true
+  console.log('分组对话框应该显示:', categoryDialog.show) // 调试信息
+}
+
 const selectProgramFile = async () => {
   try {
     const selected = await open({
@@ -551,6 +624,45 @@ const handleAddDialogClose = () => {
   addDialog.show = false
 }
 
+const handleCategoryDialogClose = () => {
+  categoryFormRef.value?.resetFields()
+  categoryDialog.show = false
+}
+
+const confirmAddCategory = async () => {
+  if (!categoryFormRef.value) return
+  
+  try {
+    await categoryFormRef.value.validate()
+    
+    categoryDialog.loading = true
+    
+    if (USE_MOCK_DATA) {
+      // Mock模式：模拟创建分组
+      await mockLauncherApi.createCategory(categoryDialog.form.name, categoryDialog.form.description || '')
+      await loadConfig()
+      ElMessage.success(`Mock: 分组 "${categoryDialog.form.name}" 创建成功`)
+    } else {
+      // 真实API调用
+      await invoke('create_category', {
+        name: categoryDialog.form.name,
+        description: categoryDialog.form.description || ''
+      })
+      
+      await loadConfig()
+      ElMessage.success(`分组 "${categoryDialog.form.name}" 创建成功`)
+    }
+    
+    categoryDialog.show = false
+    
+  } catch (error) {
+    console.error('创建分组失败:', error)
+    ElMessage.error(`创建分组失败: ${error}`)
+  } finally {
+    categoryDialog.loading = false
+  }
+}
+
 const shortenPath = (path: string) => {
   if (path.length <= 50) return path
   return `...${path.slice(-47)}`
@@ -577,6 +689,16 @@ onUnmounted(() => {
   height: 100vh;
   overflow-y: auto;
   position: relative;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-buttons .el-button {
+  flex: 1;
+  min-width: 0;
 }
 
 .programs-grid {
@@ -670,15 +792,6 @@ onUnmounted(() => {
   height: 1px;
   background: var(--el-border-color);
   margin: 4px 0;
-}
-
-.add-btn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 60px;
-  height: 60px;
-  z-index: 100;
 }
 
 .stats-bar {
