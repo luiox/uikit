@@ -263,7 +263,7 @@ interface LaunchProgramRequest {
 type LaunchConfig = Record<string, LaunchItem[]>
 
 // 开发模式配置
-const USE_MOCK_DATA = import.meta.env.DEV // 开发环境使用mock数据
+const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true' || (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA !== 'false')
 
 // 响应式数据
 const searchKeyword = ref('')

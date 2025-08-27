@@ -51,10 +51,13 @@ const nested: AppRouteRecordRaw[] = [
             meta: { title: t('route.pathName.nested1_3') },
           },
           {
-            path: 'dynamic',
-            component: () => import('@/views/nested/menu1/dynamic.vue'),
+            path: 'launcher',
+            component: () => import('@/views/launcher/index.vue'),
             name: 'RtProgramLauncher',
-            meta: { title: '程序启动器' },
+            meta: {
+              title: '程序启动器',
+              icon: 'iEL-rocket',
+            },
           },
         ],
       },
