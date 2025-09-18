@@ -281,6 +281,7 @@ dependencies = [
  "chrono",
  "clap",
  "encoding_rs",
+ "once_cell",
  "tempfile",
 ]
 

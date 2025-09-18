@@ -1,10 +1,12 @@
 mod encoding;
 mod template;
 mod file_ops;
+mod i18n;
 
 use clap::{Parser, Subcommand};
 use file_ops::FileOperations;
 use anyhow::Result;
+use i18n::{init_i18n, translate, translate_with_args};
 
 /// NKeilHelper - A Keil helper tool for file comment insertion and template processing
 #[derive(Parser)]
@@ -47,11 +49,14 @@ enum Commands {
 }
 
 fn main() -> Result<()> {
+    // 初始化国际化
+    init_i18n();
+    
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Reset => {
-            println!("Reset the config");
+            println!("{}", translate("success.config_reset"));
             // TODO: Implement config reset functionality
             Ok(())
         }
@@ -60,15 +65,15 @@ fn main() -> Result<()> {
             Ok(())
         }
         Commands::FileComment { file } => {
-            println!("Adding file comment to: {}", file);
+            println!("{}", translate_with_args("status.adding_comment", &[("file", &file)]));
             FileOperations::insert_comments(&file)
         }
         Commands::FunctionComment => {
-            println!("Function comment feature is not implemented yet");
+            println!("{}", translate("status.not_implemented"));
             Ok(())
         }
         Commands::LicenseComment => {
-            println!("License comment feature is not implemented yet");
+            println!("{}", translate("status.not_implemented"));
             Ok(())
         }
     }
@@ -87,13 +92,14 @@ fn print_help() {
 "#;
     
     println!("{}", logo);
-    println!("NKeilHelper version: 0.1.0");
-    println!("A Rust implementation of CaKeilPlugin");
+    println!("{}", translate("app.name"));
+    println!("{}", translate("app.version"));
+    println!("{}", translate("app.copyright"));
     println!();
-    println!("Usage examples:");
-    println!("  nkeil-helper reset");
-    println!("  nkeil-helper help");
-    println!("  nkeil-helper file-comment --file <FILE_PATH>");
-    println!("  nkeil-helper function-comment");
-    println!("  nkeil-helper license-comment");
+    println!("{}:", translate("help.usage_examples"));
+    println!("  {}", translate("help.example_reset"));
+    println!("  {}", translate("help.example_info"));
+    println!("  {}", translate("help.example_file_comment"));
+    println!("  {}", translate("help.example_function_comment"));
+    println!("  {}", translate("help.example_license_comment"));
 }

@@ -1,5 +1,6 @@
 use crate::encoding::FileEncoding;
 use crate::template::TemplateProcessor;
+use crate::i18n::{translate_with_args, translate};
 use encoding_rs::Encoding;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,12 +16,12 @@ impl FileOperations {
         
         // 检查文件是否存在
         if !file_path.exists() {
-            return Err(anyhow!("文件不存在: {}", file_path.display()));
+            return Err(anyhow!("{}", translate_with_args("error.file_not_found", &[("file", &file_path.display().to_string())])));
         }
         
         let file_name = file_path.file_name()
             .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow!("无法获取文件名"))?;
+            .ok_or_else(|| anyhow!("{}", translate("error.cannot_get_filename")))?;
         
         // 根据文件扩展名选择模板
         let template_name = if file_path.extension()
@@ -55,17 +56,18 @@ impl FileOperations {
         // 写回文件
         Self::write_file_with_encoding(file_path, &new_content, original_encoding)?;
         
-        println!("成功为文件 '{}' 添加注释", file_name);
+        println!("{}", translate_with_args("success.comment_added", &[("file", file_name)]));
         Ok(())
     }
     
     /// 查找模板文件
     fn find_template_file(template_name: &str) -> Result<PathBuf> {
         // 首先在当前执行目录查找
+        let exe_path_error = translate("error.cannot_get_exe_path");
         let current_dir = std::env::current_exe()
-            .context("无法获取当前执行文件路径")?
+            .context(exe_path_error)?
             .parent()
-            .ok_or_else(|| anyhow!("无法获取执行目录"))?
+            .ok_or_else(|| anyhow!("{}", translate("error.cannot_get_exe_dir")))?
             .to_path_buf();
         
         let template_path = current_dir.join(template_name);
@@ -74,26 +76,28 @@ impl FileOperations {
         }
         
         // 在当前工作目录查找
+        let current_dir_error = translate("error.cannot_get_current_dir");
         let working_dir = std::env::current_dir()
-            .context("无法获取当前工作目录")?;
+            .context(current_dir_error)?;
         
         let template_path = working_dir.join(template_name);
         if template_path.exists() {
             return Ok(template_path);
         }
         
-        Err(anyhow!("模板文件 '{}' 未找到", template_name))
+        Err(anyhow!("{}", translate_with_args("error.template_not_found", &[("template", template_name)])))
     }
     
     /// 使用指定编码读取文件
     fn read_file_with_encoding(file_path: &Path, encoding: &'static Encoding) -> Result<String> {
+        let read_error = translate_with_args("error.cannot_read_file", &[("file", &file_path.display().to_string())]);
         let bytes = fs::read(file_path)
-            .with_context(|| format!("无法读取文件: {}", file_path.display()))?;
+            .context(read_error)?;
         
         let (content, _, had_errors) = encoding.decode(&bytes);
         
         if had_errors {
-            eprintln!("警告: 解码文件时遇到错误: {}", file_path.display());
+            eprintln!("{}", translate_with_args("error.encoding_error", &[("file", &file_path.display().to_string())]));
         }
         
         Ok(content.to_string())
@@ -108,11 +112,12 @@ impl FileOperations {
         let (bytes, _, had_errors) = encoding.encode(content);
         
         if had_errors {
-            eprintln!("警告: 编码文件时遇到错误: {}", file_path.display());
+            eprintln!("{}", translate_with_args("error.encoding_write_error", &[("file", &file_path.display().to_string())]));
         }
         
+        let write_error = translate_with_args("error.cannot_write_file", &[("file", &file_path.display().to_string())]);
         fs::write(file_path, &*bytes)
-            .with_context(|| format!("无法写入文件: {}", file_path.display()))?;
+            .context(write_error)?;
         
         Ok(())
     }
