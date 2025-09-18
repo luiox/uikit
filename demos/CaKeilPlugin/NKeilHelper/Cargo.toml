@@ -1,0 +1,15 @@
+[package]
+name = "nkeil-helper"
+version = "0.1.0"
+edition = "2021"
+description = "A Keil helper tool for file comment insertion and template processing"
+authors = ["Your Name <your.email@example.com>"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+chrono = "0.4"
+encoding_rs = "0.8"
+anyhow = "1.0"
+
+[dev-dependencies]
+tempfile = "3.8"

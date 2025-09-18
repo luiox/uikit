@@ -1,0 +1,70 @@
+# Rust 编译输出
+/target/
+**/*.rs.bk
+
+# Cargo 生成的文件 (对于可执行文件项目，通常保留 Cargo.lock)
+# Cargo.lock
+
+# IDE 和编辑器配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows 系统文件
+*.tmp
+*.temp
+*.log
+
+# 测试和临时文件 (具体的测试文件名)
+temp_test*.c
+temp_test*.h
+temp/
+tmp/
+
+# 构建和部署相关
+dist/
+build/
+# *.exe  # 注释掉，因为我们可能想要包含 release 版本
+*.dll
+*.so
+*.dylib
+
+# 备份文件
+*.bak
+*.backup
+*.orig
+
+# 环境变量文件
+.env
+.env.local
+.env.production
+
+# 文档生成
+/doc/
+
+# 性能分析文件
+*.prof
+perf.data*
+
+# 调试信息
+*.pdb
+
+# 包管理器文件
+package-lock.json
+yarn.lock
+
+# Rust 特定的调试和分析工具
+flamegraph.svg
+perf.data
+perf.data.old
