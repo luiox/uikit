@@ -3,7 +3,7 @@ mod template;
 mod file_ops;
 mod i18n;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ArgAction};
 use file_ops::FileOperations;
 use anyhow::Result;
 use i18n::{init_i18n, translate, translate_with_args};
@@ -33,19 +33,75 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Reset the configuration
-    Reset,
+    Reset {
+        /// Show or hide console window (Windows only)
+        #[arg(long, default_value = "true", value_name = "BOOL", action = clap::ArgAction::Set)]
+        show: bool,
+    },
     /// Print detailed help information with logo
-    Info,
+    Info {
+        /// Show or hide console window (Windows only)
+        #[arg(long, default_value = "true", value_name = "BOOL", action = clap::ArgAction::Set)]
+        show: bool,
+    },
     /// Add file comment to the specified file
     FileComment {
         /// Path to the file to add comments to
         #[arg(short, long)]
         file: String,
+        /// Show or hide console window (Windows only)
+        #[arg(long, default_value = "true", value_name = "BOOL", action = clap::ArgAction::Set)]
+        show: bool,
     },
     /// Add function comment (not implemented yet)
-    FunctionComment,
+    FunctionComment {
+        /// Show or hide console window (Windows only)
+        #[arg(long, default_value = "true", value_name = "BOOL", action = clap::ArgAction::Set)]
+        show: bool,
+    },
     /// Add license comment (not implemented yet)
-    LicenseComment,
+    LicenseComment {
+        /// Show or hide console window (Windows only)
+        #[arg(long, default_value = "true", value_name = "BOOL", action = clap::ArgAction::Set)]
+        show: bool,
+    },
+}
+
+// Windows API 声明
+#[cfg(windows)]
+mod windows_api {
+    use std::ffi::c_void;
+    
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn GetConsoleWindow() -> *mut c_void;
+    }
+    
+    #[link(name = "user32")]
+    extern "system" {
+        pub fn ShowWindow(hwnd: *mut c_void, cmd_show: i32) -> i32;
+    }
+    
+    pub const SW_HIDE: i32 = 0;
+    pub const SW_SHOW: i32 = 5;
+}
+
+/// 设置控制台窗口显示状态（仅在 Windows 上有效）
+#[cfg(windows)]
+fn set_console_visibility(show: bool) {
+    unsafe {
+        let console_window = windows_api::GetConsoleWindow();
+        if !console_window.is_null() {
+            let cmd = if show { windows_api::SW_SHOW } else { windows_api::SW_HIDE };
+            windows_api::ShowWindow(console_window, cmd);
+        }
+    }
+}
+
+/// 在非 Windows 系统上的空实现
+#[cfg(not(windows))]
+fn set_console_visibility(_show: bool) {
+    // 在非 Windows 系统上不执行任何操作
 }
 
 fn main() -> Result<()> {
@@ -55,24 +111,34 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Reset => {
+        Commands::Reset { show } => {
+            // 设置控制台窗口显示状态
+            set_console_visibility(show);
             println!("{}", translate("success.config_reset"));
             // TODO: Implement config reset functionality
             Ok(())
         }
-        Commands::Info => {
+        Commands::Info { show } => {
+            // 设置控制台窗口显示状态
+            set_console_visibility(show);
             print_help();
             Ok(())
         }
-        Commands::FileComment { file } => {
+        Commands::FileComment { file, show } => {
+            // 设置控制台窗口显示状态
+            set_console_visibility(show);
             println!("{}", translate_with_args("status.adding_comment", &[("file", &file)]));
             FileOperations::insert_comments(&file)
         }
-        Commands::FunctionComment => {
+        Commands::FunctionComment { show } => {
+            // 设置控制台窗口显示状态
+            set_console_visibility(show);
             println!("{}", translate("status.not_implemented"));
             Ok(())
         }
-        Commands::LicenseComment => {
+        Commands::LicenseComment { show } => {
+            // 设置控制台窗口显示状态
+            set_console_visibility(show);
             println!("{}", translate("status.not_implemented"));
             Ok(())
         }
@@ -102,4 +168,5 @@ fn print_help() {
     println!("  {}", translate("help.example_file_comment"));
     println!("  {}", translate("help.example_function_comment"));
     println!("  {}", translate("help.example_license_comment"));
+    println!("  {}", translate("help.example_hide_window"));
 }

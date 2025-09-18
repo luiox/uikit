@@ -31,6 +31,8 @@ static TRANSLATIONS: Lazy<HashMap<String, HashMap<String, String>>> = Lazy::new(
     en.insert("help.example_file_comment".to_string(), "nkeil-helper file-comment --file <FILE_PATH>".to_string());
     en.insert("help.example_function_comment".to_string(), "nkeil-helper function-comment".to_string());
     en.insert("help.example_license_comment".to_string(), "nkeil-helper license-comment".to_string());
+    en.insert("help.example_hide_window".to_string(), "nkeil-helper --show=false file-comment --file <FILE_PATH>".to_string());
+    en.insert("args.show".to_string(), "Show or hide console window (Windows only)".to_string());
     
     // 中文翻译
     let mut zh = HashMap::new();
@@ -57,6 +59,8 @@ static TRANSLATIONS: Lazy<HashMap<String, HashMap<String, String>>> = Lazy::new(
     zh.insert("help.example_file_comment".to_string(), "nkeil-helper file-comment --file <文件路径>".to_string());
     zh.insert("help.example_function_comment".to_string(), "nkeil-helper function-comment".to_string());
     zh.insert("help.example_license_comment".to_string(), "nkeil-helper license-comment".to_string());
+    zh.insert("help.example_hide_window".to_string(), "nkeil-helper --show=false file-comment --file <文件路径>".to_string());
+    zh.insert("args.show".to_string(), "显示或隐藏控制台窗口（仅限 Windows）".to_string());
     
     translations.insert("en".to_string(), en);
     translations.insert("zh-CN".to_string(), zh);
