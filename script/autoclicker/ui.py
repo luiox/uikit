@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from .pages.basic_page import BasicPage
 from .pages.advanced_page import AdvancedPage
 from .config import AppConfig
+from . import util
 import pyautogui
 
 class MainUI:
@@ -103,6 +104,17 @@ class MainUI:
             messagebox.showwarning('警告', '请先设置点击坐标（输入/Overlay/F9）')
             return
 
+        # if basic restrict to window is enabled then ensure the target window exists
+        if mode == 'basic' and self.config.basic.restrict_to_window:
+            title = self.config.basic.target_window_title.strip()
+            if not title:
+                messagebox.showwarning('警告', '已启用 "限定特定窗口"，请先填写目标窗口标题并点击查找')
+                return
+            hwnd, wt = util.find_window_by_title(title)
+            if not hwnd:
+                messagebox.showwarning('警告', f'未找到包含 "{title}" 的窗口，请检查标题或先使用查找按钮')
+                return
+
         # apply FAILSAFE option
         try:
             pyautogui.FAILSAFE = self.config.advanced.fail_safe
@@ -126,6 +138,14 @@ class MainUI:
         if color:
             try:
                 self.status_label.config(foreground=color)
+            except Exception:
+                pass
+        # If the controller stopped or there was an emergency, reset start/stop buttons
+        low = (text or '').lower()
+        if 'stopped' in low or '停止' in low or '离开' in low or '待机' in low:
+            try:
+                self.start_button.config(state='normal')
+                self.stop_button.config(state='disabled')
             except Exception:
                 pass
 

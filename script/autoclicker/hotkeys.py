@@ -2,6 +2,8 @@
 import threading
 import keyboard
 from ctypes import windll, wintypes, byref
+from ctypes import c_short
+import time
 
 class HotkeyManager:
     """Manage registration/unregistration of global hotkeys (Windows) and optionally fallback to keyboard module.
@@ -17,6 +19,11 @@ class HotkeyManager:
         self._registered = {}
         self._callbacks = {}
         self._use_register = use_register
+        # Polling fallback state
+        self._poll_thread = None
+        self._poll_stop = None
+        self._poll_keys = {}  # key_name -> callback
+        self._poll_prev = {}
 
     def register_f8(self, callback):
         """Register F8 global hotkey. callback is run in the Tk root thread via root.after(0, callback)."""
@@ -56,7 +63,60 @@ class HotkeyManager:
                 pass
         hk = keyboard.add_hotkey(key_name.lower(), _cb)
         self._callbacks[f'kb_{key_name}'] = hk
+        # Also register polling fallback for games that swallow hooks
+        try:
+            self._register_poll_key(key_name, callback)
+        except Exception:
+            pass
         return True
+
+    def _start_polling_if_needed(self):
+        if self._poll_thread and self._poll_thread.is_alive():
+            return
+        self._poll_stop = threading.Event()
+        self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
+        self._poll_thread.start()
+
+    def _poll_loop(self):
+        # Use GetAsyncKeyState to poll key states
+        user32 = self.user32
+        VK_MAP = {'F8': 0x77, 'F9': 0x78}
+        while not (self._poll_stop and self._poll_stop.is_set()):
+            for key_name, cb in list(self._poll_keys.items()):
+                vk = VK_MAP.get(key_name)
+                if not vk:
+                    continue
+                try:
+                    state = user32.GetAsyncKeyState(vk)
+                except Exception:
+                    state = 0
+                pressed = (state & 0x8000) != 0
+                prev = self._poll_prev.get(key_name, False)
+                if pressed and not prev:
+                    try:
+                        self.root.after(0, cb)
+                    except Exception:
+                        pass
+                self._poll_prev[key_name] = pressed
+            time.sleep(0.04)
+
+    def _register_poll_key(self, key_name, callback):
+        if key_name in self._poll_keys:
+            return
+        self._poll_keys[key_name] = callback
+        self._start_polling_if_needed()
+
+    def _unregister_poll_key(self, key_name):
+        if key_name in self._poll_keys:
+            del self._poll_keys[key_name]
+        if key_name in self._poll_prev:
+            del self._poll_prev[key_name]
+        # stop thread when no keys
+        if not self._poll_keys and self._poll_stop:
+            try:
+                self._poll_stop.set()
+            except Exception:
+                pass
 
     def unregister_f8(self):
         return self.unregister_hotkey(1)
@@ -82,6 +142,11 @@ class HotkeyManager:
                 except Exception:
                     pass
                 del self._callbacks[key]
+            # unregister polling fallback too
+            try:
+                self._unregister_poll_key(kb_key)
+            except Exception:
+                pass
         # remove callback for registered id
         if id in self._callbacks:
             try:
@@ -137,6 +202,12 @@ class HotkeyManager:
                 except Exception:
                     pass
                 del self._callbacks[k]
+        # stop poll thread if present
+        if self._poll_stop:
+            try:
+                self._poll_stop.set()
+            except Exception:
+                pass
 
     def is_registered(self, key_name):
         """Return True if key_name (e.g., 'F8' or 'F9') is registered either via RegisterHotKey or keyboard fallback."""

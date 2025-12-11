@@ -83,19 +83,25 @@ class MouseControllerCore:
                 return
 
             # If enabled, check if the mouse is inside the window and optionally stop when leaving
+            # We only consider 'leaving' after we've been inside the window once.
+            has_been_inside = False
             while not self._stop_event.is_set():
                 from . import util as _util
-                # check stop on leave
-                if cfg.stop_on_leave:
-                    mx, my = self._mouseio.position()
-                    if not _util.is_point_in_window(hwnd, mx, my):
+                mx, my = self._mouseio.position()
+                inside = _util.is_point_in_window(hwnd, mx, my)
+
+                if inside:
+                    has_been_inside = True
+                    ok = _util.post_click_to_window(hwnd, x, y, button=button)
+                    if not ok:
+                        self.on_error('无法向目标窗口发送点击消息')
+                        break
+                else:
+                    if cfg.stop_on_leave and has_been_inside:
+                        # Only stop if we previously were inside and then left
                         self.on_status('离开窗口, 停止', 'green')
                         break
-                # post click to window
-                ok = _util.post_click_to_window(hwnd, x, y, button=button)
-                if not ok:
-                    self.on_error('无法向目标窗口发送点击消息')
-                    break
+                    # if not yet been_inside, don't click; just wait for user to enter
                 time.sleep(interval)
             return
 
