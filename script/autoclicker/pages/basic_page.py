@@ -49,7 +49,7 @@ class BasicPage(ttk.Frame):
         self._overlay_btn.grid(row=4, column=0, pady=5)
         ttk.Label(frame, text='或按 F9 捕获当前鼠标坐标（仅在 Basic 页面生效）').grid(row=3, column=1, columnspan=2)
         self.last_capture_var = tk.StringVar(value='未捕获')
-        ttk.Label(frame, textvariable=self.last_capture_var).grid(row=4, column=0, columnspan=3, sticky='w')
+        ttk.Label(frame, textvariable=self.last_capture_var).grid(row=4, column=1, columnspan=2, sticky='w')
 
         # 限定窗口选项
         ttk.Label(frame, text='限定窗口标题:').grid(row=5, column=0, sticky='w')

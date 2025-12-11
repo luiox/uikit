@@ -1,6 +1,8 @@
 import win32gui
 import win32api
 import win32con
+import os
+import json
 
 
 def find_window_by_title(title_substring):
@@ -58,5 +60,32 @@ def is_point_in_window(hwnd, x_screen, y_screen):
         rect = win32gui.GetWindowRect(hwnd)
         left, top, right, bottom = rect
         return left <= x_screen <= right and top <= y_screen <= bottom
+    except Exception:
+        return False
+
+
+def config_path(filename: str) -> str:
+    """Return the full path to the config file stored in this package directory."""
+    base = os.path.dirname(__file__)
+    return os.path.join(base, filename)
+
+
+def load_json_file(filename: str, default=None):
+    path = config_path(filename)
+    try:
+        if not os.path.exists(path):
+            return default
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def save_json_file(filename: str, data):
+    path = config_path(filename)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
     except Exception:
         return False

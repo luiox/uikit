@@ -164,4 +164,17 @@ class MainUI:
         except Exception:
             pass
         self.controller.stop()
+        # Save UI geometry and configs
+        try:
+            from dataclasses import asdict
+            from . import util
+            ui_settings = {'geometry': self.root.geometry()}
+            util.save_json_file('ui.json', ui_settings)
+            # Save configs
+            bcfg = self.basic_page.get_config()
+            acfg = self.advanced_page.get_config()
+            util.save_json_file('basic.json', asdict(bcfg))
+            util.save_json_file('advanced.json', asdict(acfg))
+        except Exception:
+            pass
         self.root.destroy()
