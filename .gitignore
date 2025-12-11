@@ -48,4 +48,4 @@ output/
 lib/
 
 script/.idea
-
+*.pyc
