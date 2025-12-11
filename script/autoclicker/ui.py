@@ -14,7 +14,7 @@ class MainUI:
         self.hotkey_manager = hotkey_manager
 
         self.root.title('鼠标控制器')
-        self.root.geometry('520x520')
+        self.root.geometry('600x600')
 
         self.notebook = ttk.Notebook(self.root)
         self.basic_page = BasicPage(self.notebook, hotkey_manager=self.hotkey_manager)
@@ -99,6 +99,14 @@ class MainUI:
         # Update config from pages
         self.config.basic = self.basic_page.get_config()
         self.config.advanced = self.advanced_page.get_config()
+
+        # If target mode is 'cursor', sample the current mouse position at start
+        if mode == 'basic' and self.config.basic.target_mode == 'cursor':
+            try:
+                x, y = pyautogui.position()
+                self.config.basic.click_point = (int(x), int(y))
+            except Exception:
+                pass
 
         if mode == 'basic' and not self.config.basic.click_point:
             messagebox.showwarning('警告', '请先设置点击坐标（输入/Overlay/F9）')

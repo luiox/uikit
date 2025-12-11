@@ -92,7 +92,11 @@ class MouseControllerCore:
 
                 if inside:
                     has_been_inside = True
-                    ok = _util.post_click_to_window(hwnd, x, y, button=button)
+                    # If target mode is 'cursor', click at the current cursor position (mapped to window client coords)
+                    if getattr(cfg, 'target_mode', 'coord') == 'cursor':
+                        ok = _util.post_click_to_window(hwnd, mx, my, button=button)
+                    else:
+                        ok = _util.post_click_to_window(hwnd, x, y, button=button)
                     if not ok:
                         self.on_error('无法向目标窗口发送点击消息')
                         break

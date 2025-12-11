@@ -13,11 +13,15 @@ class BasicPage(ttk.Frame):
         self.interval_var = tk.DoubleVar(value=0.5)
         self.coord_x_var = tk.StringVar(value='')
         self.coord_y_var = tk.StringVar(value='')
+        # target mode: coord or cursor
+        self.target_mode_var = tk.StringVar(value='coord')
         self.restrict_var = tk.BooleanVar(value=False)
         self.target_window_title_var = tk.StringVar(value='')
         self.stop_on_leave_var = tk.BooleanVar(value=False)
 
         self.setup_ui()
+        # initialize target mode UI state
+        self._on_target_mode_change()
 
     def setup_ui(self):
         frame = ttk.Frame(self, padding=10)
@@ -30,11 +34,19 @@ class BasicPage(ttk.Frame):
         ttk.Label(frame, text='点击间隔(秒):').grid(row=1, column=0, sticky='w')
         ttk.Spinbox(frame, from_=0.05, to=10, increment=0.05, textvariable=self.interval_var, width=6).grid(row=1, column=1)
 
-        ttk.Label(frame, text='坐标 (X, Y):').grid(row=2, column=0, sticky='w')
-        ttk.Entry(frame, textvariable=self.coord_x_var, width=8).grid(row=2, column=1)
-        ttk.Entry(frame, textvariable=self.coord_y_var, width=8).grid(row=2, column=2)
+        # Target selection group (mutually exclusive with left/right radio group)
+        ttk.Label(frame, text='目标选择:').grid(row=2, column=0, sticky='w')
+        ttk.Radiobutton(frame, text='使用输入坐标 (X,Y)', variable=self.target_mode_var, value='coord', command=self._on_target_mode_change).grid(row=2, column=1, columnspan=2, sticky='w')
+        ttk.Radiobutton(frame, text='使用当前鼠标坐标', variable=self.target_mode_var, value='cursor', command=self._on_target_mode_change).grid(row=2, column=3, sticky='w')
 
-        ttk.Button(frame, text='Capture (Overlay)', command=self.open_overlay).grid(row=3, column=0, pady=5)
+        ttk.Label(frame, text='坐标 (X, Y):').grid(row=3, column=0, sticky='w')
+        self._entry_x = ttk.Entry(frame, textvariable=self.coord_x_var, width=8)
+        self._entry_x.grid(row=3, column=1)
+        self._entry_y = ttk.Entry(frame, textvariable=self.coord_y_var, width=8)
+        self._entry_y.grid(row=3, column=2)
+
+        self._overlay_btn = ttk.Button(frame, text='Capture (Overlay)', command=self.open_overlay)
+        self._overlay_btn.grid(row=4, column=0, pady=5)
         ttk.Label(frame, text='或按 F9 捕获当前鼠标坐标（仅在 Basic 页面生效）').grid(row=3, column=1, columnspan=2)
         self.last_capture_var = tk.StringVar(value='未捕获')
         ttk.Label(frame, textvariable=self.last_capture_var).grid(row=4, column=0, columnspan=3, sticky='w')
@@ -50,6 +62,26 @@ class BasicPage(ttk.Frame):
         # Top-level is the root window
         root = self.winfo_toplevel()
         CaptureOverlay(root, self._on_capture)
+
+    def _on_target_mode_change(self):
+        mode = self.target_mode_var.get()
+        if mode == 'coord':
+            # enable entries and overlay
+            try:
+                self._entry_x.config(state='normal')
+                self._entry_y.config(state='normal')
+                self._overlay_btn.config(state='normal')
+            except Exception:
+                pass
+        else:
+            # disable coordinate entries when using current mouse
+            try:
+                self._entry_x.config(state='disabled')
+                self._entry_y.config(state='disabled')
+                self._overlay_btn.config(state='disabled')
+            except Exception:
+                pass
+        
 
     def _on_capture(self, point):
         if not point:
@@ -80,6 +112,7 @@ class BasicPage(ttk.Frame):
             click_button=self.click_button_var.get(),
             interval=float(self.interval_var.get()),
             click_point=point,
+            target_mode=self.target_mode_var.get(),
             restrict_to_window=self.restrict_var.get(),
             target_window_title=self.target_window_title_var.get(),
             stop_on_leave=self.stop_on_leave_var.get(),
@@ -97,6 +130,12 @@ class BasicPage(ttk.Frame):
         self.restrict_var.set(cfg.restrict_to_window)
         self.target_window_title_var.set(cfg.target_window_title)
         self.stop_on_leave_var.set(cfg.stop_on_leave)
+        # set target mode
+        try:
+            self.target_mode_var.set(cfg.target_mode)
+            self._on_target_mode_change()
+        except Exception:
+            pass
 
     def find_window(self):
         title = self.target_window_title_var.get().strip()
