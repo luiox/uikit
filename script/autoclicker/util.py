@@ -42,6 +42,23 @@ def post_click_to_window(hwnd, x_screen, y_screen, button='left'):
             return False
         cx, cy = client
         lParam = (cy << 16) | (cx & 0xffff)
+
+        # Attempt to activate/focus the window before posting click messages.
+        # We avoid physically moving the mouse; we either set the foreground window
+        # (may fail if OS prevents it) or post activation/focus messages so the
+        # target window will process the incoming mouse messages.
+        try:
+            try:
+                # Prefer the Win32 API to bring the window foreground if possible
+                win32gui.SetForegroundWindow(hwnd)
+            except Exception:
+                # Fall back to posting activation messages (no cursor movement)
+                win32api.PostMessage(hwnd, win32con.WM_ACTIVATE, win32con.WA_CLICKACTIVE, 0)
+                win32api.PostMessage(hwnd, win32con.WM_SETFOCUS, 0, 0)
+        except Exception:
+            # Ignore failures to focus; we'll still attempt to post the mouse messages
+            pass
+
         if button == 'left':
             win32api.PostMessage(hwnd, win32con.WM_MOUSEMOVE, 0, lParam)
             win32api.PostMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)

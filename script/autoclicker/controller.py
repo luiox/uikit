@@ -1,9 +1,8 @@
 import threading
 import time
+
 import pyautogui
 import win32gui
-from dataclasses import asdict
-from typing import Callable
 
 
 class MouseControllerCore:
@@ -52,13 +51,34 @@ class MouseControllerCore:
     def _run_basic(self):
         cfg = self._config_snapshot.basic
 
+        # Basic validations to fail fast with clear messages
         if not cfg.click_point:
             self.on_error('Basic mode requires a click point (通过坐标输入/Overlay/F9 捕获设置)')
             return
 
-        x, y = cfg.click_point
-        interval = float(cfg.interval)
-        button = cfg.click_button
+        # Ensure click_point is a pair of ints
+        try:
+            x, y = cfg.click_point
+            x = int(x)
+            y = int(y)
+        except Exception:
+            self.on_error('Invalid click point, 请检查坐标格式 (X,Y)')
+            return
+
+        # Interval must be a positive float
+        try:
+            interval = float(cfg.interval)
+            if interval <= 0:
+                raise ValueError()
+        except Exception:
+            self.on_error('Invalid interval, 请填写大于 0 的数字')
+            return
+
+        # Button must be 'left' or 'right'
+        button = getattr(cfg, 'click_button', 'left')
+        if button not in ('left', 'right'):
+            self.on_error('Invalid click button 配置，应为 "left" 或 "right"')
+            return
 
         self.on_status('Running (Basic)', 'red')
 
@@ -88,15 +108,21 @@ class MouseControllerCore:
             while not self._stop_event.is_set():
                 from . import util as _util
                 mx, my = self._mouseio.position()
-                inside = _util.is_point_in_window(hwnd, mx, my)
+
+                # Decide which point we should test for being inside the target window.
+                # - If target_mode is 'cursor', we check the current mouse position (mx,my)
+                # - If target_mode is 'coord', we check the configured click point (x,y)
+                target_mode = getattr(cfg, 'target_mode', 'coord')
+                if target_mode == 'cursor':
+                    inside = _util.is_point_in_window(hwnd, mx, my)
+                    click_x, click_y = mx, my
+                else:
+                    inside = _util.is_point_in_window(hwnd, x, y)
+                    click_x, click_y = x, y
 
                 if inside:
                     has_been_inside = True
-                    # If target mode is 'cursor', click at the current cursor position (mapped to window client coords)
-                    if getattr(cfg, 'target_mode', 'coord') == 'cursor':
-                        ok = _util.post_click_to_window(hwnd, mx, my, button=button)
-                    else:
-                        ok = _util.post_click_to_window(hwnd, x, y, button=button)
+                    ok = _util.post_click_to_window(hwnd, click_x, click_y, button=button)
                     if not ok:
                         self.on_error('无法向目标窗口发送点击消息')
                         break
