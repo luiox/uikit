@@ -31,7 +31,7 @@ static int my_dts_driver_probe(struct platform_device *pdev)
      */
     struct resource *res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (res) {
-        printk("platform_dts: got reg resource: start=0x%llx\n", res->start);
+        printk("platform_dts: got reg resource: start=0x%x\n", res->start);
     }
 
     return 0;
