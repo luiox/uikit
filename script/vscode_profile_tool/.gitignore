@@ -1,0 +1,16 @@
+# Ignore VS Code runtime/state (keep declarative configs only)
+.vscode/**/workspaceStorage/
+**/globalStorage/
+**/User/globalStorage/
+*.code-workspace
+.vscode/*.db
+.vscode/*.bak
+# Exported/temporary folders
+tools/dot-export/
+tools/exported-*
+# Python / env
+.venv/
+__pycache__/
+
+# Don't ignore .vscode/extensions.json if you intentionally commit it per-project
+# (keep per-project recommendedExtensions in repo when needed)
