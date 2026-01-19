@@ -35,7 +35,7 @@ static int my_dts_driver_probe(struct platform_device *pdev)
     }
 
     return 0;
-}
+}  
 
 static int my_dts_driver_remove(struct platform_device *pdev)
 {
