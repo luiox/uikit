@@ -1,25 +1,19 @@
-#include <linux/types.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 
-static int __init my_drv_init(void)
-{
-    printk(KERN_INFO "my_drv init done!\n");
-    return 0;
+static int __init first_lkm_init(void){
+	printk(KERN_INFO "My First Kernel module is loaded!\n");
+	return 0;
 }
 
-static void __exit my_drv_exit(void)
-{
-    printk("my_drv exit done!\n");
-    pr_debug("my_drv exit done! (pr_debug)\n");
-    trace_printk("my_drv exit done! (trace_printk)\n");
-    spin_lock();
+static void __exit first_lkm_exit(void){
+	printk("My First Kernel module exit!\n");
 }
 
-module_init(my_drv_init);
-module_exit(my_drv_exit);
+module_init(first_lkm_init);
+module_exit(first_lkm_exit);
 
+// 模块信息
 MODULE_LICENSE("GPL");
 MODULE_VERSION("V1.0");
 MODULE_DESCRIPTION("Canrad's first LKM");
