@@ -1,106 +1,148 @@
-/*
- * list_demo.c - simple kernel linked-list demo
- * Demonstrates basic kernel list APIs in module __init as "main".
- *
- * Build: make (provided Makefile)
- * Test: insmod list_demo.ko; dmesg -w
- * Remove: rmmod list_demo
- */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/slab.h>
 #include <linux/list.h>
-#include <linux/gfp.h>
+#include <linux/string.h>
+#include <linux/vmalloc.h>
 
-struct demo_node {
-    int val;
+struct student {
+    int id;
+    char* name;
     struct list_head list;
 };
 
-static LIST_HEAD(head);
-static int nr_nodes = 0;
+struct student* student_alloc(int id, const char* name)
+{
+    struct student* stu;
+
+    stu = vmalloc(sizeof(struct student));
+    if(stu == NULL){
+        printk("vmalloc student failed\n");
+        return NULL;
+    }
+
+    // 为字符串分配内存
+    stu->name = vmalloc(strlen(name) + 1);
+    if(stu->name == NULL){
+        printk("vmalloc name failed\n");
+        vfree(stu);
+        return NULL;
+    }
+
+    // 初始化
+    stu->id = id;
+    strcpy(stu->name, name);
+    INIT_LIST_HEAD(&stu->list);
+
+    printk("Allocated student: id=%d, name=%s\n", stu->id, stu->name);
+
+    return stu;
+}
+
+void student_free(struct student* stu)
+{
+    if(stu != NULL){
+        if(stu->name != NULL){
+            vfree(stu->name);
+        }
+        vfree(stu);
+        printk("Freed student\n");
+    }
+}
+
+// 链表的头节点
+static LIST_HEAD(student_list);
+
+// void list_move(struct list_head* list, struct list_head* head)
+// {
+//     list_del(list);
+//     list_add(list, head);
+// }
 
 static int __init list_demo_init(void)
 {
-    int i;
-    struct demo_node *node, *tmp;
-
-    pr_info("list_demo: init start\n");
-
-    /* create and add nodes */
-    for (i = 0; i < 6; i++) {
-        node = kmalloc(sizeof(*node), GFP_KERNEL);
-        if (!node) {
-            pr_err("list_demo: kmalloc failed at i=%d\n", i);
-            goto err_alloc;
-        }
-        node->val = i + 1;
-        list_add_tail(&node->list, &head);
-        nr_nodes++;
-        pr_info("list_demo: added node val=%d\n", node->val);
+    struct student* stu1, *stu2, *stu3;
+    
+    stu1 = student_alloc(1, "stu1");
+    if(stu1 == NULL){
+        goto ERR_3;
     }
 
-    /* iterate and print using list_for_each_entry */
-    pr_info("list_demo: iterate forward\n");
-    list_for_each_entry(node, &head, list)
-        pr_info("list_demo: node val=%d\n", node->val);
-
-    /* demonstrate safe removal during iteration */
-    pr_info("list_demo: remove even nodes during iteration\n");
-    list_for_each_entry_safe(node, tmp, &head, list) {
-        if ((node->val & 1) == 0) {
-            pr_info("list_demo: removing node val=%d\n", node->val);
-            list_del(&node->list);
-            kfree(node);
-            nr_nodes--;
-        }
+    stu2 = student_alloc(2, "stu2");
+    if(stu2 == NULL){
+        goto ERR_2;
     }
 
-    /* show remaining nodes */
-    pr_info("list_demo: remaining nodes\n");
-    list_for_each_entry(node, &head, list)
-        pr_info("list_demo: node val=%d\n", node->val);
+    stu3 = student_alloc(3, "stu3");
+    if(stu3 == NULL){
+        goto ERR_1;
+    }
 
-    /* demonstrate splice: move nodes to a new list then back */
+    // 纯头插法
+    list_add(&stu3->list, &student_list);
+    list_add(&stu2->list, &student_list);
+    list_add(&stu1->list, &student_list);
+
+    // 纯尾插法
+    // list_add_tail(&stu1->list, &student_list);
+    // list_add_tail(&stu2->list, &student_list);
+    // list_add_tail(&stu3->list, &student_list);
+
+    // 挨个尾插法
+    // 第一步插入到当前的尾
+    // list_add(&stu1->list, &student_list);
+    // // 然后在插入到尾部的尾部
+    // list_add(&stu2->list, &stu1->list);
+    // // 然后在插入到尾部的尾部
+    // list_add(&stu3->list, &stu2->list);
+
+    // 删除stu2
+    // list_del(&stu2->list);
+
+    // 遍历
     {
-        LIST_HEAD(tmp_list);
-        pr_info("list_demo: splice to tmp_list and back\n");
-        list_splice_init(&head, &tmp_list); /* moves head -> tmp_list, head becomes empty */
-        pr_info("list_demo: head empty after splice? %s\n", list_empty(&head) ? "yes" : "no");
-        list_splice_tail_init(&tmp_list, &head); /* move back */
-        pr_info("list_demo: head empty after splice_back? %s\n", list_empty(&tmp_list) ? "yes" : "no");
+        struct list_head* pos;
+        list_for_each(pos, &student_list){
+            struct student* stu = list_entry(pos, struct student, list);
+            printk("Student: id=%d, name=%s\n", stu->id, stu->name);
+        }
+    }
+    // 简化版遍历
+    {
+        struct student* stu;
+        list_for_each_entry(stu, &student_list, list){
+            printk("Student: id=%d, name=%s\n", stu->id, stu->name);
+        }
     }
 
-    pr_info("list_demo: init done, nr_nodes=%d\n", nr_nodes);
+    // 循环删除所有
+    {
+        struct list_head *pos, *n;
+        list_for_each_safe(pos, n, &student_list){
+            struct student* stu = list_entry(pos, struct student, list);
+            printk("Deleting Student: id=%d, name=%s\n", stu->id, stu->name);
+            list_del(pos);
+            student_free(stu);
+        }
+    }
+
     return 0;
+ERR_1:
+    student_free(stu2);
+    
+ERR_2:
+    student_free(stu1);
 
-err_alloc:
-    /* cleanup any allocated nodes */
-    list_for_each_entry_safe(node, tmp, &head, list) {
-        list_del(&node->list);
-        kfree(node);
-    }
-    nr_nodes = 0;
+ERR_3:
     return -ENOMEM;
 }
 
 static void __exit list_demo_exit(void)
 {
-    struct demo_node *node, *tmp;
 
-    pr_info("list_demo: exit start, cleaning %d nodes\n", nr_nodes);
-    list_for_each_entry_safe(node, tmp, &head, list) {
-        pr_info("list_demo: freeing node val=%d\n", node->val);
-        list_del(&node->list);
-        kfree(node);
-        nr_nodes--;
-    }
-
-    pr_info("list_demo: exit done\n");
 }
 
 module_init(list_demo_init);
 module_exit(list_demo_exit);
+
 MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Canrad");

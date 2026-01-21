@@ -1,12 +1,16 @@
 KERNELDIR := /home/canrad/linux/imx6ull/kernel
 CURRENT_PATH := $(shell pwd)
 
+ARCH := arm
+CROSS_COMPILE := arm-linux-gnueabihf-
+CC := $(CROSS_COMPILE)gcc
+
 obj-m := list_demo.o
 
-build: kernel_modules
+build: module
 
-kernel_modules:
-	$(MAKE) -C $(KERNELDIR) M=$(CURRENT_PATH) modules
+module:
+	$(MAKE) -C $(KERNELDIR) M=$(CURRENT_PATH) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
 
 clean:
-	$(MAKE) -C $(KERNELDIR) M=$(CURRENT_PATH) clean
+	$(MAKE) -C $(KERNELDIR) M=$(CURRENT_PATH) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) clean
