@@ -1,3 +1,10 @@
+开发板如果自动挂载nfs失败就手动挂载，命令如下。
+
+```bash
+mount -t nfs -o nolock,nfsvers=3 192.168.56.100:/home/canrad/linux/imx6ull/drivers /mnt/drivers
+```
+
+
 学习顺序
 
 
