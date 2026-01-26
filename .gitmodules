@@ -14,3 +14,6 @@
 	path = mrecaf4plugin
 	url = https://github.com/luiox/mrecaf4plugin.git
 	
+[submodule "ota_demo"]
+	path = ota_demo
+	url = https://github.com/luiox/ota_demo
