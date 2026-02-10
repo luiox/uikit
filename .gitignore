@@ -48,3 +48,5 @@ output/
 lib/
 
 *.pyc
+/libca_test_demo/.xmake
+/.xmake
