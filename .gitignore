@@ -48,3 +48,6 @@ output/
 lib/
 
 *.pyc
+
+.xmake/
+lv_port_linux/
