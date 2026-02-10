@@ -5,9 +5,9 @@ ARCH := arm
 CROSS_COMPILE := arm-linux-gnueabihf-
 CC := $(CROSS_COMPILE)gcc
 
-obj-m := drv.o
+obj-m := kfifo_demo.o
 
-all: module
+build: module
 
 module:
 	$(MAKE) -C $(KERNELDIR) M=$(CURRENT_PATH) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules

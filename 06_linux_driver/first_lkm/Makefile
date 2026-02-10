@@ -1,8 +1,0 @@
-obj-m := first_lkm.o
-LINUX_KERNEL_PATH := /usr/src/linux-headers-5.15.153.1-microsoft-standard-WSL2
-
-all:
-	$(MAKE) -C$(LINUX_KERNEL_PATH) M=$(CURDIR) modules
-
-clean :
-	rm -rf *.o *.ko *.mod.o *.symvers *.order *.cmd *.mod.cmd *~ core.* *.core *.gdb *.gdb.old *.gdb.new *.gdb.late *.gdb.sym *.gdb.sym.old *.gdb.sym.new *.gdb.sym.late *.gdb.sym.d *.gdb.sym.d.old *.gdb.sym.d.new *.gdb.sym.d.late *.gdb.sym.d.symvers *.gdb.sym.d.symvers.old *.gdb.sym.d.symvers.new *.gdb.sym.d.symvers.late *.gdb.sym.d.symvers.d *.gdb.sym.d.symvers.d.old *.gdb.sym.d.symvers.d.new *.gdb.sym.d.symvers.d.late *.gdb.sym.d.symvers.d.symvers *.gdb.sym.d.symvers.d.symvers.old *.gdb.sym.d.symvers.d.symvers.new *.gdb.sym.d.symvers.d.symvers.late *.gdb.sym.d.symvers.d.symvers.d *.gdb.sym.d.symvers.d.symvers.d.old *.gdb.sym.d.symvers.d.symvers.d.new *.gdb.sym.d.symvers.d.symvers.d.late *.gdb.sym.d.symvers.d.symvers.d.symvers *.gdb.sym.d.symvers.d.symvers.d.symvers.old *.gdb.sym.d.symvers.d.symvers.d.symvers.new *.gdb.sym.d.symvers.d.symvers.d.symvers.late *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.old *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.new *.gdb.sym.d.symvers.d.symvers.d.symvers.late *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.old *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.new *.gdb.sym.d.symvers.d.symvers.d.symvers.late *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.old *.gdb.sym.d.symvers.d.symvers.d.symvers.d.symvers.new *.gdb.sym.d.symvers.d.symvers.d.symvers.late *.gdb.sym.d.symvers.d.symvers.d.symvers.d.
