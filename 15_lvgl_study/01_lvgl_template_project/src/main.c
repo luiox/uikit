@@ -1,7 +1,10 @@
 #include <stdio.h>
 
-int main(int argc, char **argv) 
+/* Call into the LVGL demo entry */
+extern int main_lvgl(void);
+
+int main(int argc, char **argv)
 {
-    printf("hello world!\n");
-    return 0;
+    (void)argc; (void)argv;
+    return main_lvgl();
 }
