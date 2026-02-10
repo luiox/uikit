@@ -27,3 +27,26 @@ git clone https://github.com/luiox/monocodes.git --recursive -submodules
 git submodule update --remote
 ```
 
+
+需要移除的submodule
+
+[submodule "mverify"]
+	path = mverify
+	url = https://github.com/luiox/mverify
+[submodule "libca"]
+	path = libca
+	url = https://github.com/luiox/libca
+[submodule "morpher"]
+	path = morpher
+	url = https://github.com/luiox/morpher.git
+[submodule "morpher-api"]
+	path = morpher-api
+	url = https://github.com/luiox/morpher-api.git
+[submodule "mrecaf4plugin"]
+	path = mrecaf4plugin
+	url = https://github.com/luiox/mrecaf4plugin.git
+	
+[submodule "ota_demo"]
+	path = ota_demo
+	url = https://github.com/luiox/ota_demo
+
