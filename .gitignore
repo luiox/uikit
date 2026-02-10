@@ -52,3 +52,5 @@ lib/
 
 .xmake/
 lv_port_linux/
+.idea/
+
