@@ -49,4 +49,6 @@ lib/
 
 *.pyc
 /libca_test_demo/.xmake
-/.xmake
+
+.xmake/
+lv_port_linux/

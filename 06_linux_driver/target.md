@@ -1,8 +1,15 @@
+开发板如果自动挂载nfs失败就手动挂载，命令如下。
+
+```bash
+mount -t nfs -o nolock,nfsvers=3 192.168.56.100:/home/canrad/linux/imx6ull/drivers /mnt/drivers
+```
+
+
 学习顺序
 
 
 1. 内核构建、模块、dmesg、printk。调试技巧
-写模块打印信息，练习交叉编译与加载。ftrace、kernelshark、perf
+写模块打印信息，练习交叉编译与加载。ftrace、dynamic debug、kernelshark、perf
 
 2. 内核并发基础
 spinlock/mutex/atomic

@@ -17,3 +17,7 @@
 [submodule "ota_demo"]
 	path = ota_demo
 	url = https://github.com/luiox/ota_demo
+[submodule "15_lvgl_study/lvgl"]
+	path = 15_lvgl_study/lvgl
+	url = https://github.com/lvgl/lvgl
+	branch = release/v9.4
