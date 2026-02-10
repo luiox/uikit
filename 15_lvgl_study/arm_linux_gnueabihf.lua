@@ -24,3 +24,18 @@ toolchain("arm-linux-gnueabihf")
     set_toolset("size", "arm-linux-gnueabihf-size")
 toolchain_end()
 
+rule("util.copy_artifact")
+    after_build(function (target)
+        -- 先拿到到构建产物的路径
+        local out = target:targetfile()
+        -- 拷贝到build/artifact目录下
+        local repo_root = path.join(os.scriptdir())
+        local artifact_root = path.join(repo_root, "build", "artifact")
+        os.mkdir(artifact_root)
+        local target_dir = path.join(artifact_root, target:name())
+        os.mkdir(target_dir)
+        os.cp(out, target_dir)
+        print("[artifact] 已复制到: " .. target_dir)
+    end)
+
+rule_end()
