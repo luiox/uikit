@@ -11,7 +11,17 @@ from datetime import datetime
 from pathlib import Path
 import platform
 import subprocess
-
+# 在 Windows 下启动时隐藏控制台窗口（使用 ctypes）；如果需要查看控制台可删除此段或设置环境变量
+if platform.system() == "Windows":
+    try:
+        import ctypes
+        SW_HIDE = 0
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+    except Exception as e:
+        # 隐藏失败不影响主程序运行
+        print(f"[调试] 隐藏控制台失败: {e}")
 # ============== 配置 ==============
 CHECK_INTERVAL = 3600  # 检查间隔（秒），默认1小时
 DATA_FILE = Path(__file__).parent / "openrouter_models.json"
