@@ -76,6 +76,19 @@ def send_notification(title: str, message: str):
     print(f"[通知] {title}: {message}")
 
 
+def show_windows_messagebox(title: str, message: str, max_chars: int = 8000):
+    """在 Windows 上使用原生 MessageBox 显示模型详情；会在消息过长时截断以防卡死或超出显示限制。"""
+    try:
+        import ctypes
+        MB_OK = 0x00000000
+        # 截断过长消息以免影响显示
+        if len(message) > max_chars:
+            message = message[: max_chars - 20] + "\n... (truncated)"
+        ctypes.windll.user32.MessageBoxW(0, str(message), str(title), MB_OK)
+    except Exception as e:
+        print(f"[警告] 无法显示 MessageBox: {e}")
+
+
 # ============== API 请求 ==============
 def fetch_models() -> dict:
     """从OpenRouter API获取模型列表"""
@@ -199,12 +212,34 @@ def check_once():
                 message_parts.append(f"更新 {len(changed)} 个模型")
                 print(f"[更新] {changed}")
             
-            # 发送弹窗通知
+            # 发送弹窗通知（摘要）
             title = "🔔 OpenRouter 模型变化"
             message = " | ".join(message_parts)
             send_notification(title, message)
-            
-            # 详细通知（如果有新增模型）
+
+            # Windows 下显示详细 MessageBox（包含新增/移除/更新的具体 ID 与名称）
+            if platform.system() == "Windows" and (added or removed or changed):
+                details_lines = []
+                if added:
+                    details_lines.append("新增：")
+                    for mid in added:
+                        name = new_models.get(mid, {}).get("name", "")
+                        details_lines.append(f"  + {mid} — {name}")
+                if removed:
+                    details_lines.append("移除：")
+                    for mid in removed:
+                        name = old_models.get(mid, {}).get("name", "")
+                        details_lines.append(f"  - {mid} — {name}")
+                if changed:
+                    details_lines.append("更新：")
+                    for mid in changed:
+                        name = new_models.get(mid, {}).get("name", "")
+                        details_lines.append(f"  * {mid} — {name}")
+
+                details = "\n".join(details_lines) if details_lines else "(无详情)"
+                show_windows_messagebox("OpenRouter 模型详情", details)
+
+            # 继续保留现有的短通知（针对少量新增模型）
             if added and len(added) <= 3:
                 for model_id in added:
                     model_name = new_models[model_id]['name']
