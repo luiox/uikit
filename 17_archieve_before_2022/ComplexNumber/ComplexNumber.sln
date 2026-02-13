@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComplexNumber", "ComplexNumber\ComplexNumber.vcxproj", "{630E20F8-B15F-4CD8-BBDE-A4A577E70CA7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{630E20F8-B15F-4CD8-BBDE-A4A577E70CA7}.Debug|Win32.ActiveCfg = Debug|Win32
+		{630E20F8-B15F-4CD8-BBDE-A4A577E70CA7}.Debug|Win32.Build.0 = Debug|Win32
+		{630E20F8-B15F-4CD8-BBDE-A4A577E70CA7}.Release|Win32.ActiveCfg = Release|Win32
+		{630E20F8-B15F-4CD8-BBDE-A4A577E70CA7}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
