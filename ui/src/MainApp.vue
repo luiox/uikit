@@ -34,7 +34,10 @@
             @click="selectedItemId = item.id"
             @dblclick="item.itemType !== 'separator' && onLaunch()"
           >
-            <span class="item-icon">{{ item.itemType === 'separator' ? '--' : (item.name?.[0] || '?') }}</span>
+            <span class="item-icon">
+              <img v-if="item.itemType !== 'separator' && iconDataMap[item.id]" class="item-icon-image" :src="iconDataMap[item.id]" alt="" />
+              <span v-else>{{ getFallbackIconText(item) }}</span>
+            </span>
             <span class="item-name">{{ item.name || '(未命名)' }}</span>
             <span class="item-count">{{ item.launchCount ?? 0 }}</span>
           </li>
@@ -105,6 +108,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import {
   addGroup,
   deleteItem,
+  extractExeIcon,
   hideCurrentWindow,
   launchItem,
   loadLauncherState,
@@ -128,6 +132,8 @@ const groupMenuGroupId = ref<string | null>(null);
 const itemMenu = ref({ visible: false, x: 0, y: 0 });
 const itemMenuMode = ref<'add' | 'item'>('add');
 const itemMenuItemId = ref<string | null>(null);
+const iconDataMap = ref<Record<string, string>>({});
+const iconResolveSeq = ref(0);
 const addGroupDialogVisible = ref(false);
 const newGroupName = ref('');
 const addGroupDialogMode = ref<'add' | 'rename'>('add');
@@ -160,12 +166,54 @@ function selectGroup(id: string) {
 
 async function refresh() {
   const state = await loadLauncherState();
-  groups.value = state.groups ?? [];
+  const loadedGroups = state.groups ?? [];
+  groups.value = loadedGroups;
+  void resolveIcons(loadedGroups);
 
   const preferred = state.settings?.currentGroup;
   const byName = groups.value.find((g) => g.name === preferred);
   activeGroupId.value = byName?.id ?? groups.value[0]?.id ?? null;
   selectedItemId.value = null;
+}
+
+async function resolveIcons(sourceGroups: Group[]) {
+  const seq = iconResolveSeq.value + 1;
+  iconResolveSeq.value = seq;
+
+  const appItems = sourceGroups.flatMap((group) => group.items).filter((item) => item.itemType !== 'separator');
+  const resolved = await Promise.all(
+    appItems.map(async (item) => {
+      const iconPath = (item.iconLocation || item.targetPath || '').trim();
+      if (!iconPath) {
+        return [item.id, ''] as const;
+      }
+      try {
+        const src = await extractExeIcon(iconPath);
+        return [item.id, src] as const;
+      } catch {
+        return [item.id, ''] as const;
+      }
+    })
+  );
+
+  if (seq !== iconResolveSeq.value) {
+    return;
+  }
+
+  const nextMap: Record<string, string> = {};
+  for (const [id, src] of resolved) {
+    if (src) {
+      nextMap[id] = src;
+    }
+  }
+  iconDataMap.value = nextMap;
+}
+
+function getFallbackIconText(item: LaunchItem): string {
+  if (item.itemType === 'separator') {
+    return '--';
+  }
+  return item.name?.[0] || '?';
 }
 
 function closeMenus() {
@@ -533,6 +581,13 @@ function onItemMenuAction() {
   color: #2f4a95;
   font-size: 12px;
   font-weight: 600;
+  overflow: hidden;
+}
+
+.item-icon-image {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .item-name {

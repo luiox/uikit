@@ -769,6 +769,54 @@ fn move_item(
     Ok(())
 }
 
+#[tauri::command]
+fn extract_exe_icon(path: String) -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let trimmed = path.trim();
+        if trimmed.is_empty() {
+            return Err("icon path is empty".to_string());
+        }
+
+        let output = Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Drawing; $p=$args[0]; if (-not (Test-Path -LiteralPath $p)) { throw 'file not found' }; $icon=[System.Drawing.Icon]::ExtractAssociatedIcon($p); if ($null -eq $icon) { throw 'icon not found' }; $bmp=$icon.ToBitmap(); $ms=New-Object System.IO.MemoryStream; $bmp.Save($ms,[System.Drawing.Imaging.ImageFormat]::Png); [Convert]::ToBase64String($ms.ToArray())",
+                trimmed,
+            ])
+            .output()
+            .map_err(|e| format!("extract icon failed: {e}"))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let detail = if !stderr.is_empty() { stderr } else { stdout };
+            return Err(format!("extract icon failed: {detail}"));
+        }
+
+        let base64 = String::from_utf8(output.stdout)
+            .map_err(|e| format!("icon output decode failed: {e}"))?
+            .trim()
+            .to_string();
+
+        if base64.is_empty() {
+            return Err("icon output empty".to_string());
+        }
+
+        return Ok(format!("data:image/png;base64,{base64}"));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        Err("extract exe icon is only supported on Windows".to_string())
+    }
+}
+
 fn toggle_main_window(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
         match main.is_visible() {
@@ -874,6 +922,7 @@ fn main() {
             delete_item,
             launch_item,
             move_item,
+            extract_exe_icon,
             add_group,
             rename_group,
             open_editor,

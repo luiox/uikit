@@ -1,5 +1,7 @@
 node_modules/
 src-tauri/target/
+dist/
+ui/dist/
 *.log
 *.tmp
 launcher.v2.json

@@ -23,6 +23,10 @@ export async function moveItem(groupId: string, itemId: string, targetGroupId: s
   return invoke("move_item", { groupId, itemId, targetGroupId });
 }
 
+export async function extractExeIcon(path: string): Promise<string> {
+  return invoke("extract_exe_icon", { path });
+}
+
 export async function updateSettings(settings: Settings) {
   return invoke("update_settings", { settings });
 }
