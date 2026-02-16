@@ -44,6 +44,11 @@ export async function hideCurrentWindow() {
   await window.hide();
 }
 
+export async function closeCurrentWindow() {
+  const window = getCurrentWebviewWindow();
+  await window.close();
+}
+
 export async function onDataChanged(handler: () => void) {
   return listen("data-changed", handler);
 }

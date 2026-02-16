@@ -571,6 +571,7 @@ async fn open_editor(
     WebviewWindowBuilder::new(&app, "editor", WebviewUrl::App("editor.html".into()))
         .title("编辑启动项")
         .inner_size(560.0, 460.0)
+        .decorations(false)
         .resizable(true)
         .build()
         .map_err(|e| format!("create editor window failed: {e}"))?;

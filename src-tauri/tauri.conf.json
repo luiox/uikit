@@ -16,6 +16,7 @@
         "title": "nassistant",
         "width": 1040,
         "height": 700,
+        "decorations": false,
         "resizable": true
       }
     ],

@@ -1,8 +1,8 @@
 <template>
   <div class="app-window" @contextmenu.prevent>
-    <header class="top-bar">
+    <header class="top-bar" data-tauri-drag-region>
       <div class="top-title">nassistant</div>
-      <button class="hide-btn" @click="onHide">×</button>
+      <button class="hide-btn no-drag" @click="onHide">×</button>
     </header>
 
     <div class="body-layout">
@@ -57,11 +57,30 @@
     >
       <button class="menu-item" @click="onAddItem">添加启动项</button>
     </div>
+
+    <div v-if="addGroupDialogVisible" class="dialog-mask" @click="closeAddGroupDialog">
+      <div class="dialog-card" @click.stop>
+        <div class="dialog-title">添加分组</div>
+        <input
+          ref="groupNameInputRef"
+          v-model="newGroupName"
+          class="dialog-input"
+          type="text"
+          placeholder="输入分组名称"
+          @keydown.enter.prevent="confirmAddGroup"
+          @keydown.esc.prevent="closeAddGroupDialog"
+        />
+        <div class="dialog-actions">
+          <button class="dialog-btn primary" @click="confirmAddGroup">确定</button>
+          <button class="dialog-btn" @click="closeAddGroupDialog">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import {
   addGroup,
   deleteItem,
@@ -82,6 +101,9 @@ const statusText = ref('');
 const isError = ref(false);
 const groupMenu = ref({ visible: false, x: 0, y: 0 });
 const itemMenu = ref({ visible: false, x: 0, y: 0 });
+const addGroupDialogVisible = ref(false);
+const newGroupName = ref('');
+const groupNameInputRef = ref<HTMLInputElement | null>(null);
 
 const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null);
 const selectedItem = computed<LaunchItem | null>(() => activeGroup.value?.items.find((it) => it.id === selectedItemId.value) ?? null);
@@ -130,11 +152,27 @@ function openItemMenu(event: MouseEvent) {
 
 async function onAddGroup() {
   closeMenus();
-  const name = window.prompt('输入新分组名称');
-  if (!name) return;
+  addGroupDialogVisible.value = true;
+  newGroupName.value = '';
+  await nextTick();
+  groupNameInputRef.value?.focus();
+}
+
+function closeAddGroupDialog() {
+  addGroupDialogVisible.value = false;
+  newGroupName.value = '';
+}
+
+async function confirmAddGroup() {
+  const name = newGroupName.value.trim();
+  if (!name) {
+    setStatus('分组名称不能为空', true);
+    return;
+  }
   try {
-    await addGroup(name.trim());
+    await addGroup(name);
     setStatus('分组已添加');
+    closeAddGroupDialog();
     await refresh();
   } catch (error) {
     setStatus(String(error), true);
@@ -224,9 +262,10 @@ onMounted(async () => {
   height: 100vh;
   display: grid;
   grid-template-rows: 42px 1fr 28px;
-  background: #eff3f8;
+  background: rgb(255, 255, 255);
   color: #1f2937;
   font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  overflow: hidden;
 }
 
 .top-bar {
@@ -234,8 +273,17 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 8px 0 12px;
-  background: linear-gradient(180deg, #fdfefe 0%, #eef3f9 100%);
-  border-bottom: 1px solid #dbe3ef;
+  background: rgb(230, 230, 230);
+  border-bottom: 1px solid rgb(210, 210, 210);
+  user-select: none;
+}
+
+.top-bar[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
 }
 
 .top-title {
@@ -246,12 +294,20 @@ onMounted(async () => {
 .hide-btn {
   width: 30px;
   height: 28px;
-  border: 1px solid #ccd6e4;
+  border: 1px solid rgb(200, 200, 200);
   border-radius: 6px;
-  background: #fff;
+  background: rgb(236, 236, 236);
   font-size: 18px;
-  line-height: 1;
+  line-height: 26px;
+  text-align: center;
   cursor: pointer;
+  padding: 0;
+}
+
+.hide-btn:hover {
+  background: #e81123;
+  border-color: #e81123;
+  color: #fff;
 }
 
 .body-layout {
@@ -268,20 +324,20 @@ onMounted(async () => {
 }
 
 .group-panel {
-  border-right: 1px solid #dbe3ef;
-  background: #f8fbff;
+  border-right: 1px solid rgb(210, 210, 210);
+  background: rgb(230, 230, 230);
 }
 
 .item-panel {
-  background: #ffffff;
+  background: rgb(255, 255, 255);
 }
 
 .section-title {
   padding: 10px 12px;
-  border-bottom: 1px solid #e3eaf3;
+  border-bottom: 1px solid rgb(210, 210, 210);
   font-size: 13px;
-  color: #516174;
-  background: #f9fcff;
+  color: #495666;
+  background: rgb(230, 230, 230);
 }
 
 .group-list,
@@ -290,6 +346,7 @@ onMounted(async () => {
   margin: 0;
   padding: 8px;
   overflow: auto;
+  -ms-overflow-style: none;
 }
 
 .group-item {
@@ -302,14 +359,14 @@ onMounted(async () => {
 }
 
 .group-item:hover {
-  background: #edf4ff;
-  border-color: #d0def5;
+  background: rgb(238, 238, 238);
+  border-color: rgb(210, 210, 210);
 }
 
 .group-item.active {
-  background: #2f67e6;
-  color: #fff;
-  border-color: #2f67e6;
+  background: rgb(250, 250, 250);
+  color: #1f2937;
+  border-color: rgb(205, 205, 205);
 }
 
 .item-row {
@@ -318,7 +375,7 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   background: #fff;
-  border: 1px solid #e6ebf2;
+  border: 1px solid transparent;
   border-radius: 8px;
   padding: 9px 10px;
   margin-bottom: 7px;
@@ -326,13 +383,13 @@ onMounted(async () => {
 }
 
 .item-row:hover {
-  border-color: #b6c9f1;
-  background: #f9fbff;
+  border-color: rgb(215, 215, 215);
+  background: rgb(245, 245, 245);
 }
 
 .item-row.active {
-  border-color: #2f67e6;
-  background: #edf3ff;
+  border-color: rgb(215, 215, 215);
+  background: rgb(245, 245, 245);
 }
 
 .item-row.separator {
@@ -365,8 +422,8 @@ onMounted(async () => {
 }
 
 .status-line {
-  border-top: 1px solid #dbe3ef;
-  background: #fdfefe;
+  border-top: 1px solid rgb(220, 220, 220);
+  background: rgb(248, 248, 248);
   padding: 5px 10px;
   font-size: 13px;
   color: #0f766e;
@@ -387,6 +444,61 @@ onMounted(async () => {
   padding: 6px;
 }
 
+.dialog-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(32, 35, 42, 0.2);
+  display: grid;
+  place-items: center;
+  z-index: 12000;
+}
+
+.dialog-card {
+  width: 320px;
+  background: rgb(246, 246, 246);
+  border: 1px solid rgb(210, 210, 210);
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+  padding: 12px;
+}
+
+.dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.dialog-input {
+  width: 100%;
+  border: 1px solid rgb(200, 200, 200);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.dialog-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-btn {
+  border: 1px solid rgb(200, 200, 200);
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dialog-btn.primary {
+  background: rgb(0, 120, 215);
+  border-color: rgb(0, 120, 215);
+  color: #fff;
+}
+
 .menu-item {
   width: 100%;
   border: none;
@@ -400,5 +512,36 @@ onMounted(async () => {
 
 .menu-item:hover {
   background: #edf3ff;
+}
+
+.group-list,
+.item-list {
+  scrollbar-width: none;
+}
+
+.group-list::-webkit-scrollbar,
+.item-list::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+
+:global(html),
+:global(body),
+:global(#app) {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar),
+:global(#app::-webkit-scrollbar) {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
 }
 </style>

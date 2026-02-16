@@ -1,8 +1,11 @@
 <template>
-  <div class="editor-body" @contextmenu.prevent>
-    <div class="editor-card">
-      <h2>编辑启动项</h2>
+  <div class="editor-window" @contextmenu.prevent>
+    <header class="editor-topbar" data-tauri-drag-region>
+      <div class="editor-title">编辑启动项</div>
+      <button class="close-btn no-drag" @click="onCancel">×</button>
+    </header>
 
+    <div class="editor-content">
       <label>名称</label>
       <input v-model="name" type="text" />
 
@@ -33,7 +36,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { closeEditor, getEditorContext, onEditorContextChanged, upsertItem } from './api';
+import { closeCurrentWindow, closeEditor, getEditorContext, onEditorContextChanged, upsertItem } from './api';
 
 const groupId = ref<string | null>(null);
 const itemId = ref<string | null>(null);
@@ -101,7 +104,7 @@ async function onSave() {
 }
 
 async function onCancel() {
-  await closeEditor();
+  await closeCurrentWindow();
 }
 
 onMounted(async () => {
@@ -119,36 +122,79 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.editor-body {
-  margin: 0;
-  background: #eef2f8;
-  display: grid;
-  place-items: center;
+.editor-window {
   height: 100vh;
+  display: grid;
+  grid-template-rows: 40px 1fr;
+  background: rgb(255, 255, 255);
   font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  overflow: hidden;
 }
 
-.editor-card {
-  width: min(560px, calc(100vw - 24px));
-  background: #fff;
-  border: 1px solid #dde5f0;
-  border-radius: 12px;
-  padding: 16px;
+.editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 12px;
+  background: rgb(230, 230, 230);
+  border-bottom: 1px solid rgb(210, 210, 210);
+  user-select: none;
+}
+
+.editor-topbar[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.editor-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close-btn {
+  width: 30px;
+  height: 28px;
+  border: 1px solid rgb(200, 200, 200);
+  border-radius: 6px;
+  background: rgb(236, 236, 236);
+  font-size: 18px;
+  line-height: 26px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.close-btn:hover {
+  background: #e81123;
+  border-color: #e81123;
+  color: #fff;
+}
+
+.editor-content {
+  padding: 12px;
   display: grid;
   gap: 8px;
+  align-content: start;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.editor-card h2 {
-  margin: 2px 0 8px;
-  font-size: 20px;
+.editor-content::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
 }
 
-.editor-card input,
-.editor-card select {
+.editor-content input,
+.editor-content select {
   border: 1px solid #cfd7e3;
-  border-radius: 8px;
-  padding: 9px 10px;
-  font-size: 14px;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .editor-actions {
@@ -160,9 +206,9 @@ onMounted(async () => {
 
 button {
   border: 1px solid #cfd7e3;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #fff;
-  padding: 8px 14px;
+  padding: 7px 14px;
   cursor: pointer;
 }
 
@@ -181,5 +227,24 @@ button.primary {
 
 .status-text.error {
   color: #b91c1c;
+}
+
+:global(html),
+:global(body),
+:global(#app) {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar),
+:global(#app::-webkit-scrollbar) {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
 }
 </style>
