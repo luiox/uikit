@@ -838,21 +838,56 @@ fn resolve_icon_file_path(raw: &str) -> String {
         return normalized;
     }
 
-    if let Ok(output) = Command::new("where.exe").arg(&normalized).output() {
-        if output.status.success() {
-            let first_line = String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .next()
-                .unwrap_or_default()
-                .trim()
-                .to_string();
-            if !first_line.is_empty() {
-                return first_line;
-            }
-        }
+    #[cfg(target_os = "windows")]
+    if let Some(found) = resolve_executable_with_search_path(&normalized) {
+        return found;
     }
 
     normalized
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_executable_with_search_path(file_name: &str) -> Option<String> {
+    use windows_sys::Win32::Storage::FileSystem::SearchPathW;
+
+    let file_name_w = encode_wide_null(file_name);
+    let required = unsafe {
+        SearchPathW(
+            ptr::null(),
+            file_name_w.as_ptr(),
+            ptr::null(),
+            0,
+            ptr::null_mut(),
+            ptr::null_mut(),
+        )
+    };
+    if required == 0 {
+        return None;
+    }
+
+    let mut buffer = vec![0u16; required as usize + 1];
+    let written = unsafe {
+        SearchPathW(
+            ptr::null(),
+            file_name_w.as_ptr(),
+            ptr::null(),
+            buffer.len() as u32,
+            buffer.as_mut_ptr(),
+            ptr::null_mut(),
+        )
+    };
+    if written == 0 {
+        return None;
+    }
+
+    let value = String::from_utf16_lossy(&buffer[..written as usize])
+        .trim()
+        .to_string();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }
 
 fn stable_hash_hex(input: &str) -> String {
