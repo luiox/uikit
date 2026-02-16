@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import {
   addGroup,
   deleteItem,
@@ -133,6 +133,7 @@ const itemMenu = ref({ visible: false, x: 0, y: 0 });
 const itemMenuMode = ref<'add' | 'item'>('add');
 const itemMenuItemId = ref<string | null>(null);
 const iconDataMap = ref<Record<string, string>>({});
+const iconPathCache = ref<Record<string, string>>({});
 const iconResolveSeq = ref(0);
 const addGroupDialogVisible = ref(false);
 const newGroupName = ref('');
@@ -162,54 +163,73 @@ function setStatus(message: string, error = false) {
 function selectGroup(id: string) {
   activeGroupId.value = id;
   selectedItemId.value = null;
+  void resolveIconsForActiveGroup();
 }
 
 async function refresh() {
   const state = await loadLauncherState();
   const loadedGroups = state.groups ?? [];
   groups.value = loadedGroups;
-  void resolveIcons(loadedGroups);
 
   const preferred = state.settings?.currentGroup;
   const byName = groups.value.find((g) => g.name === preferred);
   activeGroupId.value = byName?.id ?? groups.value[0]?.id ?? null;
   selectedItemId.value = null;
+  void resolveIconsForActiveGroup();
 }
 
-async function resolveIcons(sourceGroups: Group[]) {
-  const seq = iconResolveSeq.value + 1;
-  iconResolveSeq.value = seq;
+function normalizeIconPath(path: string): string {
+  const value = path.trim().replace(/^"|"$/g, '');
+  const commaIndex = value.indexOf(',');
+  return (commaIndex >= 0 ? value.slice(0, commaIndex) : value).trim();
+}
 
-  const appItems = sourceGroups.flatMap((group) => group.items).filter((item) => item.itemType !== 'separator');
-  const resolved = await Promise.all(
-    appItems.map(async (item) => {
-      const iconPath = (item.iconLocation || item.targetPath || '').trim();
-      if (!iconPath) {
-        return [item.id, ''] as const;
-      }
-      try {
-        const src = await extractExeIcon(iconPath);
-        return [item.id, src] as const;
-      } catch (error) {
-        if (selectedItemId.value === item.id) {
-          setStatus(`图标提取失败: ${String(error)}`, true);
-        }
-        return [item.id, ''] as const;
-      }
-    })
-  );
-
-  if (seq !== iconResolveSeq.value) {
+async function resolveIconsForActiveGroup() {
+  const group = groups.value.find((g) => g.id === activeGroupId.value);
+  if (!group) {
     return;
   }
 
-  const nextMap: Record<string, string> = {};
-  for (const [id, src] of resolved) {
-    if (src) {
-      nextMap[id] = src;
+  const seq = iconResolveSeq.value + 1;
+  iconResolveSeq.value = seq;
+
+  for (const item of group.items) {
+    if (seq !== iconResolveSeq.value) {
+      return;
+    }
+    if (item.itemType === 'separator') {
+      continue;
+    }
+    if (iconDataMap.value[item.id]) {
+      continue;
+    }
+
+    const iconPath = normalizeIconPath(item.iconLocation || item.targetPath || '');
+    if (!iconPath) {
+      continue;
+    }
+
+    const cached = iconPathCache.value[iconPath];
+    if (cached) {
+      iconDataMap.value = { ...iconDataMap.value, [item.id]: cached };
+      continue;
+    }
+
+    try {
+      const src = await extractExeIcon(iconPath);
+      if (seq !== iconResolveSeq.value) {
+        return;
+      }
+      if (src) {
+        iconPathCache.value = { ...iconPathCache.value, [iconPath]: src };
+        iconDataMap.value = { ...iconDataMap.value, [item.id]: src };
+      }
+    } catch (error) {
+      if (selectedItemId.value === item.id) {
+        setStatus(`图标提取失败: ${String(error)}`, true);
+      }
     }
   }
-  iconDataMap.value = nextMap;
 }
 
 function getFallbackIconText(item: LaunchItem): string {
@@ -417,6 +437,13 @@ onMounted(async () => {
   });
   setStatus('就绪');
 });
+
+watch(
+  () => [activeGroupId.value, groups.value.length],
+  () => {
+    void resolveIconsForActiveGroup();
+  }
+);
 
 function onGroupMenuAction() {
   if (groupMenuMode.value === 'rename') {

@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -113,6 +113,7 @@ struct AppState {
     settings: Mutex<Settings>,
     editor_context: Mutex<Option<EditorContext>>,
     tray_icon: Mutex<Option<TrayIcon>>,
+    icon_cache: Mutex<HashMap<String, String>>,
     data_path: PathBuf,
     settings_path: PathBuf,
 }
@@ -769,8 +770,73 @@ fn move_item(
     Ok(())
 }
 
+fn expand_windows_env_vars(input: &str) -> String {
+    let mut result = String::new();
+    let mut rest = input;
+
+    while let Some(start) = rest.find('%') {
+        result.push_str(&rest[..start]);
+        let remain = &rest[start + 1..];
+        if let Some(end) = remain.find('%') {
+            let key = &remain[..end];
+            if key.is_empty() {
+                result.push('%');
+            } else if let Ok(value) = std::env::var(key) {
+                result.push_str(&value);
+            } else {
+                result.push('%');
+                result.push_str(key);
+                result.push('%');
+            }
+            rest = &remain[end + 1..];
+        } else {
+            result.push('%');
+            result.push_str(remain);
+            return result;
+        }
+    }
+
+    result.push_str(rest);
+    result
+}
+
+fn resolve_icon_file_path(raw: &str) -> String {
+    let mut normalized = raw.trim().trim_matches('"').trim().to_string();
+    if let Some((left, _)) = normalized.split_once(',') {
+        let candidate = left.trim().trim_matches('"').trim();
+        if !candidate.is_empty() {
+            normalized = candidate.to_string();
+        }
+    }
+
+    normalized = expand_windows_env_vars(&normalized);
+    if normalized.is_empty() {
+        return normalized;
+    }
+
+    if normalized.contains('\\') || normalized.contains('/') || normalized.contains(':') {
+        return normalized;
+    }
+
+    if let Ok(output) = Command::new("where.exe").arg(&normalized).output() {
+        if output.status.success() {
+            let first_line = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if !first_line.is_empty() {
+                return first_line;
+            }
+        }
+    }
+
+    normalized
+}
+
 #[tauri::command]
-fn extract_exe_icon(path: String) -> Result<String, String> {
+fn extract_exe_icon(state: tauri::State<'_, AppState>, path: String) -> Result<String, String> {
     #[cfg(target_os = "windows")]
     {
         let trimmed = path.trim();
@@ -778,16 +844,17 @@ fn extract_exe_icon(path: String) -> Result<String, String> {
             return Err("icon path is empty".to_string());
         }
 
-        let mut normalized = trimmed.trim_matches('"').trim().to_string();
-        if let Some((left, _)) = normalized.split_once(',') {
-            let candidate = left.trim().trim_matches('"').trim();
-            if !candidate.is_empty() {
-                normalized = candidate.to_string();
-            }
-        }
+        let normalized = resolve_icon_file_path(trimmed);
 
         if normalized.is_empty() {
             return Err("icon path is empty".to_string());
+        }
+
+        let cache_key = normalized.to_ascii_lowercase();
+        if let Ok(cache) = state.icon_cache.lock() {
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
         }
 
         let mut candidates = Vec::<String>::new();
@@ -852,7 +919,12 @@ fn extract_exe_icon(path: String) -> Result<String, String> {
             return Err("icon output empty".to_string());
         }
 
-        return Ok(format!("data:image/png;base64,{base64}"));
+        let data_url = format!("data:image/png;base64,{base64}");
+        if let Ok(mut cache) = state.icon_cache.lock() {
+            cache.insert(cache_key, data_url.clone());
+        }
+
+        return Ok(data_url);
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -923,6 +995,7 @@ fn main() {
         settings: Mutex::new(settings),
         editor_context: Mutex::new(None),
         tray_icon: Mutex::new(None),
+        icon_cache: Mutex::new(HashMap::new()),
         data_path,
         settings_path,
     };
