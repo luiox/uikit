@@ -4,38 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>编辑启动项</title>
-    <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body class="editor-body">
-    <div class="editor-card">
-      <h2>编辑启动项</h2>
-
-      <label>名称</label>
-      <input id="nameInput" type="text" />
-
-      <label>目标路径</label>
-      <input id="targetInput" type="text" />
-
-      <label>图标路径</label>
-      <input id="iconInput" type="text" />
-
-      <label>参数</label>
-      <input id="argsInput" type="text" />
-
-      <label>类型</label>
-      <select id="itemTypeSelect">
-        <option value="app">应用</option>
-        <option value="separator">分隔项</option>
-      </select>
-
-      <div class="editor-actions">
-        <button id="saveBtn" class="primary">保存</button>
-        <button id="cancelBtn">取消</button>
-      </div>
-
-      <p id="editorStatus" class="status-text"></p>
-    </div>
-
-    <script type="module" src="./editor.js"></script>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/editor.ts"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 # nassistant
 
-`nassistant` 是基于 **Rust + Tauri v2** 的轻量启动器 MVP，目标是替代旧 VB6 版本，并兼容历史数据。
+`nassistant` 是基于 **Rust + Tauri v2 + Vue 3 + TypeScript** 的轻量启动器 MVP，目标是替代旧 VB6 版本，并兼容历史数据。
 
 ## 当前状态
 
@@ -17,7 +17,7 @@
 
 - Tauri: `2.x`
 - Rust: `edition = 2021`（建议 `rustc >= 1.74`）
-- 前端: 原生 `HTML/CSS/JavaScript`
+- 前端: `Vue 3 + TypeScript + Vite`
 
 ## 目录结构
 
@@ -26,9 +26,13 @@
   ui/
     index.html
     editor.html
-    app.js
-    editor.js
-    styles.css
+    src/
+      MainApp.vue
+      EditorApp.vue
+      main.ts
+      editor.ts
+      api.ts
+      types.ts
   src-tauri/
     src/main.rs
     tauri.conf.json
