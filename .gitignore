@@ -1,0 +1,6 @@
+node_modules/
+src-tauri/target/
+*.log
+*.tmp
+launcher.v2.json
+nassistant.settings.json

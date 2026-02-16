@@ -1,0 +1,22 @@
+[package]
+name = "nassistant"
+version = "0.1.0"
+description = "nassistant launcher mvp"
+authors = ["nassistant"]
+edition = "2021"
+rust-version = "1.74"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.6", features = ["system-tray", "global-shortcut-all", "window-all", "shell-open"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "1"
+dirs = "5"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
