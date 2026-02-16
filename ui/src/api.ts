@@ -39,6 +39,10 @@ export async function addGroup(name: string): Promise<string> {
   return invoke("add_group", { name });
 }
 
+export async function renameGroup(groupId: string, name: string): Promise<void> {
+  return invoke("rename_group", { groupId, name });
+}
+
 export async function hideCurrentWindow() {
   const window = getCurrentWebviewWindow();
   await window.hide();

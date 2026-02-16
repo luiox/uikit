@@ -663,6 +663,46 @@ fn add_group(
     Ok(new_group_id)
 }
 
+#[tauri::command]
+fn rename_group(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    group_id: String,
+    name: String,
+) -> Result<(), String> {
+    let next_name = name.trim();
+    if next_name.is_empty() {
+        return Err("group name is empty".to_string());
+    }
+
+    {
+        let mut data = state
+            .data
+            .lock()
+            .map_err(|_| "state lock poisoned".to_string())?;
+
+        if data
+            .groups
+            .iter()
+            .any(|group| group.id != group_id && group.name.eq_ignore_ascii_case(next_name))
+        {
+            return Err("group already exists".to_string());
+        }
+
+        let group = data
+            .groups
+            .iter_mut()
+            .find(|group| group.id == group_id)
+            .ok_or_else(|| "group not found".to_string())?;
+
+        group.name = next_name.to_string();
+    }
+
+    state.save_data()?;
+    let _ = app.emit("data-changed", "rename_group");
+    Ok(())
+}
+
 fn toggle_main_window(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
         match main.is_visible() {
@@ -767,6 +807,7 @@ fn main() {
             delete_item,
             launch_item,
             add_group,
+            rename_group,
             open_editor,
             get_editor_context,
             close_editor,

@@ -13,6 +13,7 @@
             v-for="group in groups"
             :key="group.id"
             class="group-item"
+            :data-group-id="group.id"
             :class="{ active: group.id === activeGroupId }"
             @click="selectGroup(group.id)"
           >
@@ -47,7 +48,9 @@
       class="context-menu"
       :style="{ left: `${groupMenu.x}px`, top: `${groupMenu.y}px` }"
     >
-      <button class="menu-item" @click="onAddGroup">添加分组</button>
+      <button class="menu-item" @click="onGroupMenuAction">
+        {{ groupMenuMode === 'rename' ? '重命名分组' : '添加分组' }}
+      </button>
     </div>
 
     <div
@@ -60,13 +63,13 @@
 
     <div v-if="addGroupDialogVisible" class="dialog-mask" @click="closeAddGroupDialog">
       <div class="dialog-card" @click.stop>
-        <div class="dialog-title">添加分组</div>
+        <div class="dialog-title">{{ addGroupDialogMode === 'rename' ? '重命名分组' : '添加分组' }}</div>
         <input
           ref="groupNameInputRef"
           v-model="newGroupName"
           class="dialog-input"
           type="text"
-          placeholder="输入分组名称"
+          :placeholder="addGroupDialogMode === 'rename' ? '输入新的分组名称' : '输入分组名称'"
           @keydown.enter.prevent="confirmAddGroup"
           @keydown.esc.prevent="closeAddGroupDialog"
         />
@@ -89,7 +92,8 @@ import {
   loadLauncherState,
   onDataChanged,
   onSettingsChanged,
-  openEditor
+  openEditor,
+  renameGroup
 } from './api';
 import type { Group, LaunchItem } from './types';
 
@@ -100,9 +104,13 @@ const searchKeyword = ref('');
 const statusText = ref('');
 const isError = ref(false);
 const groupMenu = ref({ visible: false, x: 0, y: 0 });
+const groupMenuMode = ref<'add' | 'rename'>('add');
+const groupMenuGroupId = ref<string | null>(null);
 const itemMenu = ref({ visible: false, x: 0, y: 0 });
 const addGroupDialogVisible = ref(false);
 const newGroupName = ref('');
+const addGroupDialogMode = ref<'add' | 'rename'>('add');
+const addGroupDialogGroupId = ref<string | null>(null);
 const groupNameInputRef = ref<HTMLInputElement | null>(null);
 
 const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null);
@@ -142,6 +150,16 @@ function closeMenus() {
 
 function openGroupMenu(event: MouseEvent) {
   closeMenus();
+  const target = event.target as HTMLElement | null;
+  const groupItem = target?.closest('.group-item') as HTMLElement | null;
+  const groupId = groupItem?.dataset.groupId ?? null;
+  if (groupId) {
+    groupMenuMode.value = 'rename';
+    groupMenuGroupId.value = groupId;
+  } else {
+    groupMenuMode.value = 'add';
+    groupMenuGroupId.value = null;
+  }
   groupMenu.value = { visible: true, x: event.clientX, y: event.clientY };
 }
 
@@ -152,10 +170,31 @@ function openItemMenu(event: MouseEvent) {
 
 async function onAddGroup() {
   closeMenus();
+  addGroupDialogMode.value = 'add';
+  addGroupDialogGroupId.value = null;
   addGroupDialogVisible.value = true;
   newGroupName.value = '';
   await nextTick();
   groupNameInputRef.value?.focus();
+}
+
+async function onRenameGroup() {
+  closeMenus();
+  const groupId = groupMenuGroupId.value;
+  if (!groupId) {
+    return;
+  }
+  const group = groups.value.find((g) => g.id === groupId);
+  if (!group) {
+    return;
+  }
+  addGroupDialogMode.value = 'rename';
+  addGroupDialogGroupId.value = groupId;
+  addGroupDialogVisible.value = true;
+  newGroupName.value = group.name;
+  await nextTick();
+  groupNameInputRef.value?.focus();
+  groupNameInputRef.value?.select();
 }
 
 function closeAddGroupDialog() {
@@ -170,8 +209,17 @@ async function confirmAddGroup() {
     return;
   }
   try {
-    await addGroup(name);
-    setStatus('分组已添加');
+    if (addGroupDialogMode.value === 'rename') {
+      const targetId = addGroupDialogGroupId.value;
+      if (!targetId) {
+        return;
+      }
+      await renameGroup(targetId, name);
+      setStatus('分组已重命名');
+    } else {
+      await addGroup(name);
+      setStatus('分组已添加');
+    }
     closeAddGroupDialog();
     await refresh();
   } catch (error) {
@@ -255,6 +303,14 @@ onMounted(async () => {
   });
   setStatus('就绪');
 });
+
+function onGroupMenuAction() {
+  if (groupMenuMode.value === 'rename') {
+    void onRenameGroup();
+  } else {
+    void onAddGroup();
+  }
+}
 </script>
 
 <style scoped>
