@@ -10,7 +10,10 @@
       <input v-model="name" type="text" />
 
       <label>目标路径</label>
-      <input v-model="targetPath" type="text" />
+      <div class="path-row">
+        <input v-model="targetPath" type="text" />
+        <button class="path-btn" :disabled="itemType === 'separator'" @click="onPickTargetPath">浏览</button>
+      </div>
 
       <label>图标路径</label>
       <input v-model="iconLocation" type="text" />
@@ -36,6 +39,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { open } from '@tauri-apps/plugin-dialog';
 import { closeCurrentWindow, closeEditor, getEditorContext, onEditorContextChanged, upsertItem } from './api';
 
 const groupId = ref<string | null>(null);
@@ -88,12 +92,17 @@ async function onSave() {
   }
 
   try {
+    const normalizedTargetPath = targetPath.value.trim();
+    const normalizedIconPath = itemType.value === 'app'
+      ? (iconLocation.value.trim() || normalizedTargetPath)
+      : iconLocation.value.trim();
+
     await upsertItem(groupId.value, {
       id: itemId.value ?? undefined,
       itemType: itemType.value,
       name: n,
-      targetPath: targetPath.value,
-      iconLocation: iconLocation.value,
+      targetPath: normalizedTargetPath,
+      iconLocation: normalizedIconPath,
       arguments: argumentsText.value,
       enabled: true
     });
@@ -105,6 +114,34 @@ async function onSave() {
 
 async function onCancel() {
   await closeCurrentWindow();
+}
+
+async function onPickTargetPath() {
+  if (itemType.value === 'separator') {
+    return;
+  }
+
+  try {
+    const selected = await open({
+      multiple: false,
+      directory: false,
+      filters: [
+        { name: '可执行文件', extensions: ['exe'] },
+        { name: '所有文件', extensions: ['*'] }
+      ]
+    });
+
+    if (!selected || Array.isArray(selected)) {
+      return;
+    }
+
+    targetPath.value = selected;
+    if (!iconLocation.value.trim()) {
+      iconLocation.value = selected;
+    }
+  } catch (error) {
+    setStatus(`选择目标路径失败: ${String(error)}`, true);
+  }
 }
 
 onMounted(async () => {
@@ -195,6 +232,21 @@ onMounted(async () => {
   border-radius: 7px;
   padding: 8px 10px;
   font-size: 13px;
+}
+
+.path-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.path-btn {
+  min-width: 66px;
+}
+
+.path-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .editor-actions {

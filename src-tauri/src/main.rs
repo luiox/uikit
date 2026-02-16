@@ -400,23 +400,34 @@ fn upsert_item(
                 "app".to_string()
             }
         });
+        let target_path = item.target_path.trim().to_string();
+        let icon_location = {
+            let icon = item.icon_location.trim();
+            if item_type == "app" && icon.is_empty() {
+                target_path.clone()
+            } else {
+                icon.to_string()
+            }
+        };
+        let arguments = item.arguments.trim().to_string();
+        let name = item.name.trim().to_string();
 
         if let Some(id) = item.id {
             if let Some(existing) = group.items.iter_mut().find(|it| it.id == id) {
                 existing.item_type = item_type;
-                existing.name = item.name;
-                existing.target_path = item.target_path;
-                existing.icon_location = item.icon_location;
-                existing.arguments = item.arguments;
+                existing.name = name;
+                existing.target_path = target_path;
+                existing.icon_location = icon_location;
+                existing.arguments = arguments;
                 existing.enabled = item.enabled.unwrap_or(true);
             } else {
                 group.items.push(LaunchItem {
                     id,
                     item_type,
-                    name: item.name,
-                    target_path: item.target_path,
-                    icon_location: item.icon_location,
-                    arguments: item.arguments,
+                    name,
+                    target_path,
+                    icon_location,
+                    arguments,
                     launch_count: 0,
                     enabled: item.enabled.unwrap_or(true),
                 });
@@ -425,10 +436,10 @@ fn upsert_item(
             group.items.push(LaunchItem {
                 id: generate_id("item"),
                 item_type,
-                name: item.name,
-                target_path: item.target_path,
-                icon_location: item.icon_location,
-                arguments: item.arguments,
+                name,
+                target_path,
+                icon_location,
+                arguments,
                 launch_count: 0,
                 enabled: item.enabled.unwrap_or(true),
             });
@@ -769,6 +780,7 @@ fn main() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(state)
         .setup(|app: &mut tauri::App| {
