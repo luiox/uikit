@@ -1,5 +1,0 @@
-add_rules("mode.debug", "mode.release")
-target("myapp")
-    set_kind("binary")
-    add_files("**.c")
-    set_languages("c99")

@@ -1,7 +1,0 @@
-.vs/
-.xmake/
-build/
-Debug/
-Release/
-compile_commands.json
-.cache/

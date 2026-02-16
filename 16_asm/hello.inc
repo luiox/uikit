@@ -1,4 +1,0 @@
-IFDEF HELLO_INC
-DEF HELLO_INC
-includelib user32.lib
-ENDIF
