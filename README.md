@@ -52,10 +52,26 @@ npm install
 npm run tauri dev
 ```
 
+> 说明：`tauri dev` 会自动执行 `beforeDevCommand`（即 `npm run ui:dev`），无需手动开两个终端。
+
 ### 3) 构建
 
 ```bash
 npm run tauri build
+```
+
+> 说明：`tauri build` 会自动执行 `beforeBuildCommand`（即 `npm run ui:build`）。
+
+### 4) 前端单独调试（可选）
+
+```bash
+npm run ui:dev
+```
+
+### 5) 前端单独构建（可选）
+
+```bash
+npm run ui:build
 ```
 
 ## 数据兼容说明
@@ -78,6 +94,7 @@ npm run tauri build
 
 - `tauri.conf.json` 使用 **v2 schema**（`https://schema.tauri.app/config/2`）
 - 已启用能力文件：`src-tauri/capabilities/default.json`
+- 前端已切换到 **官方 npm API**（`@tauri-apps/api`），不再依赖 `window.__TAURI__` 全局注入
 - 托盘与全局快捷键通过 v2 API + 插件实现：
   - `tauri::tray::TrayIconBuilder`
   - `tauri-plugin-global-shortcut`

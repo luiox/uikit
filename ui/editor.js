@@ -1,6 +1,5 @@
-const tauriCore = window.__TAURI__;
-const invoke = tauriCore?.invoke;
-const eventApi = tauriCore?.event;
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 const ui = {
   nameInput: document.getElementById("nameInput"),
@@ -82,6 +81,10 @@ async function saveItem() {
 }
 
 function bindEvents() {
+  document.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
+
   ui.saveBtn.addEventListener("click", saveItem);
   ui.cancelBtn.addEventListener("click", () => invoke("close_editor"));
   document.addEventListener("keydown", (event) => {
@@ -93,21 +96,17 @@ function bindEvents() {
 }
 
 async function registerEvents() {
-  if (!eventApi?.listen) {
-    return;
-  }
-  await eventApi.listen("editor-context-changed", async () => {
+  await listen("editor-context-changed", async () => {
     await loadContext();
   });
 }
 
 (async function bootstrap() {
-  if (!invoke) {
-    setStatus("Tauri API 不可用", true);
-    return;
-  }
-
   bindEvents();
-  await registerEvents();
-  await loadContext();
+  try {
+    await registerEvents();
+    await loadContext();
+  } catch (error) {
+    setStatus(`初始化失败: ${String(error)}`, true);
+  }
 })();

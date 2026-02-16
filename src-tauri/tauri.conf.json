@@ -4,12 +4,12 @@
   "version": "0.1.0",
   "identifier": "com.nassistant.app",
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "frontendDist": "../ui"
+    "beforeBuildCommand": "npm run ui:build",
+    "beforeDevCommand": "npm run ui:dev",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../ui/dist"
   },
   "app": {
-    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
@@ -21,10 +21,6 @@
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
-    },
-    "trayIcon": {
-      "iconPath": "icons/icon.ico",
-      "iconAsTemplate": false
     }
   },
   "bundle": {

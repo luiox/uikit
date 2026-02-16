@@ -533,7 +533,7 @@ fn launch_item(
 }
 
 #[tauri::command]
-fn open_editor(
+async fn open_editor(
     app: AppHandle,
     state: tauri::State<'_, AppState>,
     group_id: String,
@@ -704,6 +704,12 @@ fn main() {
                     api.prevent_close();
                     let _ = window.hide();
                 }
+            } else if window.label() == "editor" {
+                if let WindowEvent::CloseRequested { .. } = event {
+                    if let Ok(mut state) = window.state::<AppState>().editor_context.lock() {
+                        *state = None;
+                    }
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -717,5 +723,8 @@ fn main() {
             update_settings
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("error while running tauri application: {e}");
+            panic!("error while running tauri application");
+        });
 }

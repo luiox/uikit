@@ -1,6 +1,5 @@
-const tauriCore = window.__TAURI__;
-const invoke = tauriCore?.invoke;
-const eventApi = tauriCore?.event;
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 const ui = {
   groupList: document.getElementById("groupList"),
@@ -131,10 +130,14 @@ async function openEditorForCurrent(editMode) {
     return;
   }
 
-  await invoke("open_editor", {
-    groupId: group.id,
-    itemId: editMode ? selected.id : null
-  });
+  try {
+    await invoke("open_editor", {
+      groupId: group.id,
+      itemId: editMode ? selected.id : null
+    });
+  } catch (error) {
+    setStatus(`打开编辑窗口失败: ${String(error)}`, true);
+  }
 }
 
 async function deleteSelectedItem() {
@@ -196,6 +199,10 @@ async function saveSettings() {
 }
 
 function bindEvents() {
+  document.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
+
   ui.searchInput.addEventListener("input", () => {
     state.searchKeyword = ui.searchInput.value;
     renderItems();
@@ -215,24 +222,21 @@ function bindEvents() {
 }
 
 async function registerEvents() {
-  if (!eventApi?.listen) {
-    return;
-  }
-  await eventApi.listen("data-changed", async () => {
+  await listen("data-changed", async () => {
     await loadState();
   });
-  await eventApi.listen("settings-changed", async () => {
+  await listen("settings-changed", async () => {
     await loadState();
   });
 }
 
 (async function bootstrap() {
-  if (!invoke) {
-    setStatus("Tauri API 不可用，请在 Tauri 环境运行", true);
-    return;
-  }
   bindEvents();
-  await registerEvents();
-  await loadState();
-  setStatus("就绪");
+  try {
+    await registerEvents();
+    await loadState();
+    setStatus("就绪");
+  } catch (error) {
+    setStatus(`初始化失败: ${String(error)}`, true);
+  }
 })();
