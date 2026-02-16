@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { EditorContext, LauncherState, LaunchItem, Settings } from "./types";
 
 export async function loadLauncherState(): Promise<LauncherState> {
@@ -32,6 +33,15 @@ export async function getEditorContext(): Promise<EditorContext | null> {
 
 export async function closeEditor() {
   return invoke("close_editor");
+}
+
+export async function addGroup(name: string): Promise<string> {
+  return invoke("add_group", { name });
+}
+
+export async function hideCurrentWindow() {
+  const window = getCurrentWebviewWindow();
+  await window.hide();
 }
 
 export async function onDataChanged(handler: () => void) {

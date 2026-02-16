@@ -614,6 +614,54 @@ fn update_settings(
     Ok(())
 }
 
+#[tauri::command]
+fn add_group(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    name: String,
+) -> Result<String, String> {
+    let group_name = name.trim();
+    if group_name.is_empty() {
+        return Err("group name is empty".to_string());
+    }
+
+    let new_group_id = {
+        let mut data = state
+            .data
+            .lock()
+            .map_err(|_| "state lock poisoned".to_string())?;
+
+        if data
+            .groups
+            .iter()
+            .any(|group| group.name.eq_ignore_ascii_case(group_name))
+        {
+            return Err("group already exists".to_string());
+        }
+
+        let next_order = data
+            .groups
+            .iter()
+            .map(|group| group.order)
+            .max()
+            .unwrap_or(-1)
+            + 1;
+
+        let group_id = generate_id("group");
+        data.groups.push(Group {
+            id: group_id.clone(),
+            name: group_name.to_string(),
+            order: next_order,
+            items: Vec::new(),
+        });
+        group_id
+    };
+
+    state.save_data()?;
+    let _ = app.emit("data-changed", "add_group");
+    Ok(new_group_id)
+}
+
 fn toggle_main_window(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
         match main.is_visible() {
@@ -717,6 +765,7 @@ fn main() {
             upsert_item,
             delete_item,
             launch_item,
+            add_group,
             open_editor,
             get_editor_context,
             close_editor,

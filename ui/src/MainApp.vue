@@ -1,29 +1,18 @@
 <template>
-  <div class="app-container" @contextmenu.prevent>
-    <!-- 标题栏 -->
-    <header class="title-bar">
-      <div class="title">Poner</div>
-      <div class="title-bar-actions">
-        <button class="title-bar-btn" @click="toggleSearch">{{ showSearch ? '×' : '🔍' }}</button>
-        <button class="title-bar-btn" @click="toggleMenu">☰</button>
-        <button class="title-bar-btn close-btn" @click="closeApp">×</button>
-      </div>
+  <div class="app-window" @contextmenu.prevent>
+    <header class="top-bar">
+      <div class="top-title">nassistant</div>
+      <button class="hide-btn" @click="onHide">×</button>
     </header>
 
-    <!-- 搜索栏 -->
-    <div v-if="showSearch" class="search-bar">
-      <input v-model="searchKeyword" type="text" placeholder="搜索..." />
-    </div>
-
-    <!-- 主内容区 -->
-    <div class="app-shell">
-      <!-- 左侧分类栏 -->
-      <aside class="category-panel">
-        <ul class="category-list">
+    <div class="body-layout">
+      <aside class="group-panel" @contextmenu.prevent="openGroupMenu">
+        <div class="section-title">分组</div>
+        <ul class="group-list">
           <li
             v-for="group in groups"
             :key="group.id"
-            class="category-item"
+            class="group-item"
             :class="{ active: group.id === activeGroupId }"
             @click="selectGroup(group.id)"
           >
@@ -32,22 +21,41 @@
         </ul>
       </aside>
 
-      <!-- 右侧启动项区域 -->
-      <main class="launcher-panel">
-        <ul class="launch-item-list">
+      <main class="item-panel" @contextmenu.prevent="openItemMenu">
+        <div class="section-title">启动项</div>
+        <ul class="item-list">
           <li
             v-for="item in filteredItems"
             :key="item.id"
-            class="launch-item"
-            :class="{ active: item.id === selectedItemId }"
+            class="item-row"
+            :class="{ active: item.id === selectedItemId, separator: item.itemType === 'separator' }"
             @click="selectedItemId = item.id"
-            @dblclick="onLaunch()"
+            @dblclick="item.itemType !== 'separator' && onLaunch()"
           >
-            <span class="launch-item-icon">{{ item.name?.[0] || '?' }}</span>
-            <span class="launch-item-name">{{ item.name || '(未命名)' }}</span>
+            <span class="item-icon">{{ item.itemType === 'separator' ? '--' : (item.name?.[0] || '?') }}</span>
+            <span class="item-name">{{ item.name || '(未命名)' }}</span>
+            <span class="item-count">{{ item.launchCount ?? 0 }}</span>
           </li>
         </ul>
       </main>
+    </div>
+
+    <footer class="status-line" :class="{ error: isError }">{{ statusText }}</footer>
+
+    <div
+      v-if="groupMenu.visible"
+      class="context-menu"
+      :style="{ left: `${groupMenu.x}px`, top: `${groupMenu.y}px` }"
+    >
+      <button class="menu-item" @click="onAddGroup">添加分组</button>
+    </div>
+
+    <div
+      v-if="itemMenu.visible"
+      class="context-menu"
+      :style="{ left: `${itemMenu.x}px`, top: `${itemMenu.y}px` }"
+    >
+      <button class="menu-item" @click="onAddItem">添加启动项</button>
     </div>
   </div>
 </template>
@@ -55,13 +63,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import {
+  addGroup,
   deleteItem,
+  hideCurrentWindow,
   launchItem,
   loadLauncherState,
   onDataChanged,
   onSettingsChanged,
-  openEditor,
-  updateSettings
+  openEditor
 } from './api';
 import type { Group, LaunchItem } from './types';
 
@@ -69,10 +78,10 @@ const groups = ref<Group[]>([]);
 const activeGroupId = ref<string | null>(null);
 const selectedItemId = ref<string | null>(null);
 const searchKeyword = ref('');
-const executeHide = ref(true);
-const hotkey = ref('Alt+1');
 const statusText = ref('');
 const isError = ref(false);
+const groupMenu = ref({ visible: false, x: 0, y: 0 });
+const itemMenu = ref({ visible: false, x: 0, y: 0 });
 
 const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null);
 const selectedItem = computed<LaunchItem | null>(() => activeGroup.value?.items.find((it) => it.id === selectedItemId.value) ?? null);
@@ -102,30 +111,44 @@ async function refresh() {
   const byName = groups.value.find((g) => g.name === preferred);
   activeGroupId.value = byName?.id ?? groups.value[0]?.id ?? null;
   selectedItemId.value = null;
-
-  executeHide.value = !!state.settings?.executeHide;
-  hotkey.value = state.settings?.hotkey ?? 'Alt+1';
 }
 
-async function onAdd() {
+function closeMenus() {
+  groupMenu.value.visible = false;
+  itemMenu.value.visible = false;
+}
+
+function openGroupMenu(event: MouseEvent) {
+  closeMenus();
+  groupMenu.value = { visible: true, x: event.clientX, y: event.clientY };
+}
+
+function openItemMenu(event: MouseEvent) {
+  closeMenus();
+  itemMenu.value = { visible: true, x: event.clientX, y: event.clientY };
+}
+
+async function onAddGroup() {
+  closeMenus();
+  const name = window.prompt('输入新分组名称');
+  if (!name) return;
+  try {
+    await addGroup(name.trim());
+    setStatus('分组已添加');
+    await refresh();
+  } catch (error) {
+    setStatus(String(error), true);
+  }
+}
+
+async function onAddItem() {
+  closeMenus();
   if (!activeGroup.value) {
     setStatus('没有可用分组', true);
     return;
   }
   try {
     await openEditor(activeGroup.value.id, null);
-  } catch (error) {
-    setStatus(`打开编辑窗口失败: ${String(error)}`, true);
-  }
-}
-
-async function onEdit() {
-  if (!activeGroup.value || !selectedItem.value) {
-    setStatus('请先选择要编辑的条目', true);
-    return;
-  }
-  try {
-    await openEditor(activeGroup.value.id, selectedItem.value.id);
   } catch (error) {
     setStatus(`打开编辑窗口失败: ${String(error)}`, true);
   }
@@ -166,17 +189,8 @@ async function onLaunch() {
   }
 }
 
-async function onSaveSettings() {
-  try {
-    await updateSettings({
-      hotkey: hotkey.value?.trim() || 'Alt+1',
-      executeHide: executeHide.value,
-      currentGroup: activeGroup.value?.name ?? null
-    });
-    setStatus('设置已保存');
-  } catch (error) {
-    setStatus(String(error), true);
-  }
+async function onHide() {
+  await hideCurrentWindow();
 }
 
 onMounted(async () => {
@@ -187,35 +201,91 @@ onMounted(async () => {
   await onSettingsChanged(async () => {
     await refresh();
   });
+  document.addEventListener('click', () => {
+    closeMenus();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMenus();
+    }
+    if (event.key === 'Delete') {
+      onDelete();
+    }
+    if (event.key === 'Enter') {
+      onLaunch();
+    }
+  });
   setStatus('就绪');
 });
 </script>
 
 <style scoped>
-.app-shell {
+.app-window {
   height: 100vh;
   display: grid;
-  grid-template-columns: 240px 1fr;
-  background: #f3f5f9;
+  grid-template-rows: 42px 1fr 28px;
+  background: #eff3f8;
   color: #1f2937;
   font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
 }
 
-.group-panel {
-  border-right: 1px solid #dfe4ec;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+.top-bar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 12px;
+  background: linear-gradient(180deg, #fdfefe 0%, #eef3f9 100%);
+  border-bottom: 1px solid #dbe3ef;
 }
 
-.panel-title {
-  padding: 14px 16px;
+.top-title {
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 1px solid #e8edf4;
 }
 
-.group-list {
+.hide-btn {
+  width: 30px;
+  height: 28px;
+  border: 1px solid #ccd6e4;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.body-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 0;
+}
+
+.group-panel,
+.item-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.group-panel {
+  border-right: 1px solid #dbe3ef;
+  background: #f8fbff;
+}
+
+.item-panel {
+  background: #ffffff;
+}
+
+.section-title {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e3eaf3;
+  font-size: 13px;
+  color: #516174;
+  background: #f9fcff;
+}
+
+.group-list,
+.item-list {
   list-style: none;
   margin: 0;
   padding: 8px;
@@ -223,16 +293,17 @@ onMounted(async () => {
 }
 
 .group-item {
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
   cursor: pointer;
   margin-bottom: 4px;
   border: 1px solid transparent;
+  font-size: 13px;
 }
 
 .group-item:hover {
-  background: #eef5ff;
-  border-color: #cddffd;
+  background: #edf4ff;
+  border-color: #d0def5;
 }
 
 .group-item.active {
@@ -241,80 +312,30 @@ onMounted(async () => {
   border-color: #2f67e6;
 }
 
-.content-panel {
-  display: grid;
-  grid-template-rows: 58px 1fr 52px;
-}
-
-.toolbar {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #fdfefe;
-}
-
-.toolbar input {
-  border: 1px solid #cfd7e3;
-  border-radius: 8px;
-  padding: 10px 12px;
-  outline: none;
-  background: #fff;
-}
-
-button {
-  border: 1px solid #cfd7e3;
-  border-radius: 8px;
-  background: #fff;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
-button.primary {
-  background: #2f67e6;
-  border-color: #2f67e6;
-  color: #fff;
-}
-
-button.danger {
-  color: #b91c1c;
-}
-
-.item-area {
-  overflow: auto;
-  padding: 10px;
-}
-
-.item-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.item {
+.item-row {
   display: grid;
   grid-template-columns: 34px 1fr auto;
   align-items: center;
   gap: 10px;
   background: #fff;
   border: 1px solid #e6ebf2;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 9px 10px;
   margin-bottom: 7px;
   cursor: pointer;
 }
 
-.item:hover {
+.item-row:hover {
   border-color: #b6c9f1;
+  background: #f9fbff;
 }
 
-.item.active {
+.item-row.active {
   border-color: #2f67e6;
   background: #edf3ff;
 }
 
-.item.separator {
+.item-row.separator {
   opacity: 0.72;
 }
 
@@ -332,57 +353,52 @@ button.danger {
 
 .item-name {
   font-weight: 600;
-}
-
-.item-sub {
-  font-size: 12px;
-  color: #667085;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.badge {
+.item-count {
   font-size: 12px;
   color: #455468;
 }
 
-.status-bar {
-  border-top: 1px solid #dfe4ec;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+.status-line {
+  border-top: 1px solid #dbe3ef;
+  background: #fdfefe;
+  padding: 5px 10px;
   font-size: 13px;
-}
-
-.checkbox-inline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hotkey-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.hotkey-wrap input {
-  width: 92px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid #cfd7e3;
-}
-
-.status-text {
   color: #0f766e;
-  min-width: 180px;
-  text-align: right;
 }
 
-.status-text.error {
+.status-line.error {
   color: #b91c1c;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #d0dae8;
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+  padding: 6px;
+}
+
+.menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: #edf3ff;
 }
 </style>
