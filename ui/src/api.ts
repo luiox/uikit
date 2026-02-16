@@ -19,6 +19,10 @@ export async function launchItem(groupId: string, itemId: string): Promise<{ ok:
   return invoke("launch_item", { groupId, itemId });
 }
 
+export async function moveItem(groupId: string, itemId: string, targetGroupId: string): Promise<void> {
+  return invoke("move_item", { groupId, itemId, targetGroupId });
+}
+
 export async function updateSettings(settings: Settings) {
   return invoke("update_settings", { settings });
 }

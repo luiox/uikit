@@ -29,6 +29,7 @@
             v-for="item in filteredItems"
             :key="item.id"
             class="item-row"
+            :data-item-id="item.id"
             :class="{ active: item.id === selectedItemId, separator: item.itemType === 'separator' }"
             @click="selectedItemId = item.id"
             @dblclick="item.itemType !== 'separator' && onLaunch()"
@@ -58,7 +59,24 @@
       class="context-menu"
       :style="{ left: `${itemMenu.x}px`, top: `${itemMenu.y}px` }"
     >
-      <button class="menu-item" @click="onAddItem">添加启动项</button>
+      <template v-if="itemMenuMode === 'item'">
+        <button class="menu-item" @click="onItemMenuAction">编辑启动项</button>
+        <div class="menu-submenu-wrap">
+          <button class="menu-item">移动到</button>
+          <div class="menu-submenu">
+            <button
+              v-for="group in moveTargetGroups"
+              :key="group.id"
+              class="menu-item"
+              @click="onMoveItem(group.id)"
+            >
+              {{ group.name }}
+            </button>
+            <div v-if="moveTargetGroups.length === 0" class="menu-empty">没有其他分组</div>
+          </div>
+        </div>
+      </template>
+      <button v-else class="menu-item" @click="onItemMenuAction">添加启动项</button>
     </div>
 
     <div v-if="addGroupDialogVisible" class="dialog-mask" @click="closeAddGroupDialog">
@@ -90,6 +108,7 @@ import {
   hideCurrentWindow,
   launchItem,
   loadLauncherState,
+  moveItem,
   onDataChanged,
   onSettingsChanged,
   openEditor,
@@ -107,6 +126,8 @@ const groupMenu = ref({ visible: false, x: 0, y: 0 });
 const groupMenuMode = ref<'add' | 'rename'>('add');
 const groupMenuGroupId = ref<string | null>(null);
 const itemMenu = ref({ visible: false, x: 0, y: 0 });
+const itemMenuMode = ref<'add' | 'item'>('add');
+const itemMenuItemId = ref<string | null>(null);
 const addGroupDialogVisible = ref(false);
 const newGroupName = ref('');
 const addGroupDialogMode = ref<'add' | 'rename'>('add');
@@ -121,6 +142,10 @@ const filteredItems = computed(() => {
   const key = searchKeyword.value.trim().toLowerCase();
   if (!key) return list;
   return list.filter((it) => (it.name ?? '').toLowerCase().includes(key));
+});
+
+const moveTargetGroups = computed(() => {
+  return groups.value.filter((group) => group.id !== activeGroupId.value);
 });
 
 function setStatus(message: string, error = false) {
@@ -165,6 +190,17 @@ function openGroupMenu(event: MouseEvent) {
 
 function openItemMenu(event: MouseEvent) {
   closeMenus();
+  const target = event.target as HTMLElement | null;
+  const itemRow = target?.closest('.item-row') as HTMLElement | null;
+  const itemId = itemRow?.dataset.itemId ?? null;
+  if (itemId) {
+    itemMenuMode.value = 'item';
+    itemMenuItemId.value = itemId;
+    selectedItemId.value = itemId;
+  } else {
+    itemMenuMode.value = 'add';
+    itemMenuItemId.value = null;
+  }
   itemMenu.value = { visible: true, x: event.clientX, y: event.clientY };
 }
 
@@ -240,6 +276,33 @@ async function onAddItem() {
   }
 }
 
+async function onEditItem() {
+  closeMenus();
+  if (!activeGroup.value || !itemMenuItemId.value) {
+    return;
+  }
+  try {
+    await openEditor(activeGroup.value.id, itemMenuItemId.value);
+  } catch (error) {
+    setStatus(`打开编辑窗口失败: ${String(error)}`, true);
+  }
+}
+
+async function onMoveItem(targetGroupId: string) {
+  closeMenus();
+  if (!activeGroup.value || !itemMenuItemId.value) {
+    return;
+  }
+  try {
+    await moveItem(activeGroup.value.id, itemMenuItemId.value, targetGroupId);
+    selectedItemId.value = null;
+    setStatus('启动项已移动');
+    await refresh();
+  } catch (error) {
+    setStatus(String(error), true);
+  }
+}
+
 async function onDelete() {
   if (!activeGroup.value || !selectedItem.value) {
     setStatus('请先选择要删除的条目', true);
@@ -309,6 +372,14 @@ function onGroupMenuAction() {
     void onRenameGroup();
   } else {
     void onAddGroup();
+  }
+}
+
+function onItemMenuAction() {
+  if (itemMenuMode.value === 'item') {
+    void onEditItem();
+  } else {
+    void onAddItem();
   }
 }
 </script>
@@ -568,6 +639,33 @@ function onGroupMenuAction() {
 
 .menu-item:hover {
   background: #edf3ff;
+}
+
+.menu-submenu-wrap {
+  position: relative;
+}
+
+.menu-submenu {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid #d0dae8;
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+  padding: 6px;
+  display: none;
+}
+
+.menu-submenu-wrap:hover .menu-submenu {
+  display: block;
+}
+
+.menu-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .group-list,

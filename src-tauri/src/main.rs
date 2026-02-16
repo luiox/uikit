@@ -714,6 +714,61 @@ fn rename_group(
     Ok(())
 }
 
+#[tauri::command]
+fn move_item(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    group_id: String,
+    item_id: String,
+    target_group_id: String,
+) -> Result<(), String> {
+    if group_id == target_group_id {
+        return Err("source and target group are the same".to_string());
+    }
+
+    {
+        let mut data = state
+            .data
+            .lock()
+            .map_err(|_| "state lock poisoned".to_string())?;
+
+        let from_index = data
+            .groups
+            .iter()
+            .position(|group| group.id == group_id)
+            .ok_or_else(|| "source group not found".to_string())?;
+
+        let to_index = data
+            .groups
+            .iter()
+            .position(|group| group.id == target_group_id)
+            .ok_or_else(|| "target group not found".to_string())?;
+
+        let moved_item = {
+            let from_group = data
+                .groups
+                .get_mut(from_index)
+                .ok_or_else(|| "source group not found".to_string())?;
+            let item_index = from_group
+                .items
+                .iter()
+                .position(|item| item.id == item_id)
+                .ok_or_else(|| "item not found".to_string())?;
+            from_group.items.remove(item_index)
+        };
+
+        let to_group = data
+            .groups
+            .get_mut(to_index)
+            .ok_or_else(|| "target group not found".to_string())?;
+        to_group.items.push(moved_item);
+    }
+
+    state.save_data()?;
+    let _ = app.emit("data-changed", "move_item");
+    Ok(())
+}
+
 fn toggle_main_window(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
         match main.is_visible() {
@@ -818,6 +873,7 @@ fn main() {
             upsert_item,
             delete_item,
             launch_item,
+            move_item,
             add_group,
             rename_group,
             open_editor,
