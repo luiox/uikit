@@ -52,6 +52,14 @@ const itemType = ref<'app' | 'separator'>('app');
 const statusText = ref('');
 const isError = ref(false);
 
+function deriveNameFromPath(pathValue: string): string {
+  const normalized = pathValue.trim().replace(/[\\/]+$/, '');
+  if (!normalized) return '';
+  const base = normalized.split(/[/\\]/).pop() ?? '';
+  if (!base) return '';
+  return base.replace(/\.[^.]+$/, '');
+}
+
 function setStatus(message: string, error = false) {
   statusText.value = message;
   isError.value = error;
@@ -80,19 +88,20 @@ async function onSave() {
     return;
   }
 
-  const n = name.value.trim();
-  if (!n) {
-    setStatus('名称不能为空', true);
-    return;
-  }
-
-  if (itemType.value === 'app' && !targetPath.value.trim()) {
+  const normalizedTargetPath = targetPath.value.trim();
+  if (itemType.value === 'app' && !normalizedTargetPath) {
     setStatus('应用类型必须填写目标路径', true);
     return;
   }
 
+  const n = name.value.trim();
+  const resolvedName = n || (itemType.value === 'app' ? deriveNameFromPath(normalizedTargetPath) : '');
+  if (!resolvedName) {
+    setStatus('名称不能为空', true);
+    return;
+  }
+
   try {
-    const normalizedTargetPath = targetPath.value.trim();
     const normalizedIconPath = itemType.value === 'app'
       ? (iconLocation.value.trim() || normalizedTargetPath)
       : iconLocation.value.trim();
@@ -100,7 +109,7 @@ async function onSave() {
     await upsertItem(groupId.value, {
       id: itemId.value ?? undefined,
       itemType: itemType.value,
-      name: n,
+      name: resolvedName,
       targetPath: normalizedTargetPath,
       iconLocation: normalizedIconPath,
       arguments: argumentsText.value,
@@ -136,6 +145,12 @@ async function onPickTargetPath() {
     }
 
     targetPath.value = selected;
+    if (!itemId.value && !name.value.trim()) {
+      const guessed = deriveNameFromPath(selected);
+      if (guessed) {
+        name.value = guessed;
+      }
+    }
     if (!iconLocation.value.trim()) {
       iconLocation.value = selected;
     }

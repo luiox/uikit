@@ -190,7 +190,10 @@ async function resolveIcons(sourceGroups: Group[]) {
       try {
         const src = await extractExeIcon(iconPath);
         return [item.id, src] as const;
-      } catch {
+      } catch (error) {
+        if (selectedItemId.value === item.id) {
+          setStatus(`图标提取失败: ${String(error)}`, true);
+        }
         return [item.id, ''] as const;
       }
     })

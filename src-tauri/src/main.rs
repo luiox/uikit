@@ -778,25 +778,70 @@ fn extract_exe_icon(path: String) -> Result<String, String> {
             return Err("icon path is empty".to_string());
         }
 
-        let output = Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Drawing; $p=$args[0]; if (-not (Test-Path -LiteralPath $p)) { throw 'file not found' }; $icon=[System.Drawing.Icon]::ExtractAssociatedIcon($p); if ($null -eq $icon) { throw 'icon not found' }; $bmp=$icon.ToBitmap(); $ms=New-Object System.IO.MemoryStream; $bmp.Save($ms,[System.Drawing.Imaging.ImageFormat]::Png); [Convert]::ToBase64String($ms.ToArray())",
-                trimmed,
-            ])
-            .output()
-            .map_err(|e| format!("extract icon failed: {e}"))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let detail = if !stderr.is_empty() { stderr } else { stdout };
-            return Err(format!("extract icon failed: {detail}"));
+        let mut normalized = trimmed.trim_matches('"').trim().to_string();
+        if let Some((left, _)) = normalized.split_once(',') {
+            let candidate = left.trim().trim_matches('"').trim();
+            if !candidate.is_empty() {
+                normalized = candidate.to_string();
+            }
         }
+
+        if normalized.is_empty() {
+            return Err("icon path is empty".to_string());
+        }
+
+        let mut candidates = Vec::<String>::new();
+        if let Ok(windir) = std::env::var("WINDIR") {
+            candidates.push(format!(
+                "{}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                windir
+            ));
+        }
+        candidates.push("powershell.exe".to_string());
+        candidates.push("pwsh.exe".to_string());
+        candidates.push("pwsh".to_string());
+
+        let script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Drawing; $p=$args[0]; if (-not (Test-Path -LiteralPath $p)) { throw 'file not found' }; $icon=[System.Drawing.Icon]::ExtractAssociatedIcon($p); if ($null -eq $icon) { throw 'icon not found' }; $bmp=$icon.ToBitmap(); $ms=New-Object System.IO.MemoryStream; $bmp.Save($ms,[System.Drawing.Imaging.ImageFormat]::Png); [Convert]::ToBase64String($ms.ToArray())";
+
+        let mut last_error = String::new();
+        let mut output: Option<std::process::Output> = None;
+        for executable in candidates {
+            match Command::new(&executable)
+                .args([
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    script,
+                    &normalized,
+                ])
+                .output()
+            {
+                Ok(result) => {
+                    if result.status.success() {
+                        output = Some(result);
+                        break;
+                    }
+
+                    let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
+                    let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                    let detail = if !stderr.is_empty() { stderr } else { stdout };
+                    last_error = format!("{executable}: {detail}");
+                }
+                Err(error) => {
+                    last_error = format!("{executable}: {error}");
+                }
+            }
+        }
+
+        let output = output.ok_or_else(|| {
+            if last_error.is_empty() {
+                "extract icon failed".to_string()
+            } else {
+                format!("extract icon failed: {last_error}")
+            }
+        })?;
 
         let base64 = String::from_utf8(output.stdout)
             .map_err(|e| format!("icon output decode failed: {e}"))?
