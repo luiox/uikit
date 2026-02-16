@@ -25,6 +25,7 @@ export interface Settings {
 export interface LauncherState {
   groups: Group[];
   settings: Settings;
+  itemIcons: Record<string, string>;
 }
 
 export interface EditorContext {

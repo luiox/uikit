@@ -5,9 +5,11 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
+    io::Cursor,
     path::{Path, PathBuf},
+    ptr,
     process::Command,
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -66,6 +68,7 @@ struct Settings {
 struct LauncherState {
     groups: Vec<Group>,
     settings: Settings,
+    item_icons: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -114,6 +117,8 @@ struct AppState {
     editor_context: Mutex<Option<EditorContext>>,
     tray_icon: Mutex<Option<TrayIcon>>,
     icon_cache: Mutex<HashMap<String, String>>,
+    icons_dir: PathBuf,
+    icons_index_path: PathBuf,
     data_path: PathBuf,
     settings_path: PathBuf,
 }
@@ -283,6 +288,19 @@ fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), String>
     Ok(())
 }
 
+fn write_text_if_changed(path: &Path, content: &str) -> Result<(), String> {
+    if let Ok(existing) = fs::read_to_string(path) {
+        if existing == content {
+            return Ok(());
+        }
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("create dir failed: {e}"))?;
+    }
+    fs::write(path, content).map_err(|e| format!("write file failed: {e}"))?;
+    Ok(())
+}
+
 fn split_windows_args(arguments: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::new();
@@ -372,10 +390,12 @@ fn load_launcher_state(state: tauri::State<'_, AppState>) -> Result<LauncherStat
         .settings
         .lock()
         .map_err(|_| "settings lock poisoned".to_string())?;
+    let item_icons = build_item_icons(&state, &data.groups);
 
     Ok(LauncherState {
         groups: data.groups.clone(),
         settings: settings.clone(),
+        item_icons,
     })
 }
 
@@ -835,104 +855,278 @@ fn resolve_icon_file_path(raw: &str) -> String {
     normalized
 }
 
-#[tauri::command]
-fn extract_exe_icon(state: tauri::State<'_, AppState>, path: String) -> Result<String, String> {
+fn stable_hash_hex(input: &str) -> String {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in input.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{hash:016x}")
+}
+
+#[cfg(target_os = "windows")]
+fn encode_wide_null(input: &str) -> Vec<u16> {
+    use std::os::windows::ffi::OsStrExt;
+    std::ffi::OsStr::new(input)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect()
+}
+
+fn run_win32_extract_to_ico(source: &str, output_file: &Path) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        let trimmed = path.trim();
-        if trimmed.is_empty() {
-            return Err("icon path is empty".to_string());
+        use windows_sys::Win32::Foundation::HWND;
+        use windows_sys::Win32::Graphics::Gdi::{
+            BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, CreateDIBSection,
+            DIB_RGB_COLORS, DeleteDC, DeleteObject, GetDC, HBITMAP, HDC, HGDIOBJ, RGBQUAD,
+            ReleaseDC, SelectObject,
+        };
+        use windows_sys::Win32::UI::{
+            Shell::ExtractIconExW,
+            WindowsAndMessaging::{
+                DI_NORMAL, DestroyIcon, DrawIconEx, GetSystemMetrics, HICON, SM_CXICON, SM_CYICON,
+            },
+        };
+
+        let source_w = encode_wide_null(source);
+        let mut large_icons: [HICON; 1] = [ptr::null_mut()];
+        let extracted = unsafe {
+            ExtractIconExW(
+                source_w.as_ptr(),
+                0,
+                large_icons.as_mut_ptr(),
+                ptr::null_mut(),
+                1,
+            )
+        };
+        if extracted == 0 || large_icons[0].is_null() {
+            return Err("extract icon failed: icon not found".to_string());
         }
 
-        let normalized = resolve_icon_file_path(trimmed);
-
-        if normalized.is_empty() {
-            return Err("icon path is empty".to_string());
-        }
-
-        let cache_key = normalized.to_ascii_lowercase();
-        if let Ok(cache) = state.icon_cache.lock() {
-            if let Some(cached) = cache.get(&cache_key) {
-                return Ok(cached.clone());
+        let icon: HICON = large_icons[0];
+        let width = unsafe { GetSystemMetrics(SM_CXICON) };
+        let height = unsafe { GetSystemMetrics(SM_CYICON) };
+        if width <= 0 || height <= 0 {
+            unsafe {
+                DestroyIcon(icon);
             }
+            return Err("extract icon failed: invalid icon size".to_string());
         }
 
-        let mut candidates = Vec::<String>::new();
-        if let Ok(windir) = std::env::var("WINDIR") {
-            candidates.push(format!(
-                "{}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-                windir
-            ));
-        }
-        candidates.push("powershell.exe".to_string());
-        candidates.push("pwsh.exe".to_string());
-        candidates.push("pwsh".to_string());
-
-        let script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Drawing; $p=$args[0]; if (-not (Test-Path -LiteralPath $p)) { throw 'file not found' }; $icon=[System.Drawing.Icon]::ExtractAssociatedIcon($p); if ($null -eq $icon) { throw 'icon not found' }; $bmp=$icon.ToBitmap(); $ms=New-Object System.IO.MemoryStream; $bmp.Save($ms,[System.Drawing.Imaging.ImageFormat]::Png); [Convert]::ToBase64String($ms.ToArray())";
-
-        let mut last_error = String::new();
-        let mut output: Option<std::process::Output> = None;
-        for executable in candidates {
-            match Command::new(&executable)
-                .args([
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    script,
-                    &normalized,
-                ])
-                .output()
-            {
-                Ok(result) => {
-                    if result.status.success() {
-                        output = Some(result);
-                        break;
-                    }
-
-                    let stderr = String::from_utf8_lossy(&result.stderr).trim().to_string();
-                    let stdout = String::from_utf8_lossy(&result.stdout).trim().to_string();
-                    let detail = if !stderr.is_empty() { stderr } else { stdout };
-                    last_error = format!("{executable}: {detail}");
-                }
-                Err(error) => {
-                    last_error = format!("{executable}: {error}");
-                }
+        let screen_dc: HDC = unsafe { GetDC(HWND::default()) };
+        if screen_dc.is_null() {
+            unsafe {
+                DestroyIcon(icon);
             }
+            return Err("extract icon failed: GetDC failed".to_string());
         }
 
-        let output = output.ok_or_else(|| {
-            if last_error.is_empty() {
-                "extract icon failed".to_string()
-            } else {
-                format!("extract icon failed: {last_error}")
+        let mem_dc = unsafe { CreateCompatibleDC(screen_dc) };
+        if mem_dc.is_null() {
+            unsafe {
+                ReleaseDC(HWND::default(), screen_dc);
+                DestroyIcon(icon);
             }
-        })?;
-
-        let base64 = String::from_utf8(output.stdout)
-            .map_err(|e| format!("icon output decode failed: {e}"))?
-            .trim()
-            .to_string();
-
-        if base64.is_empty() {
-            return Err("icon output empty".to_string());
+            return Err("extract icon failed: CreateCompatibleDC failed".to_string());
         }
 
-        let data_url = format!("data:image/png;base64,{base64}");
-        if let Ok(mut cache) = state.icon_cache.lock() {
-            cache.insert(cache_key, data_url.clone());
+        let mut bmi = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: width,
+                biHeight: -height,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB,
+                biSizeImage: 0,
+                biXPelsPerMeter: 0,
+                biYPelsPerMeter: 0,
+                biClrUsed: 0,
+                biClrImportant: 0,
+            },
+            bmiColors: [RGBQUAD {
+                rgbBlue: 0,
+                rgbGreen: 0,
+                rgbRed: 0,
+                rgbReserved: 0,
+            }],
+        };
+
+        let mut bits_ptr = ptr::null_mut();
+        let dib: HBITMAP = unsafe {
+            CreateDIBSection(
+                mem_dc,
+                &mut bmi,
+                DIB_RGB_COLORS,
+                &mut bits_ptr,
+                ptr::null_mut(),
+                0,
+            )
+        };
+        if dib.is_null() || bits_ptr.is_null() {
+            unsafe {
+                DeleteDC(mem_dc);
+                ReleaseDC(HWND::default(), screen_dc);
+                DestroyIcon(icon);
+            }
+            return Err("extract icon failed: CreateDIBSection failed".to_string());
         }
 
-        return Ok(data_url);
+        let old_obj = unsafe { SelectObject(mem_dc, dib as HGDIOBJ) };
+        let drawn = unsafe {
+            DrawIconEx(
+                mem_dc,
+                0,
+                0,
+                icon,
+                width,
+                height,
+                0,
+                ptr::null_mut(),
+                DI_NORMAL,
+            )
+        };
+
+        let size = (width as usize) * (height as usize) * 4;
+        let bgra = unsafe { std::slice::from_raw_parts(bits_ptr as *const u8, size) };
+        let mut rgba = Vec::with_capacity(size);
+        for chunk in bgra.chunks_exact(4) {
+            rgba.push(chunk[2]);
+            rgba.push(chunk[1]);
+            rgba.push(chunk[0]);
+            rgba.push(chunk[3]);
+        }
+
+        unsafe {
+            SelectObject(mem_dc, old_obj);
+            DeleteObject(dib as HGDIOBJ);
+            DeleteDC(mem_dc);
+            ReleaseDC(HWND::default(), screen_dc);
+            DestroyIcon(icon);
+        }
+
+        if drawn == 0 {
+            return Err("extract icon failed: DrawIconEx failed".to_string());
+        }
+
+        let image = ico::IconImage::from_rgba_data(width as u32, height as u32, rgba);
+        let entry = ico::IconDirEntry::encode(&image).map_err(|e| format!("encode icon failed: {e}"))?;
+        let mut dir = ico::IconDir::new(ico::ResourceType::Icon);
+        dir.add_entry(entry);
+
+        if let Some(parent) = output_file.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("create icons dir failed: {e}"))?;
+        }
+        let mut bytes = Vec::new();
+        dir.write(Cursor::new(&mut bytes))
+            .map_err(|e| format!("write ico failed: {e}"))?;
+        fs::write(output_file, bytes).map_err(|e| format!("save ico failed: {e}"))?;
+
+        Ok(())
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = path;
+        let _ = (source, output_file);
         Err("extract exe icon is only supported on Windows".to_string())
     }
 }
+
+fn build_item_icons(state: &AppState, groups: &[Group]) -> BTreeMap<String, String> {
+    let mut result = BTreeMap::<String, String>::new();
+    let mut indexed_paths = BTreeSet::<String>::new();
+
+    let _ = fs::create_dir_all(&state.icons_dir);
+
+    for group in groups {
+        for item in &group.items {
+            if item.item_type == "separator" {
+                continue;
+            }
+
+            let source_raw = if item.icon_location.trim().is_empty() {
+                item.target_path.as_str()
+            } else {
+                item.icon_location.as_str()
+            };
+
+            let resolved_path = resolve_icon_file_path(source_raw);
+            if resolved_path.trim().is_empty() {
+                continue;
+            }
+
+            indexed_paths.insert(resolved_path.clone());
+
+            let hash = stable_hash_hex(&resolved_path.to_ascii_lowercase());
+            let ico_path = state.icons_dir.join(format!("{hash}.ico"));
+
+            if !ico_path.exists() {
+                if run_win32_extract_to_ico(&resolved_path, &ico_path).is_err() {
+                    continue;
+                }
+            }
+
+            let cache_key = hash.clone();
+            let cached = state
+                .icon_cache
+                .lock()
+                .ok()
+                .and_then(|cache| cache.get(&cache_key).cloned());
+
+            let data_url = if let Some(value) = cached {
+                value
+            } else {
+                let bytes = match fs::read(&ico_path) {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                use base64::Engine;
+                let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+                let value = format!("data:image/x-icon;base64,{encoded}");
+                if let Ok(mut cache) = state.icon_cache.lock() {
+                    cache.insert(cache_key, value.clone());
+                }
+                value
+            };
+
+            result.insert(item.id.clone(), data_url);
+        }
+    }
+
+    let mut lines = String::new();
+    for path in indexed_paths {
+        lines.push_str(&path);
+        lines.push('\n');
+    }
+    let _ = write_text_if_changed(&state.icons_index_path, &lines);
+
+    result
+}
+
+#[tauri::command]
+fn extract_exe_icon(state: tauri::State<'_, AppState>, path: String) -> Result<String, String> {
+    let normalized = resolve_icon_file_path(&path);
+    if normalized.trim().is_empty() {
+        return Err("icon path is empty".to_string());
+    }
+
+    let hash = stable_hash_hex(&normalized.to_ascii_lowercase());
+    let ico_path = state.icons_dir.join(format!("{hash}.ico"));
+    if !ico_path.exists() {
+        run_win32_extract_to_ico(&normalized, &ico_path)?;
+    }
+
+    let bytes = fs::read(&ico_path).map_err(|e| format!("read icon failed: {e}"))?;
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    Ok(format!("data:image/x-icon;base64,{encoded}"))
+}
+
+/*
+legacy per-item extraction command remains available for compatibility,
+but runtime UI now relies on build_item_icons via load_launcher_state.
+*/
 
 fn toggle_main_window(app: &AppHandle) {
     if let Some(main) = app.get_webview_window("main") {
@@ -989,6 +1183,18 @@ fn build_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
 
 fn main() {
     let (data, settings, data_path, settings_path) = load_state();
+    let mut run_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    if run_dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("src-tauri"))
+    {
+        if let Some(parent) = run_dir.parent() {
+            run_dir = parent.to_path_buf();
+        }
+    }
+    let icons_dir = run_dir.join("icons");
+    let icons_index_path = icons_dir.join("index.txt");
 
     let state = AppState {
         data: Mutex::new(data),
@@ -996,6 +1202,8 @@ fn main() {
         editor_context: Mutex::new(None),
         tray_icon: Mutex::new(None),
         icon_cache: Mutex::new(HashMap::new()),
+        icons_dir,
+        icons_index_path,
         data_path,
         settings_path,
     };
