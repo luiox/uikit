@@ -9,13 +9,18 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    sync::{atomic::{AtomicU64, Ordering}, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{
-    AppHandle, CustomMenuItem, GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent,
-    SystemTrayMenu, WindowBuilder, WindowEvent, WindowUrl,
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -107,6 +112,7 @@ struct AppState {
     data: Mutex<LauncherData>,
     settings: Mutex<Settings>,
     editor_context: Mutex<Option<EditorContext>>,
+    tray_icon: Mutex<Option<TrayIcon>>,
     data_path: PathBuf,
     settings_path: PathBuf,
 }
@@ -430,7 +436,7 @@ fn upsert_item(
     }
 
     state.save_data()?;
-    let _ = app.emit_all("data-changed", "upsert_item");
+    let _ = app.emit("data-changed", "upsert_item");
     Ok(())
 }
 
@@ -456,7 +462,7 @@ fn delete_item(
     }
 
     state.save_data()?;
-    let _ = app.emit_all("data-changed", "delete_item");
+    let _ = app.emit("data-changed", "delete_item");
     Ok(())
 }
 
@@ -513,12 +519,12 @@ fn launch_item(
     state.save_data()?;
 
     if should_hide {
-        if let Some(main) = app.get_window("main") {
+        if let Some(main) = app.get_webview_window("main") {
             let _ = main.hide();
         }
     }
 
-    let _ = app.emit_all("data-changed", "launch_item");
+    let _ = app.emit("data-changed", "launch_item");
 
     Ok(LaunchResult {
         ok: true,
@@ -555,14 +561,14 @@ fn open_editor(
         *ctx = Some(EditorContext { group_id, item });
     }
 
-    if let Some(editor) = app.get_window("editor") {
+    if let Some(editor) = app.get_webview_window("editor") {
         editor.show().map_err(|e| e.to_string())?;
         editor.set_focus().map_err(|e| e.to_string())?;
         let _ = editor.emit("editor-context-changed", "updated");
         return Ok(());
     }
 
-    WindowBuilder::new(&app, "editor", WindowUrl::App("editor.html".into()))
+    WebviewWindowBuilder::new(&app, "editor", WebviewUrl::App("editor.html".into()))
         .title("编辑启动项")
         .inner_size(560.0, 460.0)
         .resizable(true)
@@ -583,7 +589,7 @@ fn get_editor_context(state: tauri::State<'_, AppState>) -> Result<Option<Editor
 
 #[tauri::command]
 fn close_editor(app: AppHandle) -> Result<(), String> {
-    if let Some(editor) = app.get_window("editor") {
+    if let Some(editor) = app.get_webview_window("editor") {
         editor.close().map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -604,12 +610,12 @@ fn update_settings(
     }
 
     state.save_settings()?;
-    let _ = app.emit_all("settings-changed", "updated");
+    let _ = app.emit("settings-changed", "updated");
     Ok(())
 }
 
 fn toggle_main_window(app: &AppHandle) {
-    if let Some(main) = app.get_window("main") {
+    if let Some(main) = app.get_webview_window("main") {
         match main.is_visible() {
             Ok(true) => {
                 let _ = main.hide();
@@ -623,12 +629,42 @@ fn toggle_main_window(app: &AppHandle) {
 }
 
 fn register_hotkey(app: &AppHandle, shortcut: &str) {
-    let mut manager = app.global_shortcut_manager();
+    let manager = app.global_shortcut();
     let _ = manager.unregister_all();
-    let app_handle = app.clone();
-    let _ = manager.register(shortcut, move || {
-        toggle_main_window(&app_handle);
+    let _ = manager.on_shortcut(shortcut, move |app_handle, _shortcut, event| {
+        if event.state == ShortcutState::Pressed {
+            toggle_main_window(app_handle);
+        }
     });
+}
+
+fn build_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
+    let toggle = MenuItem::with_id(app, "toggle", "显示 / 隐藏", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&toggle, &quit])?;
+
+    let mut tray_builder = TrayIconBuilder::new().menu(&menu).show_menu_on_left_click(false);
+    if let Some(icon) = app.default_window_icon() {
+        tray_builder = tray_builder.icon(icon.clone());
+    }
+
+    tray_builder
+        .on_menu_event(|app_handle, event| match event.id().as_ref() {
+            "toggle" => toggle_main_window(app_handle),
+            "quit" => app_handle.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                toggle_main_window(tray.app_handle());
+            }
+        })
+        .build(app)
 }
 
 fn main() {
@@ -638,26 +674,14 @@ fn main() {
         data: Mutex::new(data),
         settings: Mutex::new(settings),
         editor_context: Mutex::new(None),
+        tray_icon: Mutex::new(None),
         data_path,
         settings_path,
     };
 
-    let show_hide = CustomMenuItem::new("toggle".to_string(), "显示 / 隐藏");
-    let quit = CustomMenuItem::new("quit".to_string(), "退出");
-    let tray_menu = SystemTrayMenu::new().add_item(show_hide).add_item(quit);
-
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(state)
-        .system_tray(SystemTray::new().with_menu(tray_menu))
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "toggle" => toggle_main_window(app),
-                "quit" => std::process::exit(0),
-                _ => {}
-            },
-            SystemTrayEvent::LeftClick { .. } => toggle_main_window(app),
-            _ => {}
-        })
         .setup(|app: &mut tauri::App| {
             let state: tauri::State<'_, AppState> = app.state();
             let settings = state
@@ -665,14 +689,20 @@ fn main() {
                 .lock()
                 .map_err(|_| tauri::Error::AssetNotFound("settings lock poisoned".to_string()))?
                 .clone();
+
+            let tray = build_tray(app.app_handle())?;
+            if let Ok(mut slot) = state.tray_icon.lock() {
+                *slot = Some(tray);
+            }
+
             register_hotkey(&app.app_handle(), &settings.hotkey);
             Ok(())
         })
-        .on_window_event(|event: tauri::GlobalWindowEvent| {
-            if event.window().label() == "main" {
-                if let WindowEvent::CloseRequested { api, .. } = event.event() {
+        .on_window_event(|window: &Window, event: &WindowEvent| {
+            if window.label() == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
-                    let _ = event.window().hide();
+                    let _ = window.hide();
                 }
             }
         })
