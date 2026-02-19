@@ -45,7 +45,6 @@
                 <span v-else>{{ getFallbackIconText(item) }}</span>
               </span>
               <span class="item-name">{{ item.name || '(未命名)' }}</span>
-              <span class="item-count">{{ item.launchCount ?? 0 }}</span>
             </li>
           </ul>
         </main>
@@ -65,7 +64,7 @@
           <li
             v-for="entry in searchedItems"
             :key="entry.item.id"
-            class="item-row"
+            class="item-row has-meta"
             :class="{ active: entry.item.id === selectedSearchItemId }"
             @click="selectedSearchItemId = entry.item.id"
             @dblclick="onLaunchSearchedItem(entry)"
@@ -75,7 +74,7 @@
               <span v-else>{{ getFallbackIconText(entry.item) }}</span>
             </span>
             <span class="item-name">{{ entry.item.name || '(未命名)' }}</span>
-            <span class="item-count">{{ entry.groupName }}</span>
+            <span class="item-meta">{{ entry.groupName }}</span>
           </li>
           <li v-if="searchedItems.length === 0" class="search-empty">没有匹配的启动项</li>
         </ul>
@@ -190,7 +189,7 @@ const groupPanelWidth = ref(220);
 const isResizingSplitter = ref(false);
 const currentSettings = ref<Settings | null>(null);
 
-const SPLITTER_WIDTH = 8;
+const SPLITTER_WIDTH = 1;
 const MIN_GROUP_PANEL_WIDTH = 80;
 const MIN_ITEM_PANEL_WIDTH = 220;
 
@@ -591,6 +590,7 @@ function onItemMenuAction() {
 .app-window {
   width: 100%;
   height: 100vh;
+  border-radius: 0;
   display: grid;
   grid-template-rows: 42px 1fr 28px;
   background: rgb(255, 255, 255);
@@ -605,7 +605,7 @@ function onItemMenuAction() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 0 12px;
+  padding: 0 0 0 12px;
   background: rgb(230, 230, 230);
   border-bottom: 1px solid rgb(210, 210, 210);
   user-select: none;
@@ -626,19 +626,20 @@ function onItemMenuAction() {
 
 .top-actions {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0;
 }
 
 .search-btn,
 .hide-btn {
-  width: 30px;
-  height: 28px;
+  width: 42px;
+  height: 100%;
   border: 1px solid rgb(200, 200, 200);
-  border-radius: 6px;
+  border-radius: 0;
   background: rgb(236, 236, 236);
   font-size: 18px;
-  line-height: 26px;
+  line-height: 1;
   text-align: center;
   cursor: pointer;
   padding: 0;
@@ -683,7 +684,7 @@ function onItemMenuAction() {
 
 .body-layout {
   display: grid;
-  grid-template-columns: 220px 8px minmax(0, 1fr);
+  grid-template-columns: 220px 1px minmax(0, 1fr);
   width: 100%;
   min-height: 0;
   min-width: 0;
@@ -703,15 +704,13 @@ function onItemMenuAction() {
 }
 
 .panel-splitter {
-  width: 8px;
+  width: 1px;
   cursor: col-resize;
-  background: rgb(235, 235, 235);
-  border-left: 1px solid rgb(210, 210, 210);
-  border-right: 1px solid rgb(210, 210, 210);
+  background: rgb(210, 210, 210);
 }
 
 .panel-splitter:hover {
-  background: rgb(226, 226, 226);
+  background: rgb(170, 170, 170);
 }
 
 .item-panel {
@@ -728,28 +727,29 @@ function onItemMenuAction() {
 }
 
 .search-input-wrap {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgb(210, 210, 210);
+  padding: 0;
   box-sizing: border-box;
 }
 
 .search-input {
   width: 100%;
+  display: block;
   box-sizing: border-box;
-  border: 1px solid rgb(200, 200, 200);
-  border-radius: 6px;
+  border: none;
+  border-bottom: 1px solid rgb(210, 210, 210);
+  border-radius: 0;
   padding: 8px 10px;
   font-size: 13px;
   background: #fff;
 }
 
 .search-result-list {
-  padding: 10px;
+  padding: 0;
 }
 
 .search-empty {
   list-style: none;
-  padding: 10px;
+  padding: 10px 12px;
   color: #64748b;
   font-size: 13px;
 }
@@ -766,51 +766,53 @@ function onItemMenuAction() {
 .item-list {
   list-style: none;
   margin: 0;
-  padding: 8px;
+  padding: 0;
   overflow: auto;
   -ms-overflow-style: none;
 }
 
 .group-item {
   padding: 8px 10px;
-  border-radius: 7px;
+  border-radius: 0;
   cursor: pointer;
-  margin-bottom: 4px;
-  border: 1px solid transparent;
+  margin-bottom: 0;
+  border: none;
+  border-bottom: 1px solid rgb(214, 214, 214);
   font-size: 13px;
 }
 
 .group-item:hover {
   background: rgb(238, 238, 238);
-  border-color: rgb(210, 210, 210);
 }
 
 .group-item.active {
   background: rgb(250, 250, 250);
   color: #1f2937;
-  border-color: rgb(205, 205, 205);
 }
 
 .item-row {
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: #fff;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid rgb(235, 235, 235);
   padding: 9px 10px;
-  margin-bottom: 7px;
+  margin-bottom: 0;
   cursor: pointer;
 }
 
+.item-row.has-meta {
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+}
+
 .item-row:hover {
-  border-color: rgb(215, 215, 215);
   background: rgb(245, 245, 245);
 }
 
 .item-row.active {
-  border-color: rgb(215, 215, 215);
   background: rgb(245, 245, 245);
 }
 
@@ -821,7 +823,7 @@ function onItemMenuAction() {
 .item-icon {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   background: #edf2ff;
@@ -845,7 +847,7 @@ function onItemMenuAction() {
   white-space: nowrap;
 }
 
-.item-count {
+.item-meta {
   font-size: 12px;
   color: #455468;
 }
@@ -868,9 +870,9 @@ function onItemMenuAction() {
   min-width: 150px;
   background: #fff;
   border: 1px solid #d0dae8;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
-  padding: 6px;
+  padding: 4px;
 }
 
 .dialog-mask {
@@ -886,7 +888,7 @@ function onItemMenuAction() {
   width: 320px;
   background: rgb(246, 246, 246);
   border: 1px solid rgb(210, 210, 210);
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
   padding: 12px;
 }
@@ -900,7 +902,7 @@ function onItemMenuAction() {
 .dialog-input {
   width: 100%;
   border: 1px solid rgb(200, 200, 200);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 8px 10px;
   font-size: 13px;
   background: #fff;
@@ -915,7 +917,7 @@ function onItemMenuAction() {
 
 .dialog-btn {
   border: 1px solid rgb(200, 200, 200);
-  border-radius: 6px;
+  border-radius: 0;
   background: #fff;
   padding: 6px 12px;
   font-size: 13px;
@@ -934,7 +936,7 @@ function onItemMenuAction() {
   background: transparent;
   text-align: left;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 13px;
   cursor: pointer;
 }
@@ -954,9 +956,9 @@ function onItemMenuAction() {
   min-width: 150px;
   background: #fff;
   border: 1px solid #d0dae8;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
-  padding: 6px;
+  padding: 4px;
   display: none;
 }
 
@@ -988,6 +990,7 @@ function onItemMenuAction() {
   margin: 0;
   width: 100%;
   height: 100%;
+  border-radius: 0;
   overflow: hidden;
   -ms-overflow-style: none;
   scrollbar-width: none;

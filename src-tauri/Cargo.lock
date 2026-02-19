@@ -1836,6 +1836,7 @@ dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
  "ico 0.4.0",
+ "raw-window-handle",
  "serde",
  "serde_json",
  "tauri",
