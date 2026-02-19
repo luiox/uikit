@@ -3,215 +3,36 @@
     windows_subsystem = "windows"
 )]
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet},
     fs,
     io::Cursor,
     path::{Path, PathBuf},
     ptr,
     process::Command,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Mutex,
-    },
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
-    WindowEvent,
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-#[cfg(target_os = "windows")]
-fn disable_window_round_corners(window: &WebviewWindow) {
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-    use windows_sys::Win32::Foundation::HWND;
-    use windows_sys::Win32::Graphics::Dwm::{
-        DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND,
-    };
+mod models;
+mod state;
+mod window_style;
 
-    let Ok(handle) = window.window_handle() else {
-        return;
-    };
-    let RawWindowHandle::Win32(raw) = handle.as_raw() else {
-        return;
-    };
-
-    let preference: i32 = DWMWCP_DONOTROUND;
-    let hwnd: HWND = raw.hwnd.get() as HWND;
-    unsafe {
-        let _ = DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_WINDOW_CORNER_PREFERENCE as u32,
-            &preference as *const _ as _,
-            std::mem::size_of::<i32>() as u32,
-        );
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn enable_window_shadow(window: &WebviewWindow) {
-    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-    use windows_sys::Win32::Foundation::HWND;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetClassLongPtrW, SetClassLongPtrW, CS_DROPSHADOW, GCL_STYLE,
-    };
-
-    let Ok(handle) = window.window_handle() else {
-        return;
-    };
-    let RawWindowHandle::Win32(raw) = handle.as_raw() else {
-        return;
-    };
-
-    let hwnd: HWND = raw.hwnd.get() as HWND;
-    unsafe {
-        let style = GetClassLongPtrW(hwnd, GCL_STYLE) as usize;
-        let next_style = style | CS_DROPSHADOW as usize;
-        let _ = SetClassLongPtrW(hwnd, GCL_STYLE, next_style as isize);
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn enable_window_shadow(_window: &WebviewWindow) {}
-
-#[cfg(not(target_os = "windows"))]
-fn disable_window_round_corners(_window: &WebviewWindow) {}
+use models::{
+    default_group_panel_width, default_main_window_height, default_main_window_width, EditorContext,
+    Group, ItemInput, LaunchItem, LauncherData, LauncherState, LaunchResult, LegacyItem, Settings,
+};
+use state::AppState;
+use window_style::{disable_window_round_corners, enable_window_shadow};
 
 static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LauncherData {
-    version: u8,
-    groups: Vec<Group>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Group {
-    id: String,
-    name: String,
-    order: i32,
-    items: Vec<LaunchItem>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LaunchItem {
-    id: String,
-    item_type: String,
-    name: String,
-    target_path: String,
-    icon_location: String,
-    arguments: String,
-    launch_count: u64,
-    enabled: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Settings {
-    hotkey: String,
-    execute_hide: bool,
-    current_group: Option<String>,
-    #[serde(default = "default_group_panel_width")]
-    group_panel_width: f64,
-    #[serde(default = "default_main_window_width")]
-    main_window_width: f64,
-    #[serde(default = "default_main_window_height")]
-    main_window_height: f64,
-}
-
-fn default_group_panel_width() -> f64 {
-    220.0
-}
-
-fn default_main_window_width() -> f64 {
-    1040.0
-}
-
-fn default_main_window_height() -> f64 {
-    700.0
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct LauncherState {
-    groups: Vec<Group>,
-    settings: Settings,
-    item_icons: BTreeMap<String, String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ItemInput {
-    id: Option<String>,
-    item_type: Option<String>,
-    name: String,
-    target_path: String,
-    icon_location: String,
-    arguments: String,
-    enabled: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct LaunchResult {
-    ok: bool,
-    message: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct EditorContext {
-    group_id: String,
-    item: Option<LaunchItem>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct LegacyItem {
-    #[serde(rename = "Name")]
-    name: String,
-    #[serde(rename = "TargetPath")]
-    target_path: String,
-    #[serde(rename = "IconLocation")]
-    icon_location: String,
-    #[serde(rename = "Arguments")]
-    arguments: String,
-    #[serde(rename = "Count")]
-    count: Option<u64>,
-}
-
-struct AppState {
-    data: Mutex<LauncherData>,
-    settings: Mutex<Settings>,
-    editor_context: Mutex<Option<EditorContext>>,
-    tray_icon: Mutex<Option<TrayIcon>>,
-    icon_cache: Mutex<HashMap<String, String>>,
-    icons_dir: PathBuf,
-    icons_index_path: PathBuf,
-    data_path: PathBuf,
-    settings_path: PathBuf,
-}
-
-impl AppState {
-    fn save_data(&self) -> Result<(), String> {
-        let data = self.data.lock().map_err(|_| "state lock poisoned".to_string())?;
-        write_json_atomic(&self.data_path, &*data)
-    }
-
-    fn save_settings(&self) -> Result<(), String> {
-        let settings = self
-            .settings
-            .lock()
-            .map_err(|_| "settings lock poisoned".to_string())?;
-        write_json_atomic(&self.settings_path, &*settings)
-    }
-}
 
 fn generate_id(prefix: &str) -> String {
     let now = SystemTime::now()
@@ -355,7 +176,7 @@ fn convert_legacy_data(raw: &str) -> Result<LauncherData, String> {
     Ok(LauncherData { version: 2, groups })
 }
 
-fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+pub(crate) fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("create dir failed: {e}"))?;
     }
@@ -1318,17 +1139,14 @@ fn main() {
     let icons_dir = run_dir.join("icons");
     let icons_index_path = icons_dir.join("index.txt");
 
-    let state = AppState {
-        data: Mutex::new(data),
-        settings: Mutex::new(settings),
-        editor_context: Mutex::new(None),
-        tray_icon: Mutex::new(None),
-        icon_cache: Mutex::new(HashMap::new()),
+    let state = AppState::new(
+        data,
+        settings,
         icons_dir,
         icons_index_path,
         data_path,
         settings_path,
-    };
+    );
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
