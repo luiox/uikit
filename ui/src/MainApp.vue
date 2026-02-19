@@ -594,9 +594,9 @@ function onItemMenuAction() {
   height: 100vh;
   border-radius: 0;
   display: grid;
-  grid-template-rows: 42px 1fr 28px;
+  grid-template-rows: 35px 1fr 26px;
   background: rgb(255, 255, 255);
-  color: #1f2937;
+  color: rgb(90, 90, 90);
   font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
   overflow: hidden;
 }
@@ -622,7 +622,7 @@ function onItemMenuAction() {
 }
 
 .top-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -748,7 +748,7 @@ function onItemMenuAction() {
 .search-empty {
   list-style: none;
   padding: 10px 12px;
-  color: #64748b;
+  color: rgb(90, 90, 90);
   font-size: 13px;
 }
 
@@ -785,19 +785,19 @@ function onItemMenuAction() {
 
 .group-item.active {
   background: rgb(250, 250, 250);
-  color: #1f2937;
+  color: rgb(90, 90, 90);
 }
 
 .item-row {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 1px;
   background: #fff;
   border: none;
   border-radius: 0;
   border-bottom: 1px solid rgb(235, 235, 235);
-  padding: 9px 10px;
+  padding: 4px 4px;
   margin-bottom: 0;
   cursor: pointer;
 }
@@ -824,8 +824,8 @@ function onItemMenuAction() {
   border-radius: 0;
   display: grid;
   place-items: center;
-  background: #edf2ff;
-  color: #2f4a95;
+  background: rgb(235, 235, 235);
+  color: rgb(90, 90, 90);
   font-size: 12px;
   font-weight: 600;
   overflow: hidden;
@@ -847,7 +847,7 @@ function onItemMenuAction() {
 
 .item-meta {
   font-size: 12px;
-  color: #455468;
+  color: rgb(90, 90, 90);
 }
 
 .status-line {
@@ -855,7 +855,7 @@ function onItemMenuAction() {
   background: rgb(248, 248, 248);
   padding: 5px 10px;
   font-size: 13px;
-  color: #0f766e;
+  color: rgb(90, 90, 90);
 }
 
 .status-line.error {
