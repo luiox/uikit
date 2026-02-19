@@ -21,6 +21,8 @@ export interface Settings {
   executeHide: boolean;
   currentGroup: string | null;
   groupPanelWidth: number;
+  mainWindowWidth: number;
+  mainWindowHeight: number;
 }
 
 export interface LauncherState {

@@ -297,7 +297,9 @@ async function persistGroupPanelWidth() {
     hotkey: 'Alt+1',
     executeHide: true,
     currentGroup: null,
-    groupPanelWidth: 220
+    groupPanelWidth: 220,
+    mainWindowWidth: 1040,
+    mainWindowHeight: 700
   };
   const nextSettings: Settings = {
     ...base,
@@ -633,11 +635,11 @@ function onItemMenuAction() {
 
 .search-btn,
 .hide-btn {
-  width: 42px;
+  width: 45px;
   height: 100%;
-  border: 1px solid rgb(200, 200, 200);
+  border: none;
   border-radius: 0;
-  background: rgb(236, 236, 236);
+  background: rgb(230, 230, 230);
   font-size: 18px;
   line-height: 1;
   text-align: center;
@@ -645,13 +647,15 @@ function onItemMenuAction() {
   padding: 0;
 }
 
-.search-btn:hover {
-  background: rgb(240, 240, 240);
+.search-btn:hover,
+.hide-btn:hover {
+  background: rgb(213, 213, 213);
+  border-color: transparent;
+  color: inherit;
 }
 
 .search-btn.active {
-  background: rgb(236, 236, 236);
-  border-color: rgb(180, 180, 180);
+  background: rgb(213, 213, 213);
 }
 
 .search-icon {
@@ -674,12 +678,6 @@ function onItemMenuAction() {
   bottom: -1px;
   transform: rotate(45deg);
   transform-origin: left center;
-}
-
-.hide-btn:hover {
-  background: #e81123;
-  border-color: #e81123;
-  color: #fff;
 }
 
 .body-layout {

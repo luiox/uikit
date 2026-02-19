@@ -120,10 +120,22 @@ struct Settings {
     current_group: Option<String>,
     #[serde(default = "default_group_panel_width")]
     group_panel_width: f64,
+    #[serde(default = "default_main_window_width")]
+    main_window_width: f64,
+    #[serde(default = "default_main_window_height")]
+    main_window_height: f64,
 }
 
 fn default_group_panel_width() -> f64 {
     220.0
+}
+
+fn default_main_window_width() -> f64 {
+    1040.0
+}
+
+fn default_main_window_height() -> f64 {
+    700.0
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -253,6 +265,8 @@ fn parse_poner_cfg(path: &Path) -> Settings {
         execute_hide,
         current_group,
         group_panel_width: default_group_panel_width(),
+        main_window_width: default_main_window_width(),
+        main_window_height: default_main_window_height(),
     }
 }
 
@@ -428,6 +442,8 @@ fn load_state() -> (LauncherData, Settings, PathBuf, PathBuf) {
                         execute_hide: true,
                         current_group: None,
                         group_panel_width: default_group_panel_width(),
+                        main_window_width: default_main_window_width(),
+                        main_window_height: default_main_window_height(),
                     }
                 }
             })
@@ -440,6 +456,8 @@ fn load_state() -> (LauncherData, Settings, PathBuf, PathBuf) {
                 execute_hide: true,
                 current_group: None,
                 group_panel_width: default_group_panel_width(),
+                main_window_width: default_main_window_width(),
+                main_window_height: default_main_window_height(),
             }
         };
         let _ = write_json_atomic(&settings_path, &s);
@@ -1332,6 +1350,9 @@ fn main() {
             register_hotkey(&app.app_handle(), &settings.hotkey);
 
             if let Some(main) = app.get_webview_window("main") {
+                let width = settings.main_window_width.round().max(640.0) as u32;
+                let height = settings.main_window_height.round().max(420.0) as u32;
+                let _ = main.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(width, height)));
                 disable_window_round_corners(&main);
                 enable_window_shadow(&main);
             }
@@ -1339,9 +1360,22 @@ fn main() {
         })
         .on_window_event(|window: &Window, event: &WindowEvent| {
             if window.label() == "main" {
-                if let WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = window.hide();
+                match event {
+                    WindowEvent::Resized(size) => {
+                        let state = window.state::<AppState>();
+                        {
+                            if let Ok(mut settings) = state.settings.lock() {
+                                settings.main_window_width = size.width as f64;
+                                settings.main_window_height = size.height as f64;
+                            }
+                        }
+                        let _ = state.save_settings();
+                    }
+                    WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                    _ => {}
                 }
             } else if window.label() == "editor" {
                 if let WindowEvent::CloseRequested { .. } = event {
