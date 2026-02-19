@@ -20,6 +20,7 @@ export interface Settings {
   hotkey: string;
   executeHide: boolean;
   currentGroup: string | null;
+  groupPanelWidth: number;
 }
 
 export interface LauncherState {

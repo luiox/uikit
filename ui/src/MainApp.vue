@@ -1,5 +1,5 @@
 <template>
-  <div class="app-window" @contextmenu.prevent>
+  <div ref="appWindowRef" class="app-window" @contextmenu.prevent>
     <header class="top-bar" data-tauri-drag-region>
       <div class="top-title">nassistant</div>
       <div class="top-actions">
@@ -10,7 +10,7 @@
       </div>
     </header>
 
-    <div class="body-layout">
+    <div ref="bodyLayoutRef" class="body-layout" :style="bodyLayoutStyle">
       <template v-if="!isSearchMode">
         <aside class="group-panel" @contextmenu.prevent="openGroupMenu">
           <ul class="group-list">
@@ -26,6 +26,8 @@
             </li>
           </ul>
         </aside>
+
+        <div class="panel-splitter" @mousedown="onSplitterMouseDown"></div>
 
         <main class="item-panel" @contextmenu.prevent="openItemMenu">
           <ul class="item-list">
@@ -139,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
   addGroup,
   deleteItem,
@@ -150,9 +152,10 @@ import {
   onDataChanged,
   onSettingsChanged,
   openEditor,
-  renameGroup
+  renameGroup,
+  updateSettings
 } from './api';
-import type { Group, LaunchItem } from './types';
+import type { Group, LaunchItem, Settings } from './types';
 
 interface SearchResultItem {
   groupId: string;
@@ -181,6 +184,15 @@ const addGroupDialogMode = ref<'add' | 'rename'>('add');
 const addGroupDialogGroupId = ref<string | null>(null);
 const groupNameInputRef = ref<HTMLInputElement | null>(null);
 const searchInputRef = ref<HTMLInputElement | null>(null);
+const appWindowRef = ref<HTMLElement | null>(null);
+const bodyLayoutRef = ref<HTMLElement | null>(null);
+const groupPanelWidth = ref(220);
+const isResizingSplitter = ref(false);
+const currentSettings = ref<Settings | null>(null);
+
+const SPLITTER_WIDTH = 8;
+const MIN_GROUP_PANEL_WIDTH = 80;
+const MIN_ITEM_PANEL_WIDTH = 220;
 
 const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null);
 const selectedItem = computed<LaunchItem | null>(() => activeGroup.value?.items.find((it) => it.id === selectedItemId.value) ?? null);
@@ -212,6 +224,12 @@ const moveTargetGroups = computed(() => {
   return groups.value.filter((group) => group.id !== activeGroupId.value);
 });
 
+const bodyLayoutStyle = computed(() => {
+  return {
+    gridTemplateColumns: `${groupPanelWidth.value}px ${SPLITTER_WIDTH}px minmax(0, 1fr)`
+  };
+});
+
 function setStatus(message: string, error = false) {
   statusText.value = message;
   isError.value = error;
@@ -238,11 +256,79 @@ async function refresh() {
   const loadedGroups = state.groups ?? [];
   groups.value = loadedGroups;
   iconDataMap.value = state.itemIcons ?? {};
+  currentSettings.value = state.settings;
+
+  const persistedWidth = Number(state.settings?.groupPanelWidth ?? 220);
+  groupPanelWidth.value = Number.isFinite(persistedWidth) ? Math.round(persistedWidth) : 220;
 
   const preferred = state.settings?.currentGroup;
   const byName = groups.value.find((g) => g.name === preferred);
   activeGroupId.value = byName?.id ?? groups.value[0]?.id ?? null;
   selectedItemId.value = null;
+}
+
+function getClampedGroupPanelWidth(next: number): number {
+  const layout = bodyLayoutRef.value;
+  const totalWidth = layout?.clientWidth ?? appWindowRef.value?.clientWidth ?? 680;
+  const maxWidth = Math.max(MIN_GROUP_PANEL_WIDTH, totalWidth - MIN_ITEM_PANEL_WIDTH - SPLITTER_WIDTH);
+  if (next < MIN_GROUP_PANEL_WIDTH) {
+    return MIN_GROUP_PANEL_WIDTH;
+  }
+  if (next > maxWidth) {
+    return maxWidth;
+  }
+  return Math.round(next);
+}
+
+function onSplitterDrag(event: MouseEvent) {
+  if (!isResizingSplitter.value) {
+    return;
+  }
+  const layout = bodyLayoutRef.value;
+  if (!layout) {
+    return;
+  }
+  const rect = layout.getBoundingClientRect();
+  const next = event.clientX - rect.left;
+  groupPanelWidth.value = getClampedGroupPanelWidth(next);
+}
+
+async function persistGroupPanelWidth() {
+  const base: Settings = currentSettings.value ?? {
+    hotkey: 'Alt+1',
+    executeHide: true,
+    currentGroup: null,
+    groupPanelWidth: 220
+  };
+  const nextSettings: Settings = {
+    ...base,
+    groupPanelWidth: groupPanelWidth.value
+  };
+  try {
+    await updateSettings(nextSettings);
+    currentSettings.value = nextSettings;
+  } catch (error) {
+    setStatus(`保存界面布局失败: ${String(error)}`, true);
+  }
+}
+
+function onSplitterMouseUp() {
+  if (!isResizingSplitter.value) {
+    return;
+  }
+  isResizingSplitter.value = false;
+  document.body.classList.remove('is-resizing-splitter');
+  document.removeEventListener('mousemove', onSplitterDrag);
+  document.removeEventListener('mouseup', onSplitterMouseUp);
+  void persistGroupPanelWidth();
+}
+
+function onSplitterMouseDown(event: MouseEvent) {
+  event.preventDefault();
+  isResizingSplitter.value = true;
+  document.body.classList.add('is-resizing-splitter');
+  document.addEventListener('mousemove', onSplitterDrag);
+  document.addEventListener('mouseup', onSplitterMouseUp);
 }
 
 function getFallbackIconText(item: LaunchItem): string {
@@ -478,6 +564,12 @@ onMounted(async () => {
   setStatus('就绪');
 });
 
+onBeforeUnmount(() => {
+  if (isResizingSplitter.value) {
+    onSplitterMouseUp();
+  }
+});
+
 function onGroupMenuAction() {
   if (groupMenuMode.value === 'rename') {
     void onRenameGroup();
@@ -591,7 +683,7 @@ function onItemMenuAction() {
 
 .body-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 220px 8px minmax(0, 1fr);
   width: 100%;
   min-height: 0;
   min-width: 0;
@@ -607,8 +699,19 @@ function onItemMenuAction() {
 }
 
 .group-panel {
-  border-right: 1px solid rgb(210, 210, 210);
   background: rgb(230, 230, 230);
+}
+
+.panel-splitter {
+  width: 8px;
+  cursor: col-resize;
+  background: rgb(235, 235, 235);
+  border-left: 1px solid rgb(210, 210, 210);
+  border-right: 1px solid rgb(210, 210, 210);
+}
+
+.panel-splitter:hover {
+  background: rgb(226, 226, 226);
 }
 
 .item-panel {
@@ -888,6 +991,11 @@ function onItemMenuAction() {
   overflow: hidden;
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+:global(body.is-resizing-splitter) {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 :global(html::-webkit-scrollbar),

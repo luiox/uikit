@@ -61,6 +61,12 @@ struct Settings {
     hotkey: String,
     execute_hide: bool,
     current_group: Option<String>,
+    #[serde(default = "default_group_panel_width")]
+    group_panel_width: f64,
+}
+
+fn default_group_panel_width() -> f64 {
+    220.0
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -189,6 +195,7 @@ fn parse_poner_cfg(path: &Path) -> Settings {
         hotkey,
         execute_hide,
         current_group,
+        group_panel_width: default_group_panel_width(),
     }
 }
 
@@ -363,6 +370,7 @@ fn load_state() -> (LauncherData, Settings, PathBuf, PathBuf) {
                         hotkey: "Alt+1".to_string(),
                         execute_hide: true,
                         current_group: None,
+                        group_panel_width: default_group_panel_width(),
                     }
                 }
             })
@@ -374,6 +382,7 @@ fn load_state() -> (LauncherData, Settings, PathBuf, PathBuf) {
                 hotkey: "Alt+1".to_string(),
                 execute_hide: true,
                 current_group: None,
+                group_panel_width: default_group_panel_width(),
             }
         };
         let _ = write_json_atomic(&settings_path, &s);
