@@ -3,7 +3,9 @@
     <header class="top-bar" data-tauri-drag-region>
       <div class="top-title">nassistant</div>
       <div class="top-actions">
-        <button class="search-btn no-drag" :class="{ active: isSearchMode }" @click="toggleSearchMode">🔍</button>
+        <button class="search-btn no-drag" :class="{ active: isSearchMode }" @click="toggleSearchMode" aria-label="搜索">
+          <span class="search-icon" aria-hidden="true"></span>
+        </button>
         <button class="hide-btn no-drag" @click="onHide">×</button>
       </div>
     </header>
@@ -495,6 +497,7 @@ function onItemMenuAction() {
 
 <style scoped>
 .app-window {
+  width: 100%;
   height: 100vh;
   display: grid;
   grid-template-rows: 42px 1fr 28px;
@@ -505,6 +508,8 @@ function onItemMenuAction() {
 }
 
 .top-bar {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -548,13 +553,34 @@ function onItemMenuAction() {
 }
 
 .search-btn:hover {
-  background: rgb(226, 226, 226);
+  background: rgb(240, 240, 240);
 }
 
 .search-btn.active {
-  background: rgb(0, 120, 215);
-  border-color: rgb(0, 120, 215);
-  color: #fff;
+  background: rgb(236, 236, 236);
+  border-color: rgb(180, 180, 180);
+}
+
+.search-icon {
+  position: relative;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.6px solid #374151;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.search-icon::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 1.6px;
+  background: #374151;
+  right: -4px;
+  bottom: -1px;
+  transform: rotate(45deg);
+  transform-origin: left center;
 }
 
 .hide-btn:hover {
@@ -566,7 +592,10 @@ function onItemMenuAction() {
 .body-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .group-panel,
@@ -574,6 +603,7 @@ function onItemMenuAction() {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .group-panel {
@@ -589,16 +619,20 @@ function onItemMenuAction() {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   background: rgb(255, 255, 255);
+  grid-column: 1 / -1;
 }
 
 .search-input-wrap {
   padding: 10px 12px;
   border-bottom: 1px solid rgb(210, 210, 210);
+  box-sizing: border-box;
 }
 
 .search-input {
   width: 100%;
+  box-sizing: border-box;
   border: 1px solid rgb(200, 200, 200);
   border-radius: 6px;
   padding: 8px 10px;
