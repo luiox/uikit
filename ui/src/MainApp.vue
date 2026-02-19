@@ -2,47 +2,80 @@
   <div class="app-window" @contextmenu.prevent>
     <header class="top-bar" data-tauri-drag-region>
       <div class="top-title">nassistant</div>
-      <button class="hide-btn no-drag" @click="onHide">×</button>
+      <div class="top-actions">
+        <button class="search-btn no-drag" :class="{ active: isSearchMode }" @click="toggleSearchMode">🔍</button>
+        <button class="hide-btn no-drag" @click="onHide">×</button>
+      </div>
     </header>
 
     <div class="body-layout">
-      <aside class="group-panel" @contextmenu.prevent="openGroupMenu">
-        <div class="section-title">分组</div>
-        <ul class="group-list">
-          <li
-            v-for="group in groups"
-            :key="group.id"
-            class="group-item"
-            :data-group-id="group.id"
-            :class="{ active: group.id === activeGroupId }"
-            @click="selectGroup(group.id)"
-          >
-            {{ group.name }}
-          </li>
-        </ul>
-      </aside>
+      <template v-if="!isSearchMode">
+        <aside class="group-panel" @contextmenu.prevent="openGroupMenu">
+          <ul class="group-list">
+            <li
+              v-for="group in groups"
+              :key="group.id"
+              class="group-item"
+              :data-group-id="group.id"
+              :class="{ active: group.id === activeGroupId }"
+              @click="selectGroup(group.id)"
+            >
+              {{ group.name }}
+            </li>
+          </ul>
+        </aside>
 
-      <main class="item-panel" @contextmenu.prevent="openItemMenu">
-        <div class="section-title">启动项</div>
-        <ul class="item-list">
+        <main class="item-panel" @contextmenu.prevent="openItemMenu">
+          <ul class="item-list">
+            <li
+              v-for="item in filteredItems"
+              :key="item.id"
+              class="item-row"
+              :data-item-id="item.id"
+              :class="{ active: item.id === selectedItemId, separator: item.itemType === 'separator' }"
+              @click="selectedItemId = item.id"
+              @dblclick="item.itemType !== 'separator' && onLaunch()"
+            >
+              <span class="item-icon">
+                <img v-if="item.itemType !== 'separator' && iconDataMap[item.id]" class="item-icon-image" :src="iconDataMap[item.id]" alt="" />
+                <span v-else>{{ getFallbackIconText(item) }}</span>
+              </span>
+              <span class="item-name">{{ item.name || '(未命名)' }}</span>
+              <span class="item-count">{{ item.launchCount ?? 0 }}</span>
+            </li>
+          </ul>
+        </main>
+      </template>
+
+      <section v-else class="search-panel">
+        <div class="search-input-wrap">
+          <input
+            ref="searchInputRef"
+            v-model="searchKeyword"
+            class="search-input"
+            type="text"
+            placeholder="搜索启动项"
+          />
+        </div>
+        <ul class="item-list search-result-list">
           <li
-            v-for="item in filteredItems"
-            :key="item.id"
+            v-for="entry in searchedItems"
+            :key="entry.item.id"
             class="item-row"
-            :data-item-id="item.id"
-            :class="{ active: item.id === selectedItemId, separator: item.itemType === 'separator' }"
-            @click="selectedItemId = item.id"
-            @dblclick="item.itemType !== 'separator' && onLaunch()"
+            :class="{ active: entry.item.id === selectedSearchItemId }"
+            @click="selectedSearchItemId = entry.item.id"
+            @dblclick="onLaunchSearchedItem(entry)"
           >
             <span class="item-icon">
-              <img v-if="item.itemType !== 'separator' && iconDataMap[item.id]" class="item-icon-image" :src="iconDataMap[item.id]" alt="" />
-              <span v-else>{{ getFallbackIconText(item) }}</span>
+              <img v-if="iconDataMap[entry.item.id]" class="item-icon-image" :src="iconDataMap[entry.item.id]" alt="" />
+              <span v-else>{{ getFallbackIconText(entry.item) }}</span>
             </span>
-            <span class="item-name">{{ item.name || '(未命名)' }}</span>
-            <span class="item-count">{{ item.launchCount ?? 0 }}</span>
+            <span class="item-name">{{ entry.item.name || '(未命名)' }}</span>
+            <span class="item-count">{{ entry.groupName }}</span>
           </li>
+          <li v-if="searchedItems.length === 0" class="search-empty">没有匹配的启动项</li>
         </ul>
-      </main>
+      </section>
     </div>
 
     <footer class="status-line" :class="{ error: isError }">{{ statusText }}</footer>
@@ -119,10 +152,18 @@ import {
 } from './api';
 import type { Group, LaunchItem } from './types';
 
+interface SearchResultItem {
+  groupId: string;
+  groupName: string;
+  item: LaunchItem;
+}
+
 const groups = ref<Group[]>([]);
 const activeGroupId = ref<string | null>(null);
 const selectedItemId = ref<string | null>(null);
 const searchKeyword = ref('');
+const isSearchMode = ref(false);
+const selectedSearchItemId = ref<string | null>(null);
 const statusText = ref('');
 const isError = ref(false);
 const groupMenu = ref({ visible: false, x: 0, y: 0 });
@@ -137,15 +178,32 @@ const newGroupName = ref('');
 const addGroupDialogMode = ref<'add' | 'rename'>('add');
 const addGroupDialogGroupId = ref<string | null>(null);
 const groupNameInputRef = ref<HTMLInputElement | null>(null);
+const searchInputRef = ref<HTMLInputElement | null>(null);
 
 const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null);
 const selectedItem = computed<LaunchItem | null>(() => activeGroup.value?.items.find((it) => it.id === selectedItemId.value) ?? null);
 
 const filteredItems = computed(() => {
-  const list = activeGroup.value?.items ?? [];
+  return activeGroup.value?.items ?? [];
+});
+
+const searchedItems = computed<SearchResultItem[]>(() => {
   const key = searchKeyword.value.trim().toLowerCase();
-  if (!key) return list;
-  return list.filter((it) => (it.name ?? '').toLowerCase().includes(key));
+  return groups.value.flatMap((group) => {
+    return group.items
+      .filter((item) => item.itemType !== 'separator')
+      .filter((item) => {
+        if (!key) {
+          return true;
+        }
+        return (item.name ?? '').toLowerCase().includes(key);
+      })
+      .map((item) => ({
+        groupId: group.id,
+        groupName: group.name,
+        item
+      }));
+  });
 });
 
 const moveTargetGroups = computed(() => {
@@ -160,6 +218,17 @@ function setStatus(message: string, error = false) {
 function selectGroup(id: string) {
   activeGroupId.value = id;
   selectedItemId.value = null;
+}
+
+async function toggleSearchMode() {
+  isSearchMode.value = !isSearchMode.value;
+  searchKeyword.value = '';
+  selectedSearchItemId.value = null;
+  closeMenus();
+  if (isSearchMode.value) {
+    await nextTick();
+    searchInputRef.value?.focus();
+  }
 }
 
 async function refresh() {
@@ -351,6 +420,29 @@ async function onLaunch() {
   }
 }
 
+async function onLaunchSearchedItem(entry: SearchResultItem) {
+  try {
+    const result = await launchItem(entry.groupId, entry.item.id);
+    setStatus(result?.message ?? '启动成功');
+    await refresh();
+  } catch (error) {
+    setStatus(String(error), true);
+  }
+}
+
+async function onLaunchSelectedSearchedItem() {
+  if (!selectedSearchItemId.value) {
+    setStatus('请先选择要启动的条目', true);
+    return;
+  }
+  const target = searchedItems.value.find((entry) => entry.item.id === selectedSearchItemId.value);
+  if (!target) {
+    setStatus('未找到对应启动项', true);
+    return;
+  }
+  await onLaunchSearchedItem(target);
+}
+
 async function onHide() {
   await hideCurrentWindow();
 }
@@ -370,11 +462,15 @@ onMounted(async () => {
     if (event.key === 'Escape') {
       closeMenus();
     }
-    if (event.key === 'Delete') {
+    if (event.key === 'Delete' && !isSearchMode.value) {
       onDelete();
     }
     if (event.key === 'Enter') {
-      onLaunch();
+      if (isSearchMode.value) {
+        onLaunchSelectedSearchedItem();
+      } else {
+        onLaunch();
+      }
     }
   });
   setStatus('就绪');
@@ -431,6 +527,13 @@ function onItemMenuAction() {
   font-weight: 600;
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-btn,
 .hide-btn {
   width: 30px;
   height: 28px;
@@ -442,6 +545,16 @@ function onItemMenuAction() {
   text-align: center;
   cursor: pointer;
   padding: 0;
+}
+
+.search-btn:hover {
+  background: rgb(226, 226, 226);
+}
+
+.search-btn.active {
+  background: rgb(0, 120, 215);
+  border-color: rgb(0, 120, 215);
+  color: #fff;
 }
 
 .hide-btn:hover {
@@ -470,6 +583,38 @@ function onItemMenuAction() {
 
 .item-panel {
   background: rgb(255, 255, 255);
+}
+
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgb(255, 255, 255);
+}
+
+.search-input-wrap {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(210, 210, 210);
+}
+
+.search-input {
+  width: 100%;
+  border: 1px solid rgb(200, 200, 200);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.search-result-list {
+  padding: 10px;
+}
+
+.search-empty {
+  list-style: none;
+  padding: 10px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .section-title {
