@@ -4,8 +4,12 @@ set_xmakever("2.7.9")
 
 add_rules("mode.debug", "mode.release")
 
-rule("iconlib.codegen")
-    before_build(function (target)
+task("iconlib_codegen")
+    set_menu {
+        usage = "xmake iconlib_codegen",
+        description = "Manually regenerate icon-lib generated/icons.h and generated/icons.cpp"
+    }
+    on_run(function ()
         local script = path.join(os.scriptdir(), "scripts", "generate_cpp_assets.py")
         os.exec("python %s", script)
     end)
@@ -13,7 +17,7 @@ rule("iconlib.codegen")
 target("iconlib_dynamic")
     set_kind("static")
     set_languages("cxx17")
-    add_rules("iconlib.codegen")
+    set_default(false)
 
     add_includedirs("generated", {public = true})
     add_headerfiles("generated/icons.h")
@@ -23,7 +27,7 @@ target("iconlib_dynamic")
 target("iconlib_embed")
     set_kind("static")
     set_languages("cxx17")
-    add_rules("iconlib.codegen")
+    set_default(false)
 
     add_includedirs("generated", {public = true})
     add_headerfiles("generated/icons.h")

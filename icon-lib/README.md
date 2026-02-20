@@ -24,11 +24,14 @@
    - 从临时 Feather 源提取精简子集到 `icons/`（仅在 bootstrap 阶段使用）。
 
 ## 构建（xmake）
-- 生成代码后构建：
-   - `python scripts/generate_cpp_assets.py`
+- 手工触发生成（仅在 icon 变更后需要）：
+   - `xmake iconlib_codegen`
+- 然后构建：
    - `xmake f -m release`
    - `xmake build iconlib_dynamic`
    - `xmake build iconlib_embed`
+
+说明：默认构建不会自动重新生成 `generated/icons.h/.cpp`，避免每次 build 失去缓存收益。
 
 ## 对外接入方式
 在你的主工程里把 `icon-lib` 当子项目引入（例如 `add_subdirs("path/to/icon-lib")`），然后：
