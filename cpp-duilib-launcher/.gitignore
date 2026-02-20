@@ -1,0 +1,9 @@
+build/
+.vs/
+*.user
+*.suo
+*.vcxproj*
+*.obj
+*.pdb
+*.ilk
+*.exe

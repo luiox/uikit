@@ -8,3 +8,8 @@ launcher.v2.json
 nassistant.settings.json
 icons/*.ico
 icons/*.txt
+dec/
+ref/
+runtime-probes/target/
+win32-launcher/target/
+
