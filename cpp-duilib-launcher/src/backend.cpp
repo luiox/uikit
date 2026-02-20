@@ -82,6 +82,32 @@ bool WriteTextAtomic(const std::filesystem::path& path, const std::string& conte
     return true;
 }
 
+std::wstring Utf8ToWide(const std::string& text) {
+    if (text.empty()) {
+        return {};
+    }
+    const int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
+    if (size <= 0) {
+        return std::wstring(text.begin(), text.end());
+    }
+    std::wstring out(size, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size);
+    return out;
+}
+
+std::string WideToUtf8(const std::wstring& text) {
+    if (text.empty()) {
+        return {};
+    }
+    const int size = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
+    if (size <= 0) {
+        return std::string(text.begin(), text.end());
+    }
+    std::string out(size, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size, nullptr, nullptr);
+    return out;
+}
+
 } // namespace
 
 LauncherBackend::LauncherBackend(std::filesystem::path base_dir, std::filesystem::path legacy_root)
@@ -579,8 +605,8 @@ LaunchResult LauncherBackend::Launch(const std::string& group_id, const std::str
     sei.fMask = SEE_MASK_NOCLOSEPROCESS;
     sei.lpVerb = L"open";
 
-    std::wstring target_w(it->target_path.begin(), it->target_path.end());
-    std::wstring args_w(it->arguments.begin(), it->arguments.end());
+    std::wstring target_w = Utf8ToWide(it->target_path);
+    std::wstring args_w = Utf8ToWide(it->arguments);
     sei.lpFile = target_w.c_str();
     sei.lpParameters = args_w.empty() ? nullptr : args_w.c_str();
     sei.nShow = SW_SHOWNORMAL;
@@ -658,7 +684,7 @@ std::optional<std::pair<std::string, std::string>> LauncherBackend::ResolveShort
         return std::nullopt;
     }
 
-    std::wstring link_w(shortcut_path.begin(), shortcut_path.end());
+    std::wstring link_w = Utf8ToWide(shortcut_path);
     if (FAILED(persist_file->Load(link_w.c_str(), STGM_READ))) {
         return std::nullopt;
     }
@@ -678,7 +704,7 @@ std::optional<std::pair<std::string, std::string>> LauncherBackend::ResolveShort
     }
 
     std::wstring args_w(args);
-    return std::make_pair(std::string(target_w.begin(), target_w.end()), std::string(args_w.begin(), args_w.end()));
+    return std::make_pair(WideToUtf8(target_w), WideToUtf8(args_w));
 }
 
 std::size_t LauncherBackend::CreateItemsFromDroppedPaths(const std::string& group_id, const std::vector<std::string>& paths, std::string* error) {

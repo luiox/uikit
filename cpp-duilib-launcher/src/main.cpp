@@ -21,7 +21,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
         return 1;
     }
 
-    HWND hwnd = frame->Create(nullptr, _T("NAssistant Launcher (DuiLib)"), UI_WNDSTYLE_FRAME, WS_EX_WINDOWEDGE);
+    HWND hwnd = frame->Create(nullptr, _T("NAssistant Launcher (DuiLib)"), UI_WNDSTYLE_FRAME | WS_SIZEBOX, WS_EX_WINDOWEDGE);
     if (hwnd == nullptr) {
         delete frame;
         CoUninitialize();
