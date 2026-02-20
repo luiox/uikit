@@ -10,6 +10,8 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <string>
 
 #include "file_icon_control.h"
 #include "icons.h"
@@ -86,12 +88,71 @@ std::filesystem::path GetEmbeddedIconCacheDir() {
     return dir;
 }
 
+void ReplaceAllInPlace(std::string* text, const std::string& from, const std::string& to) {
+    if (text == nullptr || from.empty() || from == to) {
+        return;
+    }
+    std::size_t start = 0;
+    while ((start = text->find(from, start)) != std::string::npos) {
+        text->replace(start, from.length(), to);
+        start += to.length();
+    }
+}
+
+std::string ApplyIconThemeColor(std::string svg_text) {
+    static constexpr const char* kThemeColor = "rgb(128,128,128)";
+    ReplaceAllInPlace(&svg_text, "currentColor", kThemeColor);
+    ReplaceAllInPlace(&svg_text, "#000000", kThemeColor);
+    ReplaceAllInPlace(&svg_text, "#000", kThemeColor);
+    ReplaceAllInPlace(&svg_text, "black", kThemeColor);
+    ReplaceAllInPlace(&svg_text, "rgb(0,0,0)", kThemeColor);
+    return svg_text;
+}
+
+std::filesystem::path GetThemedIconCacheDir() {
+    auto dir = GetEmbeddedIconCacheDir() / "theme_128_128_128";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    return dir;
+}
+
+std::filesystem::path BuildThemedIconPath(const std::filesystem::path& source_or_name) {
+    const auto stem = source_or_name.stem().string();
+    return GetThemedIconCacheDir() / (stem + "_128_128_128.svg");
+}
+
+bool WriteThemedSvg(const std::filesystem::path& out_path, const std::string& raw_svg) {
+    std::error_code ec;
+    std::filesystem::create_directories(out_path.parent_path(), ec);
+    std::ofstream stream(out_path, std::ios::binary | std::ios::trunc);
+    if (!stream.is_open()) {
+        return false;
+    }
+    const std::string themed = ApplyIconThemeColor(raw_svg);
+    stream.write(themed.data(), static_cast<std::streamsize>(themed.size()));
+    stream.close();
+    return true;
+}
+
 std::filesystem::path GetDynamicIconPath(iconlib::Icon icon) {
     const char* rel = iconlib::GetDynamicPath(icon);
     if (rel == nullptr || rel[0] == '\0') {
         return {};
     }
-    return std::filesystem::current_path() / rel;
+    const auto source = std::filesystem::current_path() / rel;
+    if (!std::filesystem::exists(source)) {
+        return {};
+    }
+    std::ifstream stream(source, std::ios::binary);
+    if (!stream.is_open()) {
+        return source;
+    }
+    const std::string raw((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    const auto out = BuildThemedIconPath(source);
+    if (WriteThemedSvg(out, raw)) {
+        return out;
+    }
+    return source;
 }
 
 std::filesystem::path GetEmbeddedIconPath(iconlib::Icon icon) {
@@ -100,14 +161,12 @@ std::filesystem::path GetEmbeddedIconPath(iconlib::Icon icon) {
         return {};
     }
 
-    const auto out = GetEmbeddedIconCacheDir() / asset->fileName;
+    const auto out = BuildThemedIconPath(std::filesystem::path(asset->fileName));
     if (!std::filesystem::exists(out)) {
-        std::ofstream stream(out, std::ios::binary | std::ios::trunc);
-        if (!stream.is_open()) {
+        const std::string raw(asset->svg, asset->svg + asset->size);
+        if (!WriteThemedSvg(out, raw)) {
             return {};
         }
-        stream.write(asset->svg, static_cast<std::streamsize>(asset->size));
-        stream.close();
     }
     return out;
 }
@@ -132,7 +191,7 @@ iconlib::Icon ResolveTopBarIcon(iconlib::Icon preferred, iconlib::Icon fallback)
     return iconlib::Icon::None;
 }
 
-CDuiString MakeSvgImageAttr(iconlib::Icon icon) {
+CDuiString MakeSvgImageAttr(iconlib::Icon icon, int draw_px = 16, int box_px = 26) {
     if (icon == iconlib::Icon::None) {
         return {};
     }
@@ -140,10 +199,20 @@ CDuiString MakeSvgImageAttr(iconlib::Icon icon) {
     if (path.empty()) {
         return {};
     }
+    if (draw_px <= 0 || box_px <= 0 || draw_px > box_px) {
+        draw_px = 16;
+        box_px = 26;
+    }
+    const int offset = (box_px - draw_px) / 2;
+    const int left = offset;
+    const int top = offset;
+    const int right = left + draw_px;
+    const int bottom = top + draw_px;
+
     std::wstring path_w = path.wstring();
     std::replace(path_w.begin(), path_w.end(), L'\\', L'/');
     CDuiString out;
-    out.Format(_T("file='%s'"), path_w.c_str());
+    out.Format(_T("file='%s' dest='%d,%d,%d,%d'"), path_w.c_str(), left, top, right, bottom);
     return out;
 }
 

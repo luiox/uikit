@@ -1,13 +1,1 @@
 #include "resource.h"
-
-IDR_SVG_BTN_SEARCH_N RCDATA "../assets/ui/btn_search_n.svg"
-IDR_SVG_BTN_SEARCH_H RCDATA "../assets/ui/btn_search_h.svg"
-IDR_SVG_BTN_SEARCH_P RCDATA "../assets/ui/btn_search_p.svg"
-
-IDR_SVG_BTN_MENU_N   RCDATA "../assets/ui/btn_menu_n.svg"
-IDR_SVG_BTN_MENU_H   RCDATA "../assets/ui/btn_menu_h.svg"
-IDR_SVG_BTN_MENU_P   RCDATA "../assets/ui/btn_menu_p.svg"
-
-IDR_SVG_BTN_EXIT_N   RCDATA "../assets/ui/btn_exit_n.svg"
-IDR_SVG_BTN_EXIT_H   RCDATA "../assets/ui/btn_exit_h.svg"
-IDR_SVG_BTN_EXIT_P   RCDATA "../assets/ui/btn_exit_p.svg"
