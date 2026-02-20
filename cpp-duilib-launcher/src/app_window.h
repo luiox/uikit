@@ -39,6 +39,9 @@ private:
     void ShowItemContextMenu(const POINT& screen_point);
     void ExecuteGroupCommand(UINT command_id);
     void ExecuteItemCommand(UINT command_id);
+    void OpenGroupDialog(bool rename_mode, const std::string& group_id);
+    void CloseGroupDialog();
+    void ConfirmGroupDialog();
 
     bool AddItemFromFile();
     bool EditSelectedItem();
@@ -66,6 +69,9 @@ private:
     DuiLib::CVerticalLayoutUI* group_panel_ = nullptr;
     DuiLib::CControlUI* panel_splitter_ = nullptr;
     DuiLib::CEditUI* search_input_ = nullptr;
+    DuiLib::CVerticalLayoutUI* group_dialog_ = nullptr;
+    DuiLib::CLabelUI* group_dialog_title_ = nullptr;
+    DuiLib::CEditUI* group_dialog_input_ = nullptr;
 
     std::vector<std::string> group_ids_;
     std::vector<std::string> item_ids_;
@@ -75,6 +81,8 @@ private:
     std::string selected_item_group_id_;
 
     bool search_mode_ = false;
+    bool group_dialog_rename_mode_ = false;
+    std::string group_dialog_group_id_;
 
     bool splitter_dragging_ = false;
     int splitter_drag_start_x_ = 0;

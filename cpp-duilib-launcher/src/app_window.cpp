@@ -461,6 +461,66 @@ CControlUI* AppWindow::BuildRootUi() {
     status->SetTextColor(0xFF445A72);
     root->Add(status);
 
+    auto* groupDialog = new CVerticalLayoutUI();
+    groupDialog->SetName(_T("group_dialog"));
+    groupDialog->SetVisible(false);
+    groupDialog->SetFloat(true);
+    groupDialog->SetFloatAlign(DT_CENTER | DT_VCENTER);
+    groupDialog->SetFixedWidth(360);
+    groupDialog->SetFixedHeight(150);
+    groupDialog->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    groupDialog->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
+    groupDialog->SetAttribute(_T("bordersize"), _T("1"));
+    groupDialog->SetAttribute(_T("inset"), _T("12,10,12,10"));
+    groupDialog->SetAttribute(_T("childpadding"), _T("8"));
+
+    auto* groupDialogTitle = new CLabelUI();
+    groupDialogTitle->SetName(_T("group_dialog_title"));
+    groupDialogTitle->SetText(_T("Add Group"));
+    groupDialogTitle->SetFixedHeight(24);
+    groupDialogTitle->SetTextColor(0xFF2A3D52);
+    groupDialogTitle->SetFont(0);
+    groupDialog->Add(groupDialogTitle);
+
+    auto* groupDialogInput = new CEditUI();
+    groupDialogInput->SetName(_T("group_dialog_input"));
+    groupDialogInput->SetFixedHeight(28);
+    groupDialogInput->SetAttribute(_T("bordercolor"), _T("0xFF9AA4B2"));
+    groupDialogInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    groupDialogInput->SetAttribute(_T("textpadding"), _T("6,3,6,3"));
+    groupDialog->Add(groupDialogInput);
+
+    auto* actions = new CHorizontalLayoutUI();
+    actions->SetAttribute(_T("childpadding"), _T("8"));
+    actions->SetAttribute(_T("childalign"), _T("right"));
+
+    auto* okButton = new CButtonUI();
+    okButton->SetName(_T("group_dialog_ok"));
+    okButton->SetText(_T("OK"));
+    okButton->SetFixedWidth(88);
+    okButton->SetFixedHeight(28);
+    okButton->SetAttribute(_T("normalbkcolor"), _T("0xFF52718C"));
+    okButton->SetAttribute(_T("hotbkcolor"), _T("0xFF5E7F9C"));
+    okButton->SetAttribute(_T("pushedbkcolor"), _T("0xFF46627A"));
+    okButton->SetAttribute(_T("textcolor"), _T("0xFFFFFFFF"));
+    okButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
+    actions->Add(okButton);
+
+    auto* cancelButton = new CButtonUI();
+    cancelButton->SetName(_T("group_dialog_cancel"));
+    cancelButton->SetText(_T("Cancel"));
+    cancelButton->SetFixedWidth(88);
+    cancelButton->SetFixedHeight(28);
+    cancelButton->SetAttribute(_T("normalbkcolor"), _T("0xFFDDDDDD"));
+    cancelButton->SetAttribute(_T("hotbkcolor"), _T("0xFFE7E7E7"));
+    cancelButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD1D1D1"));
+    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF334155"));
+    cancelButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
+    actions->Add(cancelButton);
+
+    groupDialog->Add(actions);
+    root->Add(groupDialog);
+
     return root;
 }
 
@@ -493,6 +553,9 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     group_panel_ = static_cast<CVerticalLayoutUI*>(m_pm.FindControl(_T("group_panel")));
     panel_splitter_ = m_pm.FindControl(_T("panel_splitter"));
     search_input_ = static_cast<CEditUI*>(m_pm.FindControl(_T("search_input")));
+    group_dialog_ = static_cast<CVerticalLayoutUI*>(m_pm.FindControl(_T("group_dialog")));
+    group_dialog_title_ = static_cast<CLabelUI*>(m_pm.FindControl(_T("group_dialog_title")));
+    group_dialog_input_ = static_cast<CEditUI*>(m_pm.FindControl(_T("group_dialog_input")));
     status_.Bind(status_line_);
 
     DragAcceptFiles(m_hWnd, TRUE);
@@ -505,6 +568,14 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
 
 void AppWindow::Notify(TNotifyUI& msg) {
     if (_tcscmp(msg.sType, DUI_MSGTYPE_CLICK) == 0) {
+        if (msg.pSender != nullptr && msg.pSender->GetName() == _T("group_dialog_ok")) {
+            ConfirmGroupDialog();
+            return;
+        }
+        if (msg.pSender != nullptr && msg.pSender->GetName() == _T("group_dialog_cancel")) {
+            CloseGroupDialog();
+            return;
+        }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("closebtn")) {
             ShowWindow(m_hWnd, SW_HIDE);
             return;
@@ -636,21 +707,7 @@ void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
 
 void AppWindow::ExecuteGroupCommand(UINT command_id) {
     if (command_id == kGroupCmdAdd) {
-        std::string error;
-        const auto group_id = backend_.AddGroup(GenerateNewGroupName(), &error);
-        if (group_id.empty()) {
-            status_.Error("add group failed: " + error);
-            return;
-        }
-
-        RenderGroups();
-        for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
-            if (group_ids_[i] == group_id) {
-                SelectGroupByIndex(i);
-                break;
-            }
-        }
-        status_.Info("group added");
+        OpenGroupDialog(false, std::string());
         return;
     }
 
@@ -660,20 +717,94 @@ void AppWindow::ExecuteGroupCommand(UINT command_id) {
             status_.Warn("no group selected");
             return;
         }
-        std::string error;
-        const std::string renamed = group->name + " (edited)";
-        if (!backend_.RenameGroup(group->id, renamed, &error)) {
-            status_.Error("rename group failed: " + error);
-            return;
-        }
-        RenderGroups();
-        for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
-            if (group_ids_[i] == active_group_id_) {
-                groups_list_->SelectItem(i, false);
+        OpenGroupDialog(true, group->id);
+    }
+}
+
+void AppWindow::OpenGroupDialog(bool rename_mode, const std::string& group_id) {
+    if (group_dialog_ == nullptr || group_dialog_input_ == nullptr || group_dialog_title_ == nullptr) {
+        status_.Error("group dialog is not available");
+        return;
+    }
+
+    group_dialog_rename_mode_ = rename_mode;
+    group_dialog_group_id_ = group_id;
+
+    if (rename_mode) {
+        const backend::Group* group = nullptr;
+        for (const auto& candidate : backend_.Data().groups) {
+            if (candidate.id == group_id) {
+                group = &candidate;
                 break;
             }
         }
+        if (group == nullptr) {
+            status_.Warn("group not found");
+            return;
+        }
+        group_dialog_title_->SetText(_T("Rename Group"));
+        group_dialog_input_->SetText(Utf8ToWide(group->name).c_str());
+    } else {
+        group_dialog_title_->SetText(_T("Add Group"));
+        group_dialog_input_->SetText(_T(""));
+    }
+
+    group_dialog_->SetVisible(true);
+    group_dialog_input_->SetFocus();
+    m_pm.NeedUpdate();
+}
+
+void AppWindow::CloseGroupDialog() {
+    if (group_dialog_ == nullptr) {
+        return;
+    }
+    group_dialog_->SetVisible(false);
+    group_dialog_group_id_.clear();
+    group_dialog_rename_mode_ = false;
+    m_pm.NeedUpdate();
+}
+
+void AppWindow::ConfirmGroupDialog() {
+    if (group_dialog_input_ == nullptr) {
+        return;
+    }
+
+    const std::string name = WideToUtf8(group_dialog_input_->GetText().GetData());
+    std::string trimmed = name;
+    trimmed.erase(trimmed.begin(), std::find_if(trimmed.begin(), trimmed.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
+        trimmed.pop_back();
+    }
+
+    if (trimmed.empty()) {
+        status_.Warn("group name cannot be empty");
+        return;
+    }
+
+    std::string error;
+    if (group_dialog_rename_mode_) {
+        if (!backend_.RenameGroup(group_dialog_group_id_, trimmed, &error)) {
+            status_.Error("rename group failed: " + error);
+            return;
+        }
         status_.Info("group renamed");
+    } else {
+        const std::string created_id = backend_.AddGroup(trimmed, &error);
+        if (created_id.empty()) {
+            status_.Error("add group failed: " + error);
+            return;
+        }
+        active_group_id_ = created_id;
+        status_.Info("group added");
+    }
+
+    CloseGroupDialog();
+    RenderGroups();
+    for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
+        if (group_ids_[i] == active_group_id_) {
+            SelectGroupByIndex(i);
+            break;
+        }
     }
 }
 
@@ -966,6 +1097,18 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     }
 
     if (uMsg == WM_KEYDOWN) {
+        if (group_dialog_ != nullptr && group_dialog_->IsVisible()) {
+            if (wParam == VK_RETURN) {
+                ConfirmGroupDialog();
+                bHandled = TRUE;
+                return 0;
+            }
+            if (wParam == VK_ESCAPE) {
+                CloseGroupDialog();
+                bHandled = TRUE;
+                return 0;
+            }
+        }
         if (wParam == VK_RETURN) {
             LaunchSelectedItem();
             bHandled = TRUE;
