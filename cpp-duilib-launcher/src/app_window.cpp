@@ -9,8 +9,10 @@
 #include <cctype>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 
 #include "file_icon_control.h"
+#include "icons.h"
 
 using namespace DuiLib;
 
@@ -35,29 +37,6 @@ constexpr UINT kMainCmdExportData = 3004;
 constexpr UINT kMainCmdSettings = 3005;
 constexpr UINT kMainCmdWebSite = 3006;
 constexpr UINT kMainCmdExit = 3007;
-
-constexpr int kResTypeRCDATA = 10;
-constexpr int kResSvgBtnSearchN = 5101;
-constexpr int kResSvgBtnSearchH = 5102;
-constexpr int kResSvgBtnSearchP = 5103;
-constexpr int kResSvgBtnMenuN = 5104;
-constexpr int kResSvgBtnMenuH = 5105;
-constexpr int kResSvgBtnMenuP = 5106;
-constexpr int kResSvgBtnExitN = 5107;
-constexpr int kResSvgBtnExitH = 5108;
-constexpr int kResSvgBtnExitP = 5109;
-
-CDuiString MakeSvgImageAttr(LPCTSTR debug_path, int release_res_id) {
-#ifdef NASSISTANT_EMBED_SVG_RES
-    CDuiString out;
-    out.Format(_T("file='%d' restype='%d'"), release_res_id, kResTypeRCDATA);
-    return out;
-#else
-    CDuiString out;
-    out.Format(_T("file='%s'"), debug_path);
-    return out;
-#endif
-}
 
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
@@ -98,6 +77,74 @@ bool IsSenderFromList(DuiLib::CControlUI* sender, DuiLib::CListUI* list) {
         walk = walk->GetParent();
     }
     return false;
+}
+
+std::filesystem::path GetEmbeddedIconCacheDir() {
+    auto dir = GetAppBaseDir() / "iconlib_cache";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    return dir;
+}
+
+std::filesystem::path GetDynamicIconPath(iconlib::Icon icon) {
+    const char* rel = iconlib::GetDynamicPath(icon);
+    if (rel == nullptr || rel[0] == '\0') {
+        return {};
+    }
+    return std::filesystem::current_path() / rel;
+}
+
+std::filesystem::path GetEmbeddedIconPath(iconlib::Icon icon) {
+    const iconlib::IconAsset* asset = iconlib::FindIcon(icon);
+    if (asset == nullptr || asset->svg == nullptr || asset->size == 0) {
+        return {};
+    }
+
+    const auto out = GetEmbeddedIconCacheDir() / asset->fileName;
+    if (!std::filesystem::exists(out)) {
+        std::ofstream stream(out, std::ios::binary | std::ios::trunc);
+        if (!stream.is_open()) {
+            return {};
+        }
+        stream.write(asset->svg, static_cast<std::streamsize>(asset->size));
+        stream.close();
+    }
+    return out;
+}
+
+std::filesystem::path ResolveIconPath(iconlib::Icon icon) {
+#if ICONLIB_ENABLE_EMBED
+    return GetEmbeddedIconPath(icon);
+#else
+    return GetDynamicIconPath(icon);
+#endif
+}
+
+iconlib::Icon ResolveTopBarIcon(iconlib::Icon preferred, iconlib::Icon fallback) {
+    const auto preferred_path = ResolveIconPath(preferred);
+    if (!preferred_path.empty() && std::filesystem::exists(preferred_path)) {
+        return preferred;
+    }
+    const auto fallback_path = ResolveIconPath(fallback);
+    if (!fallback_path.empty() && std::filesystem::exists(fallback_path)) {
+        return fallback;
+    }
+    return iconlib::Icon::None;
+}
+
+CDuiString MakeSvgImageAttr(iconlib::Icon icon) {
+    if (icon == iconlib::Icon::None) {
+        return {};
+    }
+    const auto path = ResolveIconPath(icon);
+    if (path.empty()) {
+        return {};
+    }
+    std::wstring path_w = path.wstring();
+    std::replace(path_w.begin(), path_w.end(), L'\\', L'/');
+    CDuiString out;
+    out.Format(_T("file='%s'"), path_w.c_str());
+    return out;
 }
 
 } // namespace
@@ -400,9 +447,10 @@ CControlUI* AppWindow::BuildRootUi() {
     searchBtn->SetText(_T(""));
     searchBtn->SetFixedWidth(26);
     searchBtn->SetFixedHeight(26);
-    const CDuiString search_img_n = MakeSvgImageAttr(_T("assets/ui/btn_search_n.svg"), kResSvgBtnSearchN);
-    const CDuiString search_img_h = MakeSvgImageAttr(_T("assets/ui/btn_search_h.svg"), kResSvgBtnSearchH);
-    const CDuiString search_img_p = MakeSvgImageAttr(_T("assets/ui/btn_search_p.svg"), kResSvgBtnSearchP);
+    const auto search_icon = ResolveTopBarIcon(iconlib::Icon::Search, iconlib::Icon::Search);
+    const CDuiString search_img_n = MakeSvgImageAttr(search_icon);
+    const CDuiString search_img_h = MakeSvgImageAttr(search_icon);
+    const CDuiString search_img_p = MakeSvgImageAttr(search_icon);
     searchBtn->SetAttribute(_T("normalimage"), search_img_n.GetData());
     searchBtn->SetAttribute(_T("hotimage"), search_img_h.GetData());
     searchBtn->SetAttribute(_T("pushedimage"), search_img_p.GetData());
@@ -419,9 +467,10 @@ CControlUI* AppWindow::BuildRootUi() {
     menuBtn->SetText(_T(""));
     menuBtn->SetFixedWidth(26);
     menuBtn->SetFixedHeight(26);
-    const CDuiString menu_img_n = MakeSvgImageAttr(_T("assets/ui/btn_menu_n.svg"), kResSvgBtnMenuN);
-    const CDuiString menu_img_h = MakeSvgImageAttr(_T("assets/ui/btn_menu_h.svg"), kResSvgBtnMenuH);
-    const CDuiString menu_img_p = MakeSvgImageAttr(_T("assets/ui/btn_menu_p.svg"), kResSvgBtnMenuP);
+    const auto menu_icon = ResolveTopBarIcon(iconlib::Icon::Menu, iconlib::Icon::Menu);
+    const CDuiString menu_img_n = MakeSvgImageAttr(menu_icon);
+    const CDuiString menu_img_h = MakeSvgImageAttr(menu_icon);
+    const CDuiString menu_img_p = MakeSvgImageAttr(menu_icon);
     menuBtn->SetAttribute(_T("normalimage"), menu_img_n.GetData());
     menuBtn->SetAttribute(_T("hotimage"), menu_img_h.GetData());
     menuBtn->SetAttribute(_T("pushedimage"), menu_img_p.GetData());
@@ -449,9 +498,10 @@ CControlUI* AppWindow::BuildRootUi() {
     closeBtn->SetText(_T(""));
     closeBtn->SetFixedWidth(26);
     closeBtn->SetFixedHeight(26);
-    const CDuiString exit_img_n = MakeSvgImageAttr(_T("assets/ui/btn_exit_n.svg"), kResSvgBtnExitN);
-    const CDuiString exit_img_h = MakeSvgImageAttr(_T("assets/ui/btn_exit_h.svg"), kResSvgBtnExitH);
-    const CDuiString exit_img_p = MakeSvgImageAttr(_T("assets/ui/btn_exit_p.svg"), kResSvgBtnExitP);
+    const auto close_icon = ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
+    const CDuiString exit_img_n = MakeSvgImageAttr(close_icon);
+    const CDuiString exit_img_h = MakeSvgImageAttr(close_icon);
+    const CDuiString exit_img_p = MakeSvgImageAttr(close_icon);
     closeBtn->SetAttribute(_T("normalimage"), exit_img_n.GetData());
     closeBtn->SetAttribute(_T("hotimage"), exit_img_h.GetData());
     closeBtn->SetAttribute(_T("pushedimage"), exit_img_p.GetData());

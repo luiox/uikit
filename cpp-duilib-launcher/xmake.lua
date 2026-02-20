@@ -4,6 +4,7 @@ set_xmakever("2.7.9")
 
 add_rules("mode.debug", "mode.release")
 add_requires("nlohmann_json", "gtest")
+includes("../icon-lib")
 
 target("DuiLibLite")
     set_kind("static")
@@ -36,10 +37,10 @@ target("nassistant-duilib")
     if is_mode("debug") then
         set_symbols("debug")
         set_optimize("none")
+        add_deps("iconlib_dynamic")
     else
         set_optimize("faster")
-        add_defines("NASSISTANT_EMBED_SVG_RES=1")
-        add_files("res/nassistant.rc")
+        add_deps("iconlib_embed")
     end
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
@@ -54,7 +55,9 @@ target("nassistant-duilib")
     add_syslinks("user32", "gdi32", "comctl32", "comdlg32", "ole32", "oleaut32", "imm32", "winmm", "version", "uxtheme", "shell32")
 
     after_build(function (target)
-        os.cp("assets", path.join(target:targetdir(), "assets"))
+        if is_mode("debug") then
+            os.cp("../icon-lib/icons", path.join(target:targetdir(), "icons"))
+        end
     end)
 
 target("backend_tests")

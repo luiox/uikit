@@ -6,7 +6,8 @@ add_rules("mode.debug", "mode.release")
 
 rule("iconlib.codegen")
     before_build(function (target)
-        os.exec("python scripts/generate_cpp_assets.py")
+        local script = path.join(os.scriptdir(), "scripts", "generate_cpp_assets.py")
+        os.exec("python %s", script)
     end)
 
 target("iconlib_dynamic")
