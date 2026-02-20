@@ -14,3 +14,4 @@ runtime-probes/target/
 win32-launcher/target/
 
 compile_commands.json
+.cache/
