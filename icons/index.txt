@@ -1,5 +1,0 @@
-123
-213
-C:\Program Files\Everything\Everything.exe
-D:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe
-D:\Program Files\Dict\YodaoDict.exe
