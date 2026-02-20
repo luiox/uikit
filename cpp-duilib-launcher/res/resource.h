@@ -1,0 +1,13 @@
+#pragma once
+
+#define IDR_SVG_BTN_SEARCH_N 5101
+#define IDR_SVG_BTN_SEARCH_H 5102
+#define IDR_SVG_BTN_SEARCH_P 5103
+
+#define IDR_SVG_BTN_MENU_N   5104
+#define IDR_SVG_BTN_MENU_H   5105
+#define IDR_SVG_BTN_MENU_P   5106
+
+#define IDR_SVG_BTN_EXIT_N   5107
+#define IDR_SVG_BTN_EXIT_H   5108
+#define IDR_SVG_BTN_EXIT_P   5109

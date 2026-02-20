@@ -36,6 +36,29 @@ constexpr UINT kMainCmdSettings = 3005;
 constexpr UINT kMainCmdWebSite = 3006;
 constexpr UINT kMainCmdExit = 3007;
 
+constexpr int kResTypeRCDATA = 10;
+constexpr int kResSvgBtnSearchN = 5101;
+constexpr int kResSvgBtnSearchH = 5102;
+constexpr int kResSvgBtnSearchP = 5103;
+constexpr int kResSvgBtnMenuN = 5104;
+constexpr int kResSvgBtnMenuH = 5105;
+constexpr int kResSvgBtnMenuP = 5106;
+constexpr int kResSvgBtnExitN = 5107;
+constexpr int kResSvgBtnExitH = 5108;
+constexpr int kResSvgBtnExitP = 5109;
+
+CDuiString MakeSvgImageAttr(LPCTSTR debug_path, int release_res_id) {
+#ifdef NASSISTANT_EMBED_SVG_RES
+    CDuiString out;
+    out.Format(_T("file='%d' restype='%d'"), release_res_id, kResTypeRCDATA);
+    return out;
+#else
+    CDuiString out;
+    out.Format(_T("file='%s'"), debug_path);
+    return out;
+#endif
+}
+
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
     std::filesystem::path out = std::filesystem::current_path() / "data";
@@ -374,12 +397,15 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* searchBtn = new CButtonUI();
     searchBtn->SetName(_T("searchbtn"));
-    searchBtn->SetText(_T("Search"));
-    searchBtn->SetFixedWidth(108);
+    searchBtn->SetText(_T(""));
+    searchBtn->SetFixedWidth(26);
     searchBtn->SetFixedHeight(26);
-    searchBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_search_n.svg'"));
-    searchBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_search_h.svg'"));
-    searchBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_search_p.svg'"));
+    const CDuiString search_img_n = MakeSvgImageAttr(_T("assets/ui/btn_search_n.svg"), kResSvgBtnSearchN);
+    const CDuiString search_img_h = MakeSvgImageAttr(_T("assets/ui/btn_search_h.svg"), kResSvgBtnSearchH);
+    const CDuiString search_img_p = MakeSvgImageAttr(_T("assets/ui/btn_search_p.svg"), kResSvgBtnSearchP);
+    searchBtn->SetAttribute(_T("normalimage"), search_img_n.GetData());
+    searchBtn->SetAttribute(_T("hotimage"), search_img_h.GetData());
+    searchBtn->SetAttribute(_T("pushedimage"), search_img_p.GetData());
     searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
     searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
     searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
@@ -390,12 +416,15 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* menuBtn = new CButtonUI();
     menuBtn->SetName(_T("menubtn"));
-    menuBtn->SetText(_T("Menu"));
-    menuBtn->SetFixedWidth(108);
+    menuBtn->SetText(_T(""));
+    menuBtn->SetFixedWidth(26);
     menuBtn->SetFixedHeight(26);
-    menuBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_menu_n.svg'"));
-    menuBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_menu_h.svg'"));
-    menuBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_menu_p.svg'"));
+    const CDuiString menu_img_n = MakeSvgImageAttr(_T("assets/ui/btn_menu_n.svg"), kResSvgBtnMenuN);
+    const CDuiString menu_img_h = MakeSvgImageAttr(_T("assets/ui/btn_menu_h.svg"), kResSvgBtnMenuH);
+    const CDuiString menu_img_p = MakeSvgImageAttr(_T("assets/ui/btn_menu_p.svg"), kResSvgBtnMenuP);
+    menuBtn->SetAttribute(_T("normalimage"), menu_img_n.GetData());
+    menuBtn->SetAttribute(_T("hotimage"), menu_img_h.GetData());
+    menuBtn->SetAttribute(_T("pushedimage"), menu_img_p.GetData());
     menuBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
     menuBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
     menuBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
@@ -417,12 +446,15 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* closeBtn = new CButtonUI();
     closeBtn->SetName(_T("closebtn"));
-    closeBtn->SetText(_T("Exit"));
-    closeBtn->SetFixedWidth(108);
+    closeBtn->SetText(_T(""));
+    closeBtn->SetFixedWidth(26);
     closeBtn->SetFixedHeight(26);
-    closeBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_exit_n.svg'"));
-    closeBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_exit_h.svg'"));
-    closeBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_exit_p.svg'"));
+    const CDuiString exit_img_n = MakeSvgImageAttr(_T("assets/ui/btn_exit_n.svg"), kResSvgBtnExitN);
+    const CDuiString exit_img_h = MakeSvgImageAttr(_T("assets/ui/btn_exit_h.svg"), kResSvgBtnExitH);
+    const CDuiString exit_img_p = MakeSvgImageAttr(_T("assets/ui/btn_exit_p.svg"), kResSvgBtnExitP);
+    closeBtn->SetAttribute(_T("normalimage"), exit_img_n.GetData());
+    closeBtn->SetAttribute(_T("hotimage"), exit_img_h.GetData());
+    closeBtn->SetAttribute(_T("pushedimage"), exit_img_p.GetData());
     closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
     closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
     closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));

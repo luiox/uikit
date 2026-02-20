@@ -38,6 +38,8 @@ target("nassistant-duilib")
         set_optimize("none")
     else
         set_optimize("faster")
+        add_defines("NASSISTANT_EMBED_SVG_RES=1")
+        add_files("res/nassistant.rc")
     end
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
@@ -50,6 +52,10 @@ target("nassistant-duilib")
     add_deps("DuiLibLite")
 
     add_syslinks("user32", "gdi32", "comctl32", "comdlg32", "ole32", "oleaut32", "imm32", "winmm", "version", "uxtheme", "shell32")
+
+    after_build(function (target)
+        os.cp("assets", path.join(target:targetdir(), "assets"))
+    end)
 
 target("backend_tests")
     set_kind("binary")
