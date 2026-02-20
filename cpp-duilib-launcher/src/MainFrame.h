@@ -39,9 +39,15 @@ private:
     DuiLib::CListUI* groups_list_ = nullptr;
     DuiLib::CListUI* items_list_ = nullptr;
     DuiLib::CLabelUI* status_line_ = nullptr;
+    DuiLib::CVerticalLayoutUI* group_panel_ = nullptr;
+    DuiLib::CControlUI* panel_splitter_ = nullptr;
 
     std::vector<std::string> group_ids_;
     std::vector<std::string> item_ids_;
     std::string active_group_id_;
     std::string selected_item_id_;
+
+    bool splitter_dragging_ = false;
+    int splitter_drag_start_x_ = 0;
+    int splitter_start_width_ = 220;
 };

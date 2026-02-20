@@ -334,6 +334,8 @@ LRESULT MainFrame::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     groups_list_ = static_cast<CListUI*>(m_pm.FindControl(_T("groups_list")));
     items_list_ = static_cast<CListUI*>(m_pm.FindControl(_T("items_list")));
     status_line_ = static_cast<CLabelUI*>(m_pm.FindControl(_T("status_line")));
+    group_panel_ = static_cast<CVerticalLayoutUI*>(m_pm.FindControl(_T("group_panel")));
+    panel_splitter_ = m_pm.FindControl(_T("panel_splitter"));
 
     DragAcceptFiles(m_hWnd, TRUE);
 
@@ -383,6 +385,56 @@ void MainFrame::Notify(TNotifyUI& msg) {
 }
 
 LRESULT MainFrame::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
+    if (uMsg == WM_LBUTTONDOWN) {
+        const int x = static_cast<short>(LOWORD(lParam));
+        const int y = static_cast<short>(HIWORD(lParam));
+        if (panel_splitter_ != nullptr && group_panel_ != nullptr) {
+            RECT rc = panel_splitter_->GetPos();
+            rc.left -= 3;
+            rc.right += 3;
+            POINT pt{x, y};
+            if (PtInRect(&rc, pt)) {
+                splitter_dragging_ = true;
+                splitter_drag_start_x_ = x;
+                splitter_start_width_ = group_panel_->GetFixedWidth();
+                SetCapture(m_hWnd);
+                bHandled = TRUE;
+                return 0;
+            }
+        }
+    }
+
+    if (uMsg == WM_MOUSEMOVE && splitter_dragging_ && group_panel_ != nullptr) {
+        const int x = static_cast<short>(LOWORD(lParam));
+        int next_width = splitter_start_width_ + (x - splitter_drag_start_x_);
+
+        RECT client{};
+        GetClientRect(m_hWnd, &client);
+        const int total_width = client.right - client.left;
+        const int min_group = 80;
+        const int min_items = 220;
+        const int max_group = (total_width - min_items - 12 > min_group) ? (total_width - min_items - 12) : min_group;
+
+        if (next_width < min_group) {
+            next_width = min_group;
+        }
+        if (next_width > max_group) {
+            next_width = max_group;
+        }
+
+        group_panel_->SetFixedWidth(next_width);
+        m_pm.NeedUpdate();
+        bHandled = TRUE;
+        return 0;
+    }
+
+    if (uMsg == WM_LBUTTONUP && splitter_dragging_) {
+        splitter_dragging_ = false;
+        ReleaseCapture();
+        bHandled = TRUE;
+        return 0;
+    }
+
     if (uMsg == WM_DROPFILES) {
         HDROP drop = reinterpret_cast<HDROP>(wParam);
         const UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
