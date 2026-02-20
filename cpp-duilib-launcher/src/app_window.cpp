@@ -16,6 +16,7 @@
 
 #include "file_icon_control.h"
 #include "icons.h"
+#include "ui_controls.h"
 
 using namespace DuiLib;
 
@@ -247,7 +248,9 @@ CDuiString MakeSvgImageAttr(iconlib::Icon icon, int draw_px = 16, int box_px = 2
 } // namespace
 
 AppWindow::AppWindow()
-    : backend_(GetAppBaseDir(), std::filesystem::current_path()) {}
+    : backend_(GetAppBaseDir(), std::filesystem::current_path()) {
+    m_vctStaticName.push_back(_T("apptitlebar"));
+}
 
 std::wstring AppWindow::Utf8ToWide(const std::string& text) {
     if (text.empty()) {
@@ -585,15 +588,7 @@ CControlUI* AppWindow::BuildRootUi() {
     root->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     root->SetAttribute(_T("bordersize"), _T("1"));
 
-    auto* topBar = new CHorizontalLayoutUI();
-    topBar->SetName(_T("top_bar"));
-    topBar->SetFixedHeight(35);
-    topBar->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
-    topBar->SetAttribute(_T("childvalign"), _T("top"));
-    topBar->SetAttribute(_T("childpadding"), _T("0"));
-    topBar->SetAttribute(_T("inset"), _T("12,4,0,0"));
-    topBar->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    topBar->SetAttribute(_T("bordersize"), _T("0,0,0,1"));
+    auto* topBar = new appui::TitleBarUI();
 
     auto* title = new CLabelUI();
     title->SetText(_T("Poner"));
@@ -606,75 +601,31 @@ CControlUI* AppWindow::BuildRootUi() {
     auto* fill = new CControlUI();
     topBar->Add(fill);
 
-    auto* searchBtn = new CButtonUI();
+    auto* searchBtn = new appui::IconButtonUI();
     searchBtn->SetName(_T("searchbtn"));
-    searchBtn->SetText(_T(""));
-    searchBtn->SetFixedWidth(26);
-    searchBtn->SetFixedHeight(26);
     const auto search_icon = ResolveTopBarIcon(iconlib::Icon::Search, iconlib::Icon::Search);
     const CDuiString search_img_n = MakeSvgImageAttr(search_icon);
-    const CDuiString search_img_h = MakeSvgImageAttr(search_icon);
-    const CDuiString search_img_p = MakeSvgImageAttr(search_icon);
-    searchBtn->SetAttribute(_T("normalimage"), search_img_n.GetData());
-    searchBtn->SetAttribute(_T("hotimage"), search_img_h.GetData());
-    searchBtn->SetAttribute(_T("pushedimage"), search_img_p.GetData());
-    searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
-    searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
-    searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
-    searchBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    searchBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    searchBtn->SetAttribute(_T("bordersize"), _T("1"));
+    searchBtn->SetSvgImage(search_img_n);
     topBar->Add(searchBtn);
 
-    auto* menuBtn = new CButtonUI();
+    auto* menuBtn = new appui::IconButtonUI();
     menuBtn->SetName(_T("menubtn"));
-    menuBtn->SetText(_T(""));
-    menuBtn->SetFixedWidth(26);
-    menuBtn->SetFixedHeight(26);
     const auto menu_icon = ResolveTopBarIcon(iconlib::Icon::Menu, iconlib::Icon::Menu);
     const CDuiString menu_img_n = MakeSvgImageAttr(menu_icon);
-    const CDuiString menu_img_h = MakeSvgImageAttr(menu_icon);
-    const CDuiString menu_img_p = MakeSvgImageAttr(menu_icon);
-    menuBtn->SetAttribute(_T("normalimage"), menu_img_n.GetData());
-    menuBtn->SetAttribute(_T("hotimage"), menu_img_h.GetData());
-    menuBtn->SetAttribute(_T("pushedimage"), menu_img_p.GetData());
-    menuBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
-    menuBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
-    menuBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
-    menuBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    menuBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    menuBtn->SetAttribute(_T("bordersize"), _T("1"));
+    menuBtn->SetSvgImage(menu_img_n);
     topBar->Add(menuBtn);
 
-    auto* searchInput = new CEditUI();
+    auto* searchInput = new appui::SearchBoxUI();
     searchInput->SetName(_T("search_input"));
     searchInput->SetVisible(false);
     searchInput->SetFixedWidth(0);
-    searchInput->SetFixedHeight(28);
-    searchInput->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    searchInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    searchInput->SetAttribute(_T("textpadding"), _T("6,2,6,2"));
-    searchInput->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     topBar->Add(searchInput);
 
-    auto* closeBtn = new CButtonUI();
+    auto* closeBtn = new appui::IconButtonUI();
     closeBtn->SetName(_T("closebtn"));
-    closeBtn->SetText(_T(""));
-    closeBtn->SetFixedWidth(26);
-    closeBtn->SetFixedHeight(26);
     const auto close_icon = ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
     const CDuiString exit_img_n = MakeSvgImageAttr(close_icon);
-    const CDuiString exit_img_h = MakeSvgImageAttr(close_icon);
-    const CDuiString exit_img_p = MakeSvgImageAttr(close_icon);
-    closeBtn->SetAttribute(_T("normalimage"), exit_img_n.GetData());
-    closeBtn->SetAttribute(_T("hotimage"), exit_img_h.GetData());
-    closeBtn->SetAttribute(_T("pushedimage"), exit_img_p.GetData());
-    closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
-    closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
-    closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
-    closeBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    closeBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    closeBtn->SetAttribute(_T("bordersize"), _T("1"));
+    closeBtn->SetSvgImage(exit_img_n);
     topBar->Add(closeBtn);
 
     root->Add(topBar);
@@ -691,13 +642,8 @@ CControlUI* AppWindow::BuildRootUi() {
     groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     groupPanel->SetAttribute(_T("bordersize"), _T("0"));
 
-    auto* groups = new CListUI();
+    auto* groups = new appui::GroupListUI();
     groups->SetName(_T("groups_list"));
-    groups->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
-    groups->SetAttribute(_T("bordercolor"), _T("0xFFCFD7E0"));
-    groups->SetAttribute(_T("bordersize"), _T("0"));
-    groups->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    groups->SetChildPadding(0);
     groupPanel->Add(groups);
 
     body->Add(groupPanel);
@@ -714,13 +660,8 @@ CControlUI* AppWindow::BuildRootUi() {
     itemPanel->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
     itemPanel->SetAttribute(_T("bordersize"), _T("0"));
 
-    auto* items = new CListUI();
+    auto* items = new appui::ItemListUI();
     items->SetName(_T("items_list"));
-    items->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    items->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    items->SetAttribute(_T("bordersize"), _T("0"));
-    items->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    items->SetChildPadding(0);
     itemPanel->Add(items);
 
     body->Add(itemPanel);
