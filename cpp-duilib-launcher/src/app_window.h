@@ -6,10 +6,11 @@
 #include <vector>
 
 #include "backend.h"
+#include "status_presenter.h"
 
-class MainFrame : public DuiLib::WindowImplBase {
+class AppWindow : public DuiLib::WindowImplBase {
 public:
-    MainFrame();
+    AppWindow();
     LPCTSTR GetWindowClassName() const override { return _T("NAssistantMainFrame"); }
     DuiLib::CDuiString GetSkinFile() override { return _T(""); }
     DuiLib::CDuiString GetSkinFolder() { return _T(""); }
@@ -24,18 +25,36 @@ protected:
 
 private:
     DuiLib::CControlUI* BuildRootUi();
-    void SetStatus(const std::string& text, bool error = false);
     bool LoadBackendData();
     void RenderGroups();
     void RenderItems();
     void SelectGroupByIndex(int index);
     void LaunchSelectedItem();
+    void HandleFileDrop(HDROP drop_handle);
+
+    void ShowGroupContextMenu(const POINT& screen_point);
+    void ShowItemContextMenu(const POINT& screen_point);
+    void ExecuteGroupCommand(UINT command_id);
+    void ExecuteItemCommand(UINT command_id);
+
+    bool AddItemFromFile();
+    bool EditSelectedItem();
+    bool MoveSelectedItemToGroup(const std::string& target_group_id);
+
+    std::wstring PickExecutablePath() const;
+    std::string GenerateNewGroupName() const;
+    const backend::Group* FindActiveGroup() const;
+    const backend::LaunchItem* FindSelectedItem() const;
+    bool SelectListRowFromPoint(DuiLib::CListUI* list, const std::vector<std::string>& ids, const POINT& client_point, std::string* selected_id);
 
     static std::wstring Utf8ToWide(const std::string& text);
     static std::string WideToUtf8(const std::wstring& text);
+    static std::string BasenameNoExt(const std::string& path);
 
 private:
     backend::LauncherBackend backend_;
+    StatusPresenter status_;
+
     DuiLib::CListUI* groups_list_ = nullptr;
     DuiLib::CListUI* items_list_ = nullptr;
     DuiLib::CLabelUI* status_line_ = nullptr;

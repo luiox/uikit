@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <UIlib.h>
 
-#include "MainFrame.h"
+#include "app_window.h"
 
 using namespace DuiLib;
 
@@ -15,7 +15,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     CPaintManagerUI::SetCurrentPath(CPaintManagerUI::GetInstancePath());
     CPaintManagerUI::SetResourcePath(CPaintManagerUI::GetInstancePath());
 
-    MainFrame* frame = new MainFrame();
+    AppWindow* frame = new AppWindow();
     if (frame == nullptr) {
         CoUninitialize();
         return 1;
