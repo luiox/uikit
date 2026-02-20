@@ -168,8 +168,9 @@ void AppWindow::RenderGroups() {
     for (const auto* group : groups) {
         auto* row = new CListLabelElementUI();
         row->SetText(Utf8ToWide(group->name).c_str());
-        row->SetFixedHeight(26);
-        row->SetAttribute(_T("padding"), _T("8,0,0,0"));
+        row->SetFixedHeight(34);
+        row->SetAttribute(_T("padding"), _T("10,0,0,0"));
+        row->SetTextColor(0xFF5A5A5A);
         row->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         groups_list_->Add(row);
         group_ids_.push_back(group->id);
@@ -203,20 +204,21 @@ void AppWindow::RenderItems() {
                 }
 
                 auto* row = new CListContainerElementUI();
-                row->SetFixedHeight(28);
-                row->SetAttribute(_T("inset"), _T("8,0,8,0"));
-                row->SetAttribute(_T("childpadding"), _T("6"));
+                row->SetFixedHeight(34);
+                row->SetAttribute(_T("inset"), _T("4,0,4,0"));
+                row->SetAttribute(_T("childpadding"), _T("2"));
                 row->SetAttribute(_T("childvalign"), _T("vcenter"));
 
                 auto* icon = new FileIconControl();
-                icon->SetFixedWidth(20);
-                icon->SetFixedHeight(20);
+                icon->SetFixedWidth(26);
+                icon->SetFixedHeight(26);
+                icon->SetBkColor(0xFFEBEBEB);
                 icon->SetIconPath(Utf8ToWide(ParseIconSource(item)));
                 row->Add(icon);
 
                 auto* name = new CLabelUI();
                 name->SetText(Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
-                name->SetTextColor(0xFF2E3D4F);
+                name->SetTextColor(0xFF5A5A5A);
                 name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
                 row->Add(name);
 
@@ -237,9 +239,9 @@ void AppWindow::RenderItems() {
         if (item.item_type == "separator") {
             auto* row = new CListLabelElementUI();
             row->SetText(Utf8ToWide(item.name).c_str());
-            row->SetFixedHeight(28);
-            row->SetAttribute(_T("padding"), _T("8,0,0,0"));
-            row->SetTextColor(0xFF7F8A99);
+            row->SetFixedHeight(34);
+            row->SetAttribute(_T("padding"), _T("10,0,0,0"));
+            row->SetTextColor(0xFF909090);
             row->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             items_list_->Add(row);
             item_ids_.push_back(item.id);
@@ -248,20 +250,21 @@ void AppWindow::RenderItems() {
         }
 
         auto* row = new CListContainerElementUI();
-    row->SetFixedHeight(28);
-    row->SetAttribute(_T("inset"), _T("8,0,8,0"));
-        row->SetAttribute(_T("childpadding"), _T("6"));
+        row->SetFixedHeight(34);
+        row->SetAttribute(_T("inset"), _T("4,0,4,0"));
+        row->SetAttribute(_T("childpadding"), _T("2"));
         row->SetAttribute(_T("childvalign"), _T("vcenter"));
 
         auto* icon = new FileIconControl();
-        icon->SetFixedWidth(20);
-        icon->SetFixedHeight(20);
+        icon->SetFixedWidth(26);
+        icon->SetFixedHeight(26);
+        icon->SetBkColor(0xFFEBEBEB);
         icon->SetIconPath(Utf8ToWide(ParseIconSource(item)));
         row->Add(icon);
 
         auto* name = new CLabelUI();
         name->SetText(Utf8ToWide(item.name).c_str());
-        name->SetTextColor(0xFF2E3D4F);
+        name->SetTextColor(0xFF5A5A5A);
         name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
 
@@ -329,23 +332,26 @@ void AppWindow::DeleteSelectedItem() {
 
 CControlUI* AppWindow::BuildRootUi() {
     auto* root = new CVerticalLayoutUI();
-    root->SetAttribute(_T("bkcolor"), _T("0xFFF1F3F8"));
-    root->SetAttribute(_T("bordercolor"), _T("0xFF9AA4B2"));
+    root->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    root->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     root->SetAttribute(_T("bordersize"), _T("1"));
 
     auto* topBar = new CHorizontalLayoutUI();
     topBar->SetName(_T("top_bar"));
-    topBar->SetFixedHeight(30);
-    topBar->SetAttribute(_T("bkcolor"), _T("0xFF3E556B"));
+    topBar->SetFixedHeight(35);
+    topBar->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
     topBar->SetAttribute(_T("childvalign"), _T("vcenter"));
-    topBar->SetAttribute(_T("childpadding"), _T("6"));
-    topBar->SetAttribute(_T("inset"), _T("10,0,6,0"));
+    topBar->SetAttribute(_T("childpadding"), _T("0"));
+    topBar->SetAttribute(_T("inset"), _T("12,0,0,0"));
+    topBar->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    topBar->SetAttribute(_T("bordersize"), _T("0,0,0,1"));
 
     auto* title = new CLabelUI();
-    title->SetText(_T("nassistant"));
-    title->SetTextColor(0xFFFFFFFF);
+    title->SetText(_T("Poner"));
+    title->SetTextColor(0xFF5A5A5A);
     title->SetFont(0);
     title->SetFixedWidth(220);
+    title->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     topBar->Add(title);
 
     auto* fill = new CControlUI();
@@ -354,34 +360,35 @@ CControlUI* AppWindow::BuildRootUi() {
     auto* searchBtn = new CButtonUI();
     searchBtn->SetName(_T("searchbtn"));
     searchBtn->SetText(_T("S"));
-    searchBtn->SetFixedWidth(24);
-    searchBtn->SetFixedHeight(22);
-    searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFF52718C"));
-    searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFF5E7F9C"));
-    searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFF46627A"));
-    searchBtn->SetAttribute(_T("textcolor"), _T("0xFFFFFFFF"));
+    searchBtn->SetFixedWidth(45);
+    searchBtn->SetFixedHeight(35);
+    searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
+    searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
+    searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    searchBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     searchBtn->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     topBar->Add(searchBtn);
 
     auto* searchInput = new CEditUI();
     searchInput->SetName(_T("search_input"));
     searchInput->SetVisible(false);
-    searchInput->SetFixedWidth(260);
-    searchInput->SetFixedHeight(22);
-    searchInput->SetAttribute(_T("bordercolor"), _T("0xFF7F8FA0"));
+    searchInput->SetFixedWidth(320);
+    searchInput->SetFixedHeight(28);
+    searchInput->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     searchInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     searchInput->SetAttribute(_T("textpadding"), _T("6,2,6,2"));
+    searchInput->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     topBar->Add(searchInput);
 
     auto* closeBtn = new CButtonUI();
     closeBtn->SetName(_T("closebtn"));
     closeBtn->SetText(_T("X"));
-    closeBtn->SetFixedWidth(24);
-    closeBtn->SetFixedHeight(22);
-    closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFF7D3A3A"));
-    closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFF944444"));
-    closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFF6A3030"));
-    closeBtn->SetAttribute(_T("textcolor"), _T("0xFFFFFFFF"));
+    closeBtn->SetFixedWidth(45);
+    closeBtn->SetFixedHeight(35);
+    closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
+    closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
+    closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    closeBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     closeBtn->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     topBar->Add(closeBtn);
 
@@ -389,29 +396,21 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* body = new CHorizontalLayoutUI();
     body->SetName(_T("body_layout"));
-    body->SetAttribute(_T("inset"), _T("6,6,6,6"));
+    body->SetAttribute(_T("inset"), _T("0,0,0,0"));
     body->SetAttribute(_T("childpadding"), _T("0"));
 
     auto* groupPanel = new CVerticalLayoutUI();
     groupPanel->SetName(_T("group_panel"));
     groupPanel->SetFixedWidth(220);
-    groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFE8EDF3"));
-    groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
-    groupPanel->SetAttribute(_T("bordersize"), _T("1"));
-
-    auto* groupTitle = new CLabelUI();
-    groupTitle->SetText(_T("Groups"));
-    groupTitle->SetFixedHeight(28);
-    groupTitle->SetAttribute(_T("padding"), _T("10,7,0,0"));
-    groupTitle->SetTextColor(0xFF2A3D52);
-    groupTitle->SetFont(0);
-    groupPanel->Add(groupTitle);
+    groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
+    groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    groupPanel->SetAttribute(_T("bordersize"), _T("0"));
 
     auto* groups = new CListUI();
     groups->SetName(_T("groups_list"));
-    groups->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    groups->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
     groups->SetAttribute(_T("bordercolor"), _T("0xFFCFD7E0"));
-    groups->SetAttribute(_T("bordersize"), _T("1"));
+    groups->SetAttribute(_T("bordersize"), _T("0"));
     groups->SetAttribute(_T("inset"), _T("0,0,0,0"));
     groups->SetChildPadding(0);
     groupPanel->Add(groups);
@@ -421,28 +420,20 @@ CControlUI* AppWindow::BuildRootUi() {
     auto* splitter = new CControlUI();
     splitter->SetName(_T("panel_splitter"));
     splitter->SetFixedWidth(1);
-    splitter->SetAttribute(_T("bkcolor"), _T("0xFFB8C3CF"));
+    splitter->SetAttribute(_T("bkcolor"), _T("0xFFD2D2D2"));
     body->Add(splitter);
 
     auto* itemPanel = new CVerticalLayoutUI();
     itemPanel->SetName(_T("item_panel"));
     itemPanel->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     itemPanel->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
-    itemPanel->SetAttribute(_T("bordersize"), _T("1"));
-
-    auto* itemTitle = new CLabelUI();
-    itemTitle->SetText(_T("Items"));
-    itemTitle->SetFixedHeight(28);
-    itemTitle->SetAttribute(_T("padding"), _T("10,7,0,0"));
-    itemTitle->SetTextColor(0xFF2A3D52);
-    itemTitle->SetFont(0);
-    itemPanel->Add(itemTitle);
+    itemPanel->SetAttribute(_T("bordersize"), _T("0"));
 
     auto* items = new CListUI();
     items->SetName(_T("items_list"));
     items->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    items->SetAttribute(_T("bordercolor"), _T("0xFFCFD7E0"));
-    items->SetAttribute(_T("bordersize"), _T("1"));
+    items->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    items->SetAttribute(_T("bordersize"), _T("0"));
     items->SetAttribute(_T("inset"), _T("0,0,0,0"));
     items->SetChildPadding(0);
     itemPanel->Add(items);
@@ -453,12 +444,12 @@ CControlUI* AppWindow::BuildRootUi() {
     auto* status = new CLabelUI();
     status->SetName(_T("status_line"));
     status->SetText(_T("Ready"));
-    status->SetFixedHeight(22);
-    status->SetAttribute(_T("padding"), _T("8,4,0,0"));
-    status->SetAttribute(_T("bkcolor"), _T("0xFFE6EBF2"));
-    status->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
+    status->SetFixedHeight(26);
+    status->SetAttribute(_T("padding"), _T("10,6,0,0"));
+    status->SetAttribute(_T("bkcolor"), _T("0xFFF8F8F8"));
+    status->SetAttribute(_T("bordercolor"), _T("0xFFDCDCDC"));
     status->SetAttribute(_T("bordersize"), _T("1,1,1,0"));
-    status->SetTextColor(0xFF445A72);
+    status->SetTextColor(0xFF5A5A5A);
     root->Add(status);
 
     auto* groupDialog = new CVerticalLayoutUI();
@@ -469,7 +460,7 @@ CControlUI* AppWindow::BuildRootUi() {
     groupDialog->SetFixedWidth(360);
     groupDialog->SetFixedHeight(150);
     groupDialog->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    groupDialog->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
+    groupDialog->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     groupDialog->SetAttribute(_T("bordersize"), _T("1"));
     groupDialog->SetAttribute(_T("inset"), _T("12,10,12,10"));
     groupDialog->SetAttribute(_T("childpadding"), _T("8"));
@@ -478,14 +469,14 @@ CControlUI* AppWindow::BuildRootUi() {
     groupDialogTitle->SetName(_T("group_dialog_title"));
     groupDialogTitle->SetText(_T("Add Group"));
     groupDialogTitle->SetFixedHeight(24);
-    groupDialogTitle->SetTextColor(0xFF2A3D52);
+    groupDialogTitle->SetTextColor(0xFF5A5A5A);
     groupDialogTitle->SetFont(0);
     groupDialog->Add(groupDialogTitle);
 
     auto* groupDialogInput = new CEditUI();
     groupDialogInput->SetName(_T("group_dialog_input"));
     groupDialogInput->SetFixedHeight(28);
-    groupDialogInput->SetAttribute(_T("bordercolor"), _T("0xFF9AA4B2"));
+    groupDialogInput->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     groupDialogInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     groupDialogInput->SetAttribute(_T("textpadding"), _T("6,3,6,3"));
     groupDialog->Add(groupDialogInput);
@@ -499,10 +490,10 @@ CControlUI* AppWindow::BuildRootUi() {
     okButton->SetText(_T("OK"));
     okButton->SetFixedWidth(88);
     okButton->SetFixedHeight(28);
-    okButton->SetAttribute(_T("normalbkcolor"), _T("0xFF52718C"));
-    okButton->SetAttribute(_T("hotbkcolor"), _T("0xFF5E7F9C"));
-    okButton->SetAttribute(_T("pushedbkcolor"), _T("0xFF46627A"));
-    okButton->SetAttribute(_T("textcolor"), _T("0xFFFFFFFF"));
+    okButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
+    okButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
+    okButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    okButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     okButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     actions->Add(okButton);
 
@@ -511,10 +502,10 @@ CControlUI* AppWindow::BuildRootUi() {
     cancelButton->SetText(_T("Cancel"));
     cancelButton->SetFixedWidth(88);
     cancelButton->SetFixedHeight(28);
-    cancelButton->SetAttribute(_T("normalbkcolor"), _T("0xFFDDDDDD"));
-    cancelButton->SetAttribute(_T("hotbkcolor"), _T("0xFFE7E7E7"));
-    cancelButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD1D1D1"));
-    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF334155"));
+    cancelButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
+    cancelButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
+    cancelButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
     cancelButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     actions->Add(cancelButton);
 
