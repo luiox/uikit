@@ -6,3 +6,5 @@ ui/dist/
 *.tmp
 launcher.v2.json
 nassistant.settings.json
+icons/*.ico
+icons/*.txt

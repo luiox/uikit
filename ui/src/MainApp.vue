@@ -141,8 +141,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import {
   addGroup,
+  createItemsFromDroppedPaths,
   deleteItem,
   hideCurrentWindow,
   launchItem,
@@ -188,6 +190,7 @@ const bodyLayoutRef = ref<HTMLElement | null>(null);
 const groupPanelWidth = ref(220);
 const isResizingSplitter = ref(false);
 const currentSettings = ref<Settings | null>(null);
+let unlistenDragDrop: (() => void) | null = null;
 
 const SPLITTER_WIDTH = 1;
 const MIN_GROUP_PANEL_WIDTH = 80;
@@ -536,6 +539,30 @@ async function onHide() {
   await hideCurrentWindow();
 }
 
+async function onDropCreateItems(paths: string[]) {
+  const groupId = activeGroupId.value;
+  if (!groupId) {
+    setStatus('没有可用分组', true);
+    return;
+  }
+
+  const normalized = (paths ?? []).map((path) => String(path ?? '').trim()).filter((path) => path.length > 0);
+  if (normalized.length === 0) {
+    return;
+  }
+
+  try {
+    const created = await createItemsFromDroppedPaths(groupId, normalized);
+    if (created > 0) {
+      setStatus(`已添加 ${created} 个启动项`);
+      return;
+    }
+    setStatus('未识别到可添加的程序路径', true);
+  } catch (error) {
+    setStatus(`拖拽添加失败: ${String(error)}`, true);
+  }
+}
+
 onMounted(async () => {
   await refresh();
   await onDataChanged(async () => {
@@ -543,6 +570,12 @@ onMounted(async () => {
   });
   await onSettingsChanged(async () => {
     await refresh();
+  });
+  unlistenDragDrop = await getCurrentWebviewWindow().onDragDropEvent(async (event) => {
+    if (event.payload.type !== 'drop') {
+      return;
+    }
+    await onDropCreateItems(event.payload.paths ?? []);
   });
   document.addEventListener('click', () => {
     closeMenus();
@@ -568,6 +601,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (isResizingSplitter.value) {
     onSplitterMouseUp();
+  }
+  if (unlistenDragDrop) {
+    unlistenDragDrop();
+    unlistenDragDrop = null;
   }
 });
 

@@ -26,8 +26,9 @@ mod state;
 mod window_style;
 
 use commands::{
-    add_group, close_editor, delete_item, extract_exe_icon, get_editor_context, launch_item,
-    load_launcher_state, move_item, open_editor, rename_group, update_settings, upsert_item,
+    add_group, close_editor, create_items_from_dropped_paths, delete_item, extract_exe_icon,
+    get_editor_context, launch_item, load_launcher_state, move_item, open_editor, rename_group,
+    update_settings, upsert_item,
 };
 use models::{
     default_group_panel_width, default_main_window_height, default_main_window_width, Group,
@@ -718,7 +719,8 @@ fn main() {
             open_editor,
             get_editor_context,
             close_editor,
-            update_settings
+            update_settings,
+            create_items_from_dropped_paths
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

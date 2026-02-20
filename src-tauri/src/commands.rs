@@ -1,4 +1,9 @@
-use std::{collections::{BTreeMap, BTreeSet}, fs, process::Command};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+    process::Command,
+};
 
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
@@ -437,6 +442,185 @@ pub fn extract_exe_icon(state: tauri::State<'_, AppState>, path: String) -> Resu
     use base64::Engine;
     let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(format!("data:image/x-icon;base64,{encoded}"))
+}
+
+#[tauri::command]
+pub fn create_items_from_dropped_paths(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    group_id: String,
+    paths: Vec<String>,
+) -> Result<usize, String> {
+    if paths.is_empty() {
+        return Ok(0);
+    }
+
+    let mut created = 0usize;
+
+    {
+        let mut data = state
+            .data
+            .lock()
+            .map_err(|_| "state lock poisoned".to_string())?;
+
+        let group = data
+            .groups
+            .iter_mut()
+            .find(|g| g.id == group_id)
+            .ok_or_else(|| "group not found".to_string())?;
+
+        for raw_path in paths {
+            let (target_path, icon_location, arguments) = resolve_dropped_target_and_icon(&raw_path);
+            if target_path.trim().is_empty() {
+                continue;
+            }
+
+            let name = basename_of_path(&target_path);
+            if name.trim().is_empty() {
+                continue;
+            }
+
+            group.items.push(LaunchItem {
+                id: generate_id("item"),
+                item_type: "app".to_string(),
+                name,
+                target_path,
+                icon_location,
+                arguments,
+                launch_count: 0,
+                enabled: true,
+            });
+            created = created.saturating_add(1);
+        }
+    }
+
+    if created > 0 {
+        state.save_data()?;
+        let _ = app.emit("data-changed", "create_items_from_dropped_paths");
+    }
+
+    Ok(created)
+}
+
+fn basename_of_path(path: &str) -> String {
+    Path::new(path)
+    .file_stem()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| path.to_string())
+}
+
+fn resolve_dropped_target_and_icon(raw_path: &str) -> (String, String, String) {
+    let dropped = normalize_dropped_path(raw_path);
+    if dropped.is_empty() {
+        return (String::new(), String::new(), String::new());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if dropped.to_ascii_lowercase().ends_with(".lnk") {
+            if let Some((target, args)) = resolve_windows_shortcut_target(&dropped) {
+                let normalized = target.trim().trim_matches('"').trim().to_string();
+                if !normalized.is_empty() {
+                    return (normalized.clone(), normalized, args);
+                }
+            }
+            return (String::new(), String::new(), String::new());
+        }
+    }
+
+    (dropped.clone(), dropped, String::new())
+}
+
+fn normalize_dropped_path(raw_path: &str) -> String {
+    let mut value = raw_path.trim().trim_matches('"').trim().to_string();
+    if value.is_empty() {
+        return value;
+    }
+
+    let lower = value.to_ascii_lowercase();
+    if lower.starts_with("file://") {
+        let without_scheme = value
+            .trim_start_matches("file:///")
+            .trim_start_matches("file://")
+            .to_string();
+        let slash_fixed = without_scheme.replace('/', "\\");
+        value = percent_decode_path(&slash_fixed);
+    }
+
+    value
+}
+
+fn percent_decode_path(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0usize;
+
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            let hi = bytes[index + 1] as char;
+            let lo = bytes[index + 2] as char;
+            let hex = [hi, lo].iter().collect::<String>();
+            if let Ok(decoded) = u8::from_str_radix(&hex, 16) {
+                out.push(decoded);
+                index += 3;
+                continue;
+            }
+        }
+        out.push(bytes[index]);
+        index += 1;
+    }
+
+    String::from_utf8_lossy(&out).to_string()
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_windows_shortcut_target(shortcut_path: &str) -> Option<(String, String)> {
+    let escaped_path = shortcut_path.replace('\'', "''");
+    let script = format!(
+        "$ErrorActionPreference = 'Stop'; \
+         $ws = New-Object -ComObject WScript.Shell; \
+         $shortcut = $ws.CreateShortcut('{escaped_path}'); \
+         $targetRaw = [string]$shortcut.TargetPath; \
+         $argsRaw = [string]$shortcut.Arguments; \
+         $targetB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($targetRaw)); \
+         $argsB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($argsRaw)); \
+         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; \
+         Write-Output ($targetB64 + '|' + $argsB64)"
+    );
+
+    let mut raw = String::new();
+    for shell in ["powershell.exe", "pwsh.exe"] {
+        let output = match Command::new(shell)
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .output()
+        {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        if output.status.success() {
+            raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !raw.is_empty() {
+                break;
+            }
+        }
+    }
+
+    if raw.is_empty() {
+        return None;
+    }
+
+    let (target_b64, args_b64) = raw.split_once('|')?;
+    use base64::Engine;
+    let target_bytes = base64::engine::general_purpose::STANDARD.decode(target_b64).ok()?;
+    let args_bytes = base64::engine::general_purpose::STANDARD.decode(args_b64).ok()?;
+    let target = String::from_utf8_lossy(&target_bytes).trim().to_string();
+    let args = String::from_utf8_lossy(&args_bytes).trim().to_string();
+    if target.is_empty() {
+        None
+    } else {
+        Some((target, args))
+    }
 }
 
 fn build_item_icons(state: &AppState, groups: &[Group]) -> BTreeMap<String, String> {

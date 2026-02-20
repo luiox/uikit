@@ -31,6 +31,10 @@ export async function upsertItem(groupId: string, item: Partial<LaunchItem> & { 
   return invoke("upsert_item", { groupId, item });
 }
 
+export async function createItemsFromDroppedPaths(groupId: string, paths: string[]): Promise<number> {
+  return invoke("create_items_from_dropped_paths", { groupId, paths });
+}
+
 export async function getEditorContext(): Promise<EditorContext | null> {
   return invoke("get_editor_context");
 }
