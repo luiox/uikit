@@ -28,8 +28,11 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
         return 2;
     }
 
-    frame->CenterWindow();
-    frame->ShowWindow(true);
+    if (!frame->HasRestoredWindowPlacement()) {
+        frame->CenterWindow();
+    }
+    ::ShowWindow(hwnd, frame->ShouldStartMaximized() ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);
+    ::UpdateWindow(hwnd);
 
     CPaintManagerUI::MessageLoop();
     CoUninitialize();

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <string>
 
 #include "file_icon_control.h"
@@ -86,6 +87,33 @@ std::filesystem::path GetEmbeddedIconCacheDir() {
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     return dir;
+}
+
+std::filesystem::path GetUiStatePath() {
+    return GetAppBaseDir() / "ui_state.ini";
+}
+
+bool ReadIniInt(const std::filesystem::path& ini_path, const wchar_t* section, const wchar_t* key, int* out) {
+    if (out == nullptr) {
+        return false;
+    }
+    wchar_t buffer[64]{};
+    const DWORD size = GetPrivateProfileStringW(section, key, L"", buffer, static_cast<DWORD>(std::size(buffer)), ini_path.wstring().c_str());
+    if (size == 0) {
+        return false;
+    }
+    wchar_t* end = nullptr;
+    const long value = std::wcstol(buffer, &end, 10);
+    if (end == buffer) {
+        return false;
+    }
+    *out = static_cast<int>(value);
+    return true;
+}
+
+void WriteIniInt(const std::filesystem::path& ini_path, const wchar_t* section, const wchar_t* key, int value) {
+    const std::wstring value_text = std::to_wstring(value);
+    WritePrivateProfileStringW(section, key, value_text.c_str(), ini_path.wstring().c_str());
 }
 
 void ReplaceAllInPlace(std::string* text, const std::string& from, const std::string& to) {
@@ -265,6 +293,73 @@ std::string AppWindow::ToLowerAscii(std::string value) {
 
 bool AppWindow::ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const {
     return ToLowerAscii(text).find(ToLowerAscii(keyword)) != std::string::npos;
+}
+
+void AppWindow::RestoreUiState() {
+    const auto ini_path = GetUiStatePath();
+
+    if (group_panel_ != nullptr) {
+        int splitter_width = 0;
+        if (ReadIniInt(ini_path, L"layout", L"splitter_width", &splitter_width)) {
+            if (splitter_width < 80) {
+                splitter_width = 80;
+            }
+            if (splitter_width > 600) {
+                splitter_width = 600;
+            }
+            group_panel_->SetFixedWidth(splitter_width);
+        }
+    }
+
+    int left = 0;
+    int top = 0;
+    int right = 0;
+    int bottom = 0;
+    if (!ReadIniInt(ini_path, L"window", L"left", &left) ||
+        !ReadIniInt(ini_path, L"window", L"top", &top) ||
+        !ReadIniInt(ini_path, L"window", L"right", &right) ||
+        !ReadIniInt(ini_path, L"window", L"bottom", &bottom)) {
+        return;
+    }
+
+    const int width = right - left;
+    const int height = bottom - top;
+    if (width < 480 || height < 320) {
+        return;
+    }
+
+    has_restored_window_ = true;
+    ::SetWindowPos(m_hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+
+    int maximized = 0;
+    if (ReadIniInt(ini_path, L"window", L"maximized", &maximized) && maximized != 0) {
+        start_maximized_ = true;
+    }
+}
+
+void AppWindow::SaveUiState() const {
+    const auto ini_path = GetUiStatePath();
+
+    if (group_panel_ != nullptr) {
+        int splitter_width = group_panel_->GetFixedWidth();
+        if (splitter_width < 80) {
+            splitter_width = 80;
+        }
+        WriteIniInt(ini_path, L"layout", L"splitter_width", splitter_width);
+    }
+
+    WINDOWPLACEMENT placement{};
+    placement.length = sizeof(WINDOWPLACEMENT);
+    if (!GetWindowPlacement(m_hWnd, &placement)) {
+        return;
+    }
+
+    const RECT rc = placement.rcNormalPosition;
+    WriteIniInt(ini_path, L"window", L"left", rc.left);
+    WriteIniInt(ini_path, L"window", L"top", rc.top);
+    WriteIniInt(ini_path, L"window", L"right", rc.right);
+    WriteIniInt(ini_path, L"window", L"bottom", rc.bottom);
+    WriteIniInt(ini_path, L"window", L"maximized", placement.showCmd == SW_SHOWMAXIMIZED ? 1 : 0);
 }
 
 bool AppWindow::IsSearchMode() const {
@@ -738,6 +833,8 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     group_dialog_title_ = static_cast<CLabelUI*>(m_pm.FindControl(_T("group_dialog_title")));
     group_dialog_input_ = static_cast<CEditUI*>(m_pm.FindControl(_T("group_dialog_input")));
     status_.Bind(status_line_);
+
+    RestoreUiState();
 
     DragAcceptFiles(m_hWnd, TRUE);
 
@@ -1570,6 +1667,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
 }
 
 LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
+    SaveUiState();
     PostQuitMessage(0);
     bHandled = FALSE;
     return 0;

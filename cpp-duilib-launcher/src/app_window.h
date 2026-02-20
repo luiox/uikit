@@ -14,6 +14,8 @@ public:
     LPCTSTR GetWindowClassName() const override { return _T("NAssistantMainFrame"); }
     DuiLib::CDuiString GetSkinFile() override { return _T(""); }
     DuiLib::CDuiString GetSkinFolder() { return _T(""); }
+    bool HasRestoredWindowPlacement() const { return has_restored_window_; }
+    bool ShouldStartMaximized() const { return start_maximized_; }
 
     void Notify(DuiLib::TNotifyUI& msg) override;
     LRESULT OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -65,6 +67,8 @@ private:
     static std::string BasenameNoExt(const std::string& path);
     static std::string ToLowerAscii(std::string value);
     bool ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const;
+    void RestoreUiState();
+    void SaveUiState() const;
 
 private:
     backend::LauncherBackend backend_;
@@ -94,4 +98,7 @@ private:
     bool splitter_dragging_ = false;
     int splitter_drag_start_x_ = 0;
     int splitter_start_width_ = 220;
+
+    bool has_restored_window_ = false;
+    bool start_maximized_ = false;
 };
