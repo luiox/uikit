@@ -457,6 +457,40 @@ bool LauncherBackend::RenameGroup(const std::string& group_id, const std::string
     return SaveData(error);
 }
 
+bool LauncherBackend::DeleteGroup(const std::string& group_id, const std::string& target_group_id, std::string* error) {
+    if (!EnsureLoaded(error)) {
+        return false;
+    }
+
+    if (data_.groups.size() <= 1) {
+        SetError(error, "cannot delete the last group");
+        return false;
+    }
+
+    auto delete_it = std::find_if(data_.groups.begin(), data_.groups.end(), [&](const Group& g) { return g.id == group_id; });
+    if (delete_it == data_.groups.end()) {
+        SetError(error, "group not found");
+        return false;
+    }
+
+    auto target_it = std::find_if(data_.groups.begin(), data_.groups.end(), [&](const Group& g) {
+        return g.id == target_group_id && g.id != group_id;
+    });
+    if (target_it == data_.groups.end()) {
+        SetError(error, "target group not found");
+        return false;
+    }
+
+    target_it->items.insert(target_it->items.end(), delete_it->items.begin(), delete_it->items.end());
+    data_.groups.erase(delete_it);
+
+    if (settings_.current_group.has_value() && *settings_.current_group == group_id) {
+        settings_.current_group = target_group_id;
+    }
+
+    return SaveData(error);
+}
+
 bool LauncherBackend::UpsertItem(const std::string& group_id, const ItemInput& input, std::string* error) {
     if (!EnsureLoaded(error)) {
         return false;

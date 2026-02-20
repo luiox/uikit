@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <filesystem>
 
 #include "file_icon_control.h"
@@ -17,10 +18,23 @@ namespace {
 
 constexpr UINT kGroupCmdAdd = 1001;
 constexpr UINT kGroupCmdRename = 1002;
+constexpr UINT kGroupCmdDelete = 1003;
 constexpr UINT kItemCmdAdd = 1101;
 constexpr UINT kItemCmdEdit = 1102;
 constexpr UINT kItemCmdDelete = 1103;
+constexpr UINT kItemCmdRunAs = 1104;
+constexpr UINT kItemCmdOpenFolder = 1105;
+constexpr UINT kItemCmdShellMenu = 1106;
+constexpr UINT kItemCmdCopyPath = 1107;
 constexpr UINT kItemCmdMoveBase = 2000;
+
+constexpr UINT kMainCmdNewCustom = 3001;
+constexpr UINT kMainCmdSortByName = 3002;
+constexpr UINT kMainCmdImportData = 3003;
+constexpr UINT kMainCmdExportData = 3004;
+constexpr UINT kMainCmdSettings = 3005;
+constexpr UINT kMainCmdWebSite = 3006;
+constexpr UINT kMainCmdExit = 3007;
 
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
@@ -127,6 +141,7 @@ void AppWindow::UpdateSearchUi() {
     }
     if (search_input_ != nullptr) {
         search_input_->SetVisible(search_mode_);
+        search_input_->SetFixedWidth(search_mode_ ? 320 : 0);
         if (search_mode_) {
             search_input_->SetFocus();
         }
@@ -169,7 +184,7 @@ void AppWindow::RenderGroups() {
         auto* row = new CListLabelElementUI();
         row->SetText(Utf8ToWide(group->name).c_str());
         row->SetFixedHeight(34);
-        row->SetAttribute(_T("padding"), _T("10,0,0,0"));
+        row->SetAttribute(_T("padding"), _T("8,0,0,0"));
         row->SetTextColor(0xFF5A5A5A);
         row->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         groups_list_->Add(row);
@@ -340,9 +355,9 @@ CControlUI* AppWindow::BuildRootUi() {
     topBar->SetName(_T("top_bar"));
     topBar->SetFixedHeight(35);
     topBar->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
-    topBar->SetAttribute(_T("childvalign"), _T("vcenter"));
+    topBar->SetAttribute(_T("childvalign"), _T("top"));
     topBar->SetAttribute(_T("childpadding"), _T("0"));
-    topBar->SetAttribute(_T("inset"), _T("12,0,0,0"));
+    topBar->SetAttribute(_T("inset"), _T("12,4,0,0"));
     topBar->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     topBar->SetAttribute(_T("bordersize"), _T("0,0,0,1"));
 
@@ -359,20 +374,40 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* searchBtn = new CButtonUI();
     searchBtn->SetName(_T("searchbtn"));
-    searchBtn->SetText(_T("S"));
-    searchBtn->SetFixedWidth(45);
-    searchBtn->SetFixedHeight(35);
-    searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
-    searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
-    searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    searchBtn->SetText(_T("Search"));
+    searchBtn->SetFixedWidth(108);
+    searchBtn->SetFixedHeight(26);
+    searchBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_search_n.svg'"));
+    searchBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_search_h.svg'"));
+    searchBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_search_p.svg'"));
+    searchBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
+    searchBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
+    searchBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
     searchBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    searchBtn->SetAttribute(_T("bordercolor"), _T("0x00000000"));
+    searchBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    searchBtn->SetAttribute(_T("bordersize"), _T("1"));
     topBar->Add(searchBtn);
+
+    auto* menuBtn = new CButtonUI();
+    menuBtn->SetName(_T("menubtn"));
+    menuBtn->SetText(_T("Menu"));
+    menuBtn->SetFixedWidth(108);
+    menuBtn->SetFixedHeight(26);
+    menuBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_menu_n.svg'"));
+    menuBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_menu_h.svg'"));
+    menuBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_menu_p.svg'"));
+    menuBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
+    menuBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
+    menuBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
+    menuBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
+    menuBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    menuBtn->SetAttribute(_T("bordersize"), _T("1"));
+    topBar->Add(menuBtn);
 
     auto* searchInput = new CEditUI();
     searchInput->SetName(_T("search_input"));
     searchInput->SetVisible(false);
-    searchInput->SetFixedWidth(320);
+    searchInput->SetFixedWidth(0);
     searchInput->SetFixedHeight(28);
     searchInput->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     searchInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
@@ -382,14 +417,18 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* closeBtn = new CButtonUI();
     closeBtn->SetName(_T("closebtn"));
-    closeBtn->SetText(_T("X"));
-    closeBtn->SetFixedWidth(45);
-    closeBtn->SetFixedHeight(35);
-    closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
-    closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
-    closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
+    closeBtn->SetText(_T("Exit"));
+    closeBtn->SetFixedWidth(108);
+    closeBtn->SetFixedHeight(26);
+    closeBtn->SetAttribute(_T("normalimage"), _T("file='assets/ui/btn_exit_n.svg'"));
+    closeBtn->SetAttribute(_T("hotimage"), _T("file='assets/ui/btn_exit_h.svg'"));
+    closeBtn->SetAttribute(_T("pushedimage"), _T("file='assets/ui/btn_exit_p.svg'"));
+    closeBtn->SetAttribute(_T("normalbkcolor"), _T("0xFFF2F2F2"));
+    closeBtn->SetAttribute(_T("hotbkcolor"), _T("0xFFE4E4E4"));
+    closeBtn->SetAttribute(_T("pushedbkcolor"), _T("0xFFD7D7D7"));
     closeBtn->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    closeBtn->SetAttribute(_T("bordercolor"), _T("0x00000000"));
+    closeBtn->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    closeBtn->SetAttribute(_T("bordersize"), _T("1"));
     topBar->Add(closeBtn);
 
     root->Add(topBar);
@@ -568,7 +607,7 @@ void AppWindow::Notify(TNotifyUI& msg) {
             return;
         }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("closebtn")) {
-            ShowWindow(m_hWnd, SW_HIDE);
+            ::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
             return;
         }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("searchbtn")) {
@@ -579,6 +618,13 @@ void AppWindow::Notify(TNotifyUI& msg) {
             UpdateSearchUi();
             RenderItems();
             status_.Info(search_mode_ ? "search mode on" : "search mode off");
+            return;
+        }
+        if (msg.pSender != nullptr && msg.pSender->GetName() == _T("menubtn")) {
+            RECT rc{};
+            GetWindowRect(m_hWnd, &rc);
+            POINT menu_point{rc.left + 12, rc.top + 35};
+            ShowMainContextMenu(menu_point);
             return;
         }
     }
@@ -653,6 +699,7 @@ void AppWindow::ShowGroupContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
     AppendMenuW(menu, MF_STRING, kGroupCmdAdd, L"Add Group");
     AppendMenuW(menu, MF_STRING, kGroupCmdRename, L"Edit Group Name");
+    AppendMenuW(menu, MF_STRING, kGroupCmdDelete, L"Delete Group");
 
     SetForegroundWindow(m_hWnd);
     const UINT command_id = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, screen_point.x, screen_point.y, 0, m_hWnd, nullptr);
@@ -665,6 +712,11 @@ void AppWindow::ShowGroupContextMenu(const POINT& screen_point) {
 
 void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING, kItemCmdRunAs, L"Run as administrator");
+    AppendMenuW(menu, MF_STRING, kItemCmdOpenFolder, L"Open file location");
+    AppendMenuW(menu, MF_STRING, kItemCmdShellMenu, L"Explorer menu");
+    AppendMenuW(menu, MF_STRING, kItemCmdCopyPath, L"Copy full path");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kItemCmdAdd, L"Add Item");
     AppendMenuW(menu, MF_STRING, kItemCmdEdit, L"Edit Item");
     AppendMenuW(menu, MF_STRING, kItemCmdDelete, L"Delete Item");
@@ -696,6 +748,58 @@ void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
     }
 }
 
+void AppWindow::ShowMainContextMenu(const POINT& screen_point) {
+    HMENU menu = CreatePopupMenu();
+    HMENU new_menu = CreatePopupMenu();
+
+    AppendMenuW(new_menu, MF_STRING, kMainCmdNewCustom, L"Custom");
+    AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(new_menu), L"New Item");
+    AppendMenuW(menu, MF_STRING, kMainCmdSortByName, L"Sort By Name");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, kMainCmdImportData, L"Import Data");
+    AppendMenuW(menu, MF_STRING, kMainCmdExportData, L"Export Data");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, kMainCmdSettings, L"Settings");
+    AppendMenuW(menu, MF_STRING, kMainCmdWebSite, L"Website");
+    AppendMenuW(menu, MF_STRING, kMainCmdExit, L"Exit");
+
+    SetForegroundWindow(m_hWnd);
+    const UINT command_id = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, screen_point.x, screen_point.y, 0, m_hWnd, nullptr);
+    DestroyMenu(menu);
+
+    if (command_id != 0) {
+        ExecuteMainCommand(command_id);
+    }
+}
+
+void AppWindow::ExecuteMainCommand(UINT command_id) {
+    switch (command_id) {
+    case kMainCmdNewCustom:
+        AddItemFromFile();
+        return;
+    case kMainCmdSortByName:
+        status_.Warn("sort by name is not implemented yet");
+        return;
+    case kMainCmdImportData:
+        status_.Warn("import data is not implemented yet");
+        return;
+    case kMainCmdExportData:
+        status_.Warn("export data is not implemented yet");
+        return;
+    case kMainCmdSettings:
+        status_.Warn("settings window is not implemented yet");
+        return;
+    case kMainCmdWebSite:
+        ShellExecuteW(nullptr, L"open", L"https://www.52pojie.cn/?Poner", nullptr, nullptr, SW_SHOWNORMAL);
+        return;
+    case kMainCmdExit:
+        ::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
+        return;
+    default:
+        return;
+    }
+}
+
 void AppWindow::ExecuteGroupCommand(UINT command_id) {
     if (command_id == kGroupCmdAdd) {
         OpenGroupDialog(false, std::string());
@@ -709,6 +813,11 @@ void AppWindow::ExecuteGroupCommand(UINT command_id) {
             return;
         }
         OpenGroupDialog(true, group->id);
+        return;
+    }
+
+    if (command_id == kGroupCmdDelete) {
+        DeleteActiveGroup();
     }
 }
 
@@ -800,6 +909,22 @@ void AppWindow::ConfirmGroupDialog() {
 }
 
 void AppWindow::ExecuteItemCommand(UINT command_id) {
+    if (command_id == kItemCmdRunAs) {
+        RunSelectedItemAsAdmin();
+        return;
+    }
+    if (command_id == kItemCmdOpenFolder) {
+        OpenSelectedItemFolder();
+        return;
+    }
+    if (command_id == kItemCmdShellMenu) {
+        ShowSelectedItemShellMenu();
+        return;
+    }
+    if (command_id == kItemCmdCopyPath) {
+        CopySelectedItemPath();
+        return;
+    }
     if (command_id == kItemCmdAdd) {
         AddItemFromFile();
         return;
@@ -899,6 +1024,167 @@ bool AppWindow::EditSelectedItem() {
 
     RenderItems();
     status_.Info("item updated");
+    return true;
+}
+
+bool AppWindow::DeleteActiveGroup() {
+    const backend::Group* active_group = FindActiveGroup();
+    if (active_group == nullptr) {
+        status_.Warn("select a group first");
+        return false;
+    }
+
+    std::string target_group_id;
+    for (const auto& group_id : group_ids_) {
+        if (group_id != active_group->id) {
+            target_group_id = group_id;
+            break;
+        }
+    }
+    if (target_group_id.empty()) {
+        status_.Warn("cannot delete the last group");
+        return false;
+    }
+
+    const int confirmed = MessageBoxW(m_hWnd,
+        L"The selected group will be deleted and its items moved to another group. Continue?",
+        L"Delete Group",
+        MB_ICONQUESTION | MB_YESNO);
+    if (confirmed != IDYES) {
+        status_.Warn("delete group canceled");
+        return false;
+    }
+
+    std::string error;
+    if (!backend_.DeleteGroup(active_group->id, target_group_id, &error)) {
+        status_.Error("delete group failed: " + error);
+        return false;
+    }
+
+    active_group_id_ = target_group_id;
+    selected_item_id_.clear();
+    selected_item_group_id_.clear();
+    RenderGroups();
+    for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
+        if (group_ids_[i] == active_group_id_) {
+            SelectGroupByIndex(i);
+            break;
+        }
+    }
+    status_.Info("group deleted");
+    return true;
+}
+
+bool AppWindow::RunSelectedItemAsAdmin() {
+    const backend::LaunchItem* item = FindSelectedItem();
+    if (item == nullptr) {
+        status_.Warn("select an item first");
+        return false;
+    }
+    if (item->item_type == "separator") {
+        status_.Warn("separator item cannot be launched");
+        return false;
+    }
+
+    const std::wstring target_w = Utf8ToWide(item->target_path);
+    const std::wstring args_w = Utf8ToWide(item->arguments);
+    HINSTANCE instance = ShellExecuteW(
+        m_hWnd,
+        L"runas",
+        target_w.c_str(),
+        args_w.empty() ? nullptr : args_w.c_str(),
+        nullptr,
+        SW_SHOWNORMAL);
+    if (reinterpret_cast<INT_PTR>(instance) <= 32) {
+        status_.Error("run as administrator failed");
+        return false;
+    }
+
+    status_.Info("started as administrator");
+    return true;
+}
+
+bool AppWindow::OpenSelectedItemFolder() {
+    const backend::LaunchItem* item = FindSelectedItem();
+    if (item == nullptr) {
+        status_.Warn("select an item first");
+        return false;
+    }
+    if (item->target_path.empty()) {
+        status_.Warn("target path is empty");
+        return false;
+    }
+
+    PIDLIST_ABSOLUTE pidl = ILCreateFromPathW(Utf8ToWide(item->target_path).c_str());
+    if (pidl == nullptr) {
+        status_.Error("open file location failed");
+        return false;
+    }
+    const HRESULT hr = SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0);
+    ILFree(pidl);
+    if (FAILED(hr)) {
+        status_.Error("open file location failed");
+        return false;
+    }
+
+    status_.Info("opened file location");
+    return true;
+}
+
+bool AppWindow::ShowSelectedItemShellMenu() {
+    const backend::LaunchItem* item = FindSelectedItem();
+    if (item == nullptr) {
+        status_.Warn("select an item first");
+        return false;
+    }
+    if (item->target_path.empty()) {
+        status_.Warn("target path is empty");
+        return false;
+    }
+
+    const std::wstring path_w = Utf8ToWide(item->target_path);
+    HINSTANCE instance = ShellExecuteW(m_hWnd, L"properties", path_w.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    if (reinterpret_cast<INT_PTR>(instance) <= 32) {
+        status_.Error("open explorer menu failed");
+        return false;
+    }
+
+    status_.Info("opened explorer properties");
+    return true;
+}
+
+bool AppWindow::CopySelectedItemPath() {
+    const backend::LaunchItem* item = FindSelectedItem();
+    if (item == nullptr) {
+        status_.Warn("select an item first");
+        return false;
+    }
+    if (item->target_path.empty()) {
+        status_.Warn("target path is empty");
+        return false;
+    }
+
+    const std::wstring text = Utf8ToWide(item->target_path);
+    if (!OpenClipboard(m_hWnd)) {
+        status_.Error("copy path failed");
+        return false;
+    }
+
+    EmptyClipboard();
+    const std::size_t bytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL buffer = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (buffer == nullptr) {
+        CloseClipboard();
+        status_.Error("copy path failed");
+        return false;
+    }
+    void* ptr = GlobalLock(buffer);
+    memcpy(ptr, text.c_str(), bytes);
+    GlobalUnlock(buffer);
+    SetClipboardData(CF_UNICODETEXT, buffer);
+    CloseClipboard();
+
+    status_.Info("path copied");
     return true;
 }
 

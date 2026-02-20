@@ -65,6 +65,7 @@ public:
 
     std::string AddGroup(const std::string& name, std::string* error = nullptr);
     bool RenameGroup(const std::string& group_id, const std::string& name, std::string* error = nullptr);
+    bool DeleteGroup(const std::string& group_id, const std::string& target_group_id, std::string* error = nullptr);
     bool UpsertItem(const std::string& group_id, const ItemInput& input, std::string* error = nullptr);
     bool DeleteItem(const std::string& group_id, const std::string& item_id, std::string* error = nullptr);
     bool MoveItem(const std::string& group_id, const std::string& item_id, const std::string& target_group_id, std::string* error = nullptr);

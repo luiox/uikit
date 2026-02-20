@@ -37,6 +37,8 @@ private:
 
     void ShowGroupContextMenu(const POINT& screen_point);
     void ShowItemContextMenu(const POINT& screen_point);
+    void ShowMainContextMenu(const POINT& screen_point);
+    void ExecuteMainCommand(UINT command_id);
     void ExecuteGroupCommand(UINT command_id);
     void ExecuteItemCommand(UINT command_id);
     void OpenGroupDialog(bool rename_mode, const std::string& group_id);
@@ -45,7 +47,12 @@ private:
 
     bool AddItemFromFile();
     bool EditSelectedItem();
+    bool DeleteActiveGroup();
     bool MoveSelectedItemToGroup(const std::string& target_group_id);
+    bool RunSelectedItemAsAdmin();
+    bool OpenSelectedItemFolder();
+    bool ShowSelectedItemShellMenu();
+    bool CopySelectedItemPath();
 
     std::wstring PickExecutablePath() const;
     std::string GenerateNewGroupName() const;
