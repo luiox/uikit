@@ -30,7 +30,10 @@ private:
     void RenderItems();
     void SelectGroupByIndex(int index);
     void LaunchSelectedItem();
+    void DeleteSelectedItem();
     void HandleFileDrop(HDROP drop_handle);
+    void UpdateSearchUi();
+    bool IsSearchMode() const;
 
     void ShowGroupContextMenu(const POINT& screen_point);
     void ShowItemContextMenu(const POINT& screen_point);
@@ -50,6 +53,8 @@ private:
     static std::wstring Utf8ToWide(const std::string& text);
     static std::string WideToUtf8(const std::wstring& text);
     static std::string BasenameNoExt(const std::string& path);
+    static std::string ToLowerAscii(std::string value);
+    bool ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const;
 
 private:
     backend::LauncherBackend backend_;
@@ -60,11 +65,16 @@ private:
     DuiLib::CLabelUI* status_line_ = nullptr;
     DuiLib::CVerticalLayoutUI* group_panel_ = nullptr;
     DuiLib::CControlUI* panel_splitter_ = nullptr;
+    DuiLib::CEditUI* search_input_ = nullptr;
 
     std::vector<std::string> group_ids_;
     std::vector<std::string> item_ids_;
+    std::vector<std::string> item_group_ids_;
     std::string active_group_id_;
     std::string selected_item_id_;
+    std::string selected_item_group_id_;
+
+    bool search_mode_ = false;
 
     bool splitter_dragging_ = false;
     int splitter_drag_start_x_ = 0;

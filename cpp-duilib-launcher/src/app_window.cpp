@@ -6,6 +6,7 @@
 #include <shlobj.h>
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 
 #include "file_icon_control.h"
@@ -18,6 +19,7 @@ constexpr UINT kGroupCmdAdd = 1001;
 constexpr UINT kGroupCmdRename = 1002;
 constexpr UINT kItemCmdAdd = 1101;
 constexpr UINT kItemCmdEdit = 1102;
+constexpr UINT kItemCmdDelete = 1103;
 constexpr UINT kItemCmdMoveBase = 2000;
 
 std::filesystem::path GetAppBaseDir() {
@@ -41,6 +43,24 @@ std::string ParseIconSource(const backend::LaunchItem& item) {
         return item.icon_location.substr(0, comma);
     }
     return item.target_path;
+}
+
+bool IsSenderFromList(DuiLib::CControlUI* sender, DuiLib::CListUI* list) {
+    if (sender == nullptr || list == nullptr) {
+        return false;
+    }
+    if (sender == list) {
+        return true;
+    }
+    DuiLib::CControlUI* walk = sender;
+    DuiLib::CControlUI* list_body = list->GetList();
+    while (walk != nullptr) {
+        if (walk == list || walk == list_body) {
+            return true;
+        }
+        walk = walk->GetParent();
+    }
+    return false;
 }
 
 } // namespace
@@ -83,6 +103,37 @@ std::string AppWindow::BasenameNoExt(const std::string& path) {
     return path;
 }
 
+std::string AppWindow::ToLowerAscii(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
+}
+
+bool AppWindow::ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const {
+    return ToLowerAscii(text).find(ToLowerAscii(keyword)) != std::string::npos;
+}
+
+bool AppWindow::IsSearchMode() const {
+    return search_mode_;
+}
+
+void AppWindow::UpdateSearchUi() {
+    if (group_panel_ != nullptr) {
+        group_panel_->SetVisible(!search_mode_);
+    }
+    if (panel_splitter_ != nullptr) {
+        panel_splitter_->SetVisible(!search_mode_);
+    }
+    if (search_input_ != nullptr) {
+        search_input_->SetVisible(search_mode_);
+        if (search_mode_) {
+            search_input_->SetFocus();
+        }
+    }
+    m_pm.NeedUpdate();
+}
+
 bool AppWindow::LoadBackendData() {
     std::string error;
     if (!backend_.Load(&error)) {
@@ -117,8 +168,9 @@ void AppWindow::RenderGroups() {
     for (const auto* group : groups) {
         auto* row = new CListLabelElementUI();
         row->SetText(Utf8ToWide(group->name).c_str());
-        row->SetFixedHeight(28);
-        row->SetAttribute(_T("padding"), _T("8,6,0,0"));
+        row->SetFixedHeight(26);
+        row->SetAttribute(_T("padding"), _T("8,0,0,0"));
+        row->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         groups_list_->Add(row);
         group_ids_.push_back(group->id);
     }
@@ -131,7 +183,50 @@ void AppWindow::RenderItems() {
 
     items_list_->RemoveAll();
     item_ids_.clear();
+    item_group_ids_.clear();
     selected_item_id_.clear();
+    selected_item_group_id_.clear();
+
+    if (search_mode_) {
+        std::string keyword;
+        if (search_input_ != nullptr) {
+            keyword = WideToUtf8(search_input_->GetText().GetData());
+        }
+
+        for (const auto& group : backend_.Data().groups) {
+            for (const auto& item : group.items) {
+                if (item.item_type == "separator") {
+                    continue;
+                }
+                if (!keyword.empty() && !ContainsCaseInsensitive(item.name, keyword)) {
+                    continue;
+                }
+
+                auto* row = new CListContainerElementUI();
+                row->SetFixedHeight(28);
+                row->SetAttribute(_T("inset"), _T("8,0,8,0"));
+                row->SetAttribute(_T("childpadding"), _T("6"));
+                row->SetAttribute(_T("childvalign"), _T("vcenter"));
+
+                auto* icon = new FileIconControl();
+                icon->SetFixedWidth(20);
+                icon->SetFixedHeight(20);
+                icon->SetIconPath(Utf8ToWide(ParseIconSource(item)));
+                row->Add(icon);
+
+                auto* name = new CLabelUI();
+                name->SetText(Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
+                name->SetTextColor(0xFF2E3D4F);
+                name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                row->Add(name);
+
+                items_list_->Add(row);
+                item_ids_.push_back(item.id);
+                item_group_ids_.push_back(group.id);
+            }
+        }
+        return;
+    }
 
     const backend::Group* group = FindActiveGroup();
     if (!group) {
@@ -142,18 +237,19 @@ void AppWindow::RenderItems() {
         if (item.item_type == "separator") {
             auto* row = new CListLabelElementUI();
             row->SetText(Utf8ToWide(item.name).c_str());
-            row->SetFixedHeight(30);
-            row->SetAttribute(_T("padding"), _T("8,7,0,0"));
+            row->SetFixedHeight(28);
+            row->SetAttribute(_T("padding"), _T("8,0,0,0"));
             row->SetTextColor(0xFF7F8A99);
             row->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             items_list_->Add(row);
             item_ids_.push_back(item.id);
+            item_group_ids_.push_back(group->id);
             continue;
         }
 
         auto* row = new CListContainerElementUI();
-        row->SetFixedHeight(30);
-        row->SetAttribute(_T("inset"), _T("8,4,8,4"));
+    row->SetFixedHeight(28);
+    row->SetAttribute(_T("inset"), _T("8,0,8,0"));
         row->SetAttribute(_T("childpadding"), _T("6"));
         row->SetAttribute(_T("childvalign"), _T("vcenter"));
 
@@ -171,6 +267,7 @@ void AppWindow::RenderItems() {
 
         items_list_->Add(row);
         item_ids_.push_back(item.id);
+        item_group_ids_.push_back(group->id);
     }
 }
 
@@ -186,19 +283,47 @@ void AppWindow::SelectGroupByIndex(int index) {
 }
 
 void AppWindow::LaunchSelectedItem() {
-    if (active_group_id_.empty() || selected_item_id_.empty()) {
+    if (selected_item_id_.empty()) {
         status_.Warn("no item selected");
         return;
     }
 
+    const std::string group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
+    if (group_id.empty()) {
+        status_.Warn("no group selected");
+        return;
+    }
+
     std::string error;
-    const auto result = backend_.Launch(active_group_id_, selected_item_id_, &error);
+    const auto result = backend_.Launch(group_id, selected_item_id_, &error);
     if (!result.ok) {
         status_.Error(error.empty() ? result.message : ("launch failed: " + error));
         return;
     }
 
     status_.Info(result.message);
+    RenderItems();
+}
+
+void AppWindow::DeleteSelectedItem() {
+    if (selected_item_id_.empty()) {
+        status_.Warn("select an item first");
+        return;
+    }
+
+    const std::string group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
+    if (group_id.empty()) {
+        status_.Warn("no group selected");
+        return;
+    }
+
+    std::string error;
+    if (!backend_.DeleteItem(group_id, selected_item_id_, &error)) {
+        status_.Error("delete item failed: " + error);
+        return;
+    }
+
+    status_.Info("item deleted");
     RenderItems();
 }
 
@@ -237,6 +362,16 @@ CControlUI* AppWindow::BuildRootUi() {
     searchBtn->SetAttribute(_T("textcolor"), _T("0xFFFFFFFF"));
     searchBtn->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     topBar->Add(searchBtn);
+
+    auto* searchInput = new CEditUI();
+    searchInput->SetName(_T("search_input"));
+    searchInput->SetVisible(false);
+    searchInput->SetFixedWidth(260);
+    searchInput->SetFixedHeight(22);
+    searchInput->SetAttribute(_T("bordercolor"), _T("0xFF7F8FA0"));
+    searchInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    searchInput->SetAttribute(_T("textpadding"), _T("6,2,6,2"));
+    topBar->Add(searchInput);
 
     auto* closeBtn = new CButtonUI();
     closeBtn->SetName(_T("closebtn"));
@@ -277,7 +412,8 @@ CControlUI* AppWindow::BuildRootUi() {
     groups->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     groups->SetAttribute(_T("bordercolor"), _T("0xFFCFD7E0"));
     groups->SetAttribute(_T("bordersize"), _T("1"));
-    groups->SetAttribute(_T("inset"), _T("6,0,6,6"));
+    groups->SetAttribute(_T("inset"), _T("0,0,0,0"));
+    groups->SetChildPadding(0);
     groupPanel->Add(groups);
 
     body->Add(groupPanel);
@@ -307,7 +443,8 @@ CControlUI* AppWindow::BuildRootUi() {
     items->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     items->SetAttribute(_T("bordercolor"), _T("0xFFCFD7E0"));
     items->SetAttribute(_T("bordersize"), _T("1"));
-    items->SetAttribute(_T("inset"), _T("6,0,6,6"));
+    items->SetAttribute(_T("inset"), _T("0,0,0,0"));
+    items->SetChildPadding(0);
     itemPanel->Add(items);
 
     body->Add(itemPanel);
@@ -355,6 +492,7 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     status_line_ = static_cast<CLabelUI*>(m_pm.FindControl(_T("status_line")));
     group_panel_ = static_cast<CVerticalLayoutUI*>(m_pm.FindControl(_T("group_panel")));
     panel_splitter_ = m_pm.FindControl(_T("panel_splitter"));
+    search_input_ = static_cast<CEditUI*>(m_pm.FindControl(_T("search_input")));
     status_.Bind(status_line_);
 
     DragAcceptFiles(m_hWnd, TRUE);
@@ -368,34 +506,53 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
 void AppWindow::Notify(TNotifyUI& msg) {
     if (_tcscmp(msg.sType, DUI_MSGTYPE_CLICK) == 0) {
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("closebtn")) {
-            Close();
+            ShowWindow(m_hWnd, SW_HIDE);
             return;
         }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("searchbtn")) {
-            status_.Warn("search UI not connected yet");
+            search_mode_ = !search_mode_;
+            if (!search_mode_ && search_input_ != nullptr) {
+                search_input_->SetText(_T(""));
+            }
+            UpdateSearchUi();
+            RenderItems();
+            status_.Info(search_mode_ ? "search mode on" : "search mode off");
             return;
         }
     }
 
+    if (_tcscmp(msg.sType, DUI_MSGTYPE_TEXTCHANGED) == 0 && msg.pSender != nullptr && msg.pSender->GetName() == _T("search_input")) {
+        if (search_mode_) {
+            RenderItems();
+        }
+        return;
+    }
+
     if (_tcscmp(msg.sType, DUI_MSGTYPE_ITEMCLICK) == 0 && msg.pSender != nullptr) {
-        if (msg.pSender->GetName() == _T("groups_list") && groups_list_ != nullptr) {
+        if (groups_list_ != nullptr && IsSenderFromList(msg.pSender, groups_list_)) {
             SelectGroupByIndex(groups_list_->GetCurSel());
             return;
         }
-        if (msg.pSender->GetName() == _T("items_list") && items_list_ != nullptr) {
+        if (items_list_ != nullptr && IsSenderFromList(msg.pSender, items_list_)) {
             const int index = items_list_->GetCurSel();
             if (index >= 0 && index < static_cast<int>(item_ids_.size())) {
                 selected_item_id_ = item_ids_[index];
+                if (index < static_cast<int>(item_group_ids_.size())) {
+                    selected_item_group_id_ = item_group_ids_[index];
+                }
             }
             return;
         }
     }
 
     if ((_tcscmp(msg.sType, DUI_MSGTYPE_ITEMDBCLICK) == 0 || _tcscmp(msg.sType, DUI_MSGTYPE_ITEMACTIVATE) == 0) &&
-        msg.pSender != nullptr && msg.pSender->GetName() == _T("items_list") && items_list_ != nullptr) {
+        msg.pSender != nullptr && items_list_ != nullptr && IsSenderFromList(msg.pSender, items_list_)) {
         const int index = items_list_->GetCurSel();
         if (index >= 0 && index < static_cast<int>(item_ids_.size())) {
             selected_item_id_ = item_ids_[index];
+            if (index < static_cast<int>(item_group_ids_.size())) {
+                selected_item_group_id_ = item_group_ids_[index];
+            }
             LaunchSelectedItem();
         }
         return;
@@ -448,6 +605,7 @@ void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
     AppendMenuW(menu, MF_STRING, kItemCmdAdd, L"Add Item");
     AppendMenuW(menu, MF_STRING, kItemCmdEdit, L"Edit Item");
+    AppendMenuW(menu, MF_STRING, kItemCmdDelete, L"Delete Item");
 
     HMENU move_menu = CreatePopupMenu();
     for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
@@ -526,6 +684,10 @@ void AppWindow::ExecuteItemCommand(UINT command_id) {
     }
     if (command_id == kItemCmdEdit) {
         EditSelectedItem();
+        return;
+    }
+    if (command_id == kItemCmdDelete) {
+        DeleteSelectedItem();
         return;
     }
     if (command_id >= kItemCmdMoveBase) {
@@ -607,7 +769,8 @@ bool AppWindow::EditSelectedItem() {
     input.enabled = item->enabled;
 
     std::string error;
-    if (!backend_.UpsertItem(active_group_id_, input, &error)) {
+    const std::string group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
+    if (!backend_.UpsertItem(group_id, input, &error)) {
         status_.Error("edit item failed: " + error);
         return false;
     }
@@ -622,13 +785,18 @@ bool AppWindow::MoveSelectedItemToGroup(const std::string& target_group_id) {
         status_.Warn("select an item first");
         return false;
     }
-    if (target_group_id == active_group_id_) {
+    const std::string source_group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
+    if (source_group_id.empty()) {
+        status_.Warn("no source group");
+        return false;
+    }
+    if (target_group_id == source_group_id) {
         status_.Warn("item is already in this group");
         return false;
     }
 
     std::string error;
-    if (!backend_.MoveItem(active_group_id_, selected_item_id_, target_group_id, &error)) {
+    if (!backend_.MoveItem(source_group_id, selected_item_id_, target_group_id, &error)) {
         status_.Error("move item failed: " + error);
         return false;
     }
@@ -667,7 +835,14 @@ const backend::Group* AppWindow::FindActiveGroup() const {
 }
 
 const backend::LaunchItem* AppWindow::FindSelectedItem() const {
-    const backend::Group* group = FindActiveGroup();
+    const std::string group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
+    const backend::Group* group = nullptr;
+    for (const auto& candidate : backend_.Data().groups) {
+        if (candidate.id == group_id) {
+            group = &candidate;
+            break;
+        }
+    }
     if (group == nullptr) {
         return nullptr;
     }
@@ -780,7 +955,34 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
 
         const bool over_item = SelectListRowFromPoint(items_list_, item_ids_, client_point, &selected_item_id_);
         if (over_item) {
+            const int index = items_list_ != nullptr ? items_list_->GetCurSel() : -1;
+            if (index >= 0 && index < static_cast<int>(item_group_ids_.size())) {
+                selected_item_group_id_ = item_group_ids_[index];
+            }
             ShowItemContextMenu(screen_point);
+            bHandled = TRUE;
+            return 0;
+        }
+    }
+
+    if (uMsg == WM_KEYDOWN) {
+        if (wParam == VK_RETURN) {
+            LaunchSelectedItem();
+            bHandled = TRUE;
+            return 0;
+        }
+        if (wParam == VK_DELETE) {
+            DeleteSelectedItem();
+            bHandled = TRUE;
+            return 0;
+        }
+        if (wParam == VK_ESCAPE && search_mode_) {
+            search_mode_ = false;
+            if (search_input_ != nullptr) {
+                search_input_->SetText(_T(""));
+            }
+            UpdateSearchUi();
+            RenderItems();
             bHandled = TRUE;
             return 0;
         }
