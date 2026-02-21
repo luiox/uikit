@@ -68,7 +68,12 @@ private:
     static std::string ToLowerAscii(std::string value);
     bool ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const;
     void RestoreUiState();
-    void SaveUiState() const;
+    void SaveUiState();
+    void MarkUiStateDirty();
+    void ScheduleUiStateSave();
+    void FlushUiStateIfDirty();
+    void DrawSplitterPreview(int preview_x);
+    void ClearSplitterPreview();
 
 private:
     backend::LauncherBackend backend_;
@@ -98,7 +103,13 @@ private:
     bool splitter_dragging_ = false;
     int splitter_drag_start_x_ = 0;
     int splitter_start_width_ = 220;
+    int splitter_pending_width_ = -1;
+    int splitter_preview_x_ = -1;
+    bool splitter_preview_visible_ = false;
 
     bool has_restored_window_ = false;
     bool start_maximized_ = false;
+
+    bool ui_state_dirty_ = false;
+    bool ui_state_timer_active_ = false;
 };

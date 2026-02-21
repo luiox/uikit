@@ -41,6 +41,8 @@ constexpr UINT kMainCmdExportData = 3004;
 constexpr UINT kMainCmdSettings = 3005;
 constexpr UINT kMainCmdWebSite = 3006;
 constexpr UINT kMainCmdExit = 3007;
+constexpr UINT_PTR kUiStateSaveTimerId = 0x4E53;
+constexpr UINT kUiStateSaveDelayMs = 120000;
 
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
@@ -327,7 +329,7 @@ void AppWindow::RestoreUiState() {
 
     const int width = right - left;
     const int height = bottom - top;
-    if (width < 480 || height < 320) {
+    if (width < 320 || height < 220) {
         return;
     }
 
@@ -340,7 +342,7 @@ void AppWindow::RestoreUiState() {
     }
 }
 
-void AppWindow::SaveUiState() const {
+void AppWindow::SaveUiState() {
     const auto ini_path = GetUiStatePath();
 
     if (group_panel_ != nullptr) {
@@ -363,6 +365,69 @@ void AppWindow::SaveUiState() const {
     WriteIniInt(ini_path, L"window", L"right", rc.right);
     WriteIniInt(ini_path, L"window", L"bottom", rc.bottom);
     WriteIniInt(ini_path, L"window", L"maximized", placement.showCmd == SW_SHOWMAXIMIZED ? 1 : 0);
+
+    ui_state_dirty_ = false;
+}
+
+void AppWindow::ScheduleUiStateSave() {
+    if (ui_state_timer_active_) {
+        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+    }
+    ::SetTimer(m_hWnd, kUiStateSaveTimerId, kUiStateSaveDelayMs, nullptr);
+    ui_state_timer_active_ = true;
+}
+
+void AppWindow::MarkUiStateDirty() {
+    ui_state_dirty_ = true;
+    ScheduleUiStateSave();
+}
+
+void AppWindow::FlushUiStateIfDirty() {
+    if (!ui_state_dirty_) {
+        return;
+    }
+    SaveUiState();
+}
+
+void AppWindow::DrawSplitterPreview(int preview_x) {
+    if (!splitter_dragging_ || panel_splitter_ == nullptr || preview_x < 0) {
+        return;
+    }
+
+    const RECT split_rc = panel_splitter_->GetPos();
+    HDC dc = ::GetDC(m_hWnd);
+    if (dc == nullptr) {
+        return;
+    }
+
+    if (splitter_preview_visible_) {
+        RECT old_rc{splitter_preview_x_, split_rc.top, splitter_preview_x_ + 1, split_rc.bottom};
+        ::DrawFocusRect(dc, &old_rc);
+    }
+
+    RECT new_rc{preview_x, split_rc.top, preview_x + 1, split_rc.bottom};
+    ::DrawFocusRect(dc, &new_rc);
+    ::ReleaseDC(m_hWnd, dc);
+
+    splitter_preview_x_ = preview_x;
+    splitter_preview_visible_ = true;
+}
+
+void AppWindow::ClearSplitterPreview() {
+    if (!splitter_preview_visible_ || panel_splitter_ == nullptr) {
+        return;
+    }
+
+    const RECT split_rc = panel_splitter_->GetPos();
+    HDC dc = ::GetDC(m_hWnd);
+    if (dc != nullptr) {
+        RECT old_rc{splitter_preview_x_, split_rc.top, splitter_preview_x_ + 1, split_rc.bottom};
+        ::DrawFocusRect(dc, &old_rc);
+        ::ReleaseDC(m_hWnd, dc);
+    }
+
+    splitter_preview_visible_ = false;
+    splitter_preview_x_ = -1;
 }
 
 bool AppWindow::IsSearchMode() const {
@@ -1493,6 +1558,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
                 splitter_dragging_ = true;
                 splitter_drag_start_x_ = x;
                 splitter_start_width_ = group_panel_->GetFixedWidth();
+                splitter_pending_width_ = splitter_start_width_;
                 SetCapture(m_hWnd);
                 bHandled = TRUE;
                 return 0;
@@ -1518,8 +1584,12 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
             next_width = max_group;
         }
 
-        group_panel_->SetFixedWidth(next_width);
-        m_pm.NeedUpdate();
+        if (splitter_pending_width_ != next_width) {
+            splitter_pending_width_ = next_width;
+            const RECT group_rc = group_panel_->GetPos();
+            const int preview_x = group_rc.left + next_width;
+            DrawSplitterPreview(preview_x);
+        }
         bHandled = TRUE;
         return 0;
     }
@@ -1527,6 +1597,24 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     if (uMsg == WM_LBUTTONUP && splitter_dragging_) {
         splitter_dragging_ = false;
         ReleaseCapture();
+        ClearSplitterPreview();
+        if (group_panel_ != nullptr && splitter_pending_width_ >= 0 && group_panel_->GetFixedWidth() != splitter_pending_width_) {
+            group_panel_->SetFixedWidth(splitter_pending_width_);
+            m_pm.NeedUpdate();
+            MarkUiStateDirty();
+        }
+        bHandled = TRUE;
+        return 0;
+    }
+
+    if (uMsg == WM_EXITSIZEMOVE) {
+        MarkUiStateDirty();
+    }
+
+    if (uMsg == WM_TIMER && wParam == kUiStateSaveTimerId) {
+        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+        ui_state_timer_active_ = false;
+        FlushUiStateIfDirty();
         bHandled = TRUE;
         return 0;
     }
@@ -1608,7 +1696,16 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
 }
 
 LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
-    SaveUiState();
+    if (splitter_dragging_) {
+        splitter_dragging_ = false;
+        ReleaseCapture();
+    }
+    ClearSplitterPreview();
+    if (ui_state_timer_active_) {
+        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+        ui_state_timer_active_ = false;
+    }
+    FlushUiStateIfDirty();
     PostQuitMessage(0);
     bHandled = FALSE;
     return 0;
