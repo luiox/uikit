@@ -1,3 +1,6 @@
+-- directory where the DuiLib source submodule is checked out
+local duilib_dir = "../third_party/DuiLib_DuiEditor/DuiLib"
+
 target("DuiLibLite")
     set_kind("static")
     set_languages("cxx17")
@@ -10,16 +13,16 @@ target("DuiLibLite")
     end
 
     add_defines("WIN32", "_WIN32", "WINDOWS", "_WIN64", "UNICODE", "_UNICODE", "UILIB_EXPORTS", "UILIB_STATIC")
-    add_includedirs("../ref/DuiLib_DuiEditor-master/DuiLib", {public = true})
-    add_files("../ref/DuiLib_DuiEditor-master/DuiLib/**.cpp")
+    add_includedirs(duilib_dir, {public = true})
+    add_files(duilib_dir .. "/**.cpp")
     remove_files(
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Utils/unzip.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Utils/UIDataExchange.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/**/**Gtk.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Render/UIObject_Cairo.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Render/UIRender_Cairo.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Render/UIRender_CairoWin32.cpp",
-        "../ref/DuiLib_DuiEditor-master/DuiLib/Render/UIRenderFactory_Cairo.cpp"
+        duilib_dir .. "/Utils/unzip.cpp",
+        duilib_dir .. "/Utils/UIDataExchange.cpp",
+        duilib_dir .. "/**/**Gtk.cpp",
+        duilib_dir .. "/Render/UIObject_Cairo.cpp",
+        duilib_dir .. "/Render/UIRender_Cairo.cpp",
+        duilib_dir .. "/Render/UIRender_CairoWin32.cpp",
+        duilib_dir .. "/Render/UIRenderFactory_Cairo.cpp"
     )
 
 target("nassistant-duilib")
@@ -36,7 +39,7 @@ target("nassistant-duilib")
     end
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
-    add_includedirs("../ref/DuiLib_DuiEditor-master/DuiLib", {public = true})
+    add_includedirs(duilib_dir, {public = true})
 
     add_files("src/*.cpp")
     add_headerfiles("src/*.h")
@@ -64,7 +67,7 @@ target("backend_tests")
     end
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
-    add_includedirs("src", "../ref/DuiLib_DuiEditor-master/DuiLib")
+    add_includedirs("src", duilib_dir)
     add_files("src/backend.cpp", "tests/backend_tests.cpp")
     add_packages("nlohmann_json", "gtest")
     add_syslinks("user32", "shell32", "ole32", "oleaut32")

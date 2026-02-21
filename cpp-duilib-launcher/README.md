@@ -22,7 +22,14 @@ xmake
 xmake run nassistant-duilib
 ```
 
-> 依赖说明：当前脚本直接编译仓库内 DuiLib 核心源码（`../ref/DuiLib_DuiEditor-master/DuiLib`），并以静态库方式链接。
+> 依赖说明：DuiLib 代码现在以 git submodule 形式放在 `third_party/DuiLib_DuiEditor` 下。克隆仓库后请运行：
+> 
+> ```bash
+> git submodule update --init --recursive
+> ```
+> 
+> 构建脚本会引用子模块中的 `DuiLib` 子目录（`../third_party/DuiLib_DuiEditor/DuiLib`）。
+> 静态库方式编译链接与之前保持一致。
 
 ## 下一步迁移顺序（建议）
 

@@ -34,6 +34,14 @@
 
 ## 本地开发
 
+在第一次克隆项目后，请同步子模块：
+
+```bash
+git submodule update --init --recursive
+```
+
+然后进入主程序目录构建运行：
+
 ```bash
 cd cpp-duilib-launcher
 xmake -r
