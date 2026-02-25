@@ -6,8 +6,17 @@
 #include <vector>
 
 #include "backend.h"
+#include "dialog_manager.h"
 #include "icon_manager.h"
+#include "list_controller.h"
+#include "search_controller.h"
 #include "status_presenter.h"
+#include "ui_builder.h"
+
+class UiBuilder;
+class ListController;
+class SearchController;
+class DialogManager;
 
 class AppWindow : public DuiLib::WindowImplBase {
 public:
@@ -31,6 +40,11 @@ protected:
     DuiLib::CControlUI* CreateControl(LPCTSTR pstrClass) override { return nullptr; }
 
 private:
+    friend class UiBuilder;
+    friend class ListController;
+    friend class SearchController;
+    friend class DialogManager;
+
     enum class DragListKind {
         None,
         Groups,
@@ -89,6 +103,10 @@ private:
     backend::LauncherBackend backend_;
     IconManager icon_manager_;
     StatusPresenter status_;
+    UiBuilder ui_builder_;
+    ListController list_controller_;
+    SearchController search_controller_;
+    DialogManager dialog_manager_;
 
     DuiLib::CListUI* groups_list_ = nullptr;
     DuiLib::CListUI* items_list_ = nullptr;

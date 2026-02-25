@@ -13,9 +13,11 @@
 #include <string>
 
 #include "constants.h"
-#include "file_icon_control.h"
+#include "dialog_manager.h"
+#include "list_controller.h"
 #include "logger.h"
-#include "ui_controls.h"
+#include "search_controller.h"
+#include "ui_builder.h"
 #include "utils/string_util.h"
 
 using namespace DuiLib;
@@ -130,7 +132,11 @@ bool WriteUiStateAtomically(const std::filesystem::path& ini_path, const UiState
 
 AppWindow::AppWindow()
     : backend_(GetAppBaseDir(), std::filesystem::current_path()),
-      icon_manager_(GetAppBaseDir()) {
+            icon_manager_(GetAppBaseDir()),
+            ui_builder_(*this),
+            list_controller_(*this),
+            search_controller_(*this),
+            dialog_manager_(*this) {
     m_vctStaticName.push_back(_T("apptitlebar"));
 }
 
@@ -277,29 +283,11 @@ void AppWindow::FlushUiStateIfDirty() {
 }
 
 bool AppWindow::IsSearchMode() const {
-    return search_mode_;
+    return search_controller_.IsSearchMode();
 }
 
 void AppWindow::UpdateSearchUi() {
-    if (search_bar_ != nullptr) {
-        search_bar_->SetVisible(search_mode_);
-        search_bar_->SetFixedHeight(search_mode_ ? 30 : 0);
-    }
-    if (group_panel_ != nullptr) {
-        group_panel_->SetVisible(!search_mode_);
-    }
-    if (panel_splitter_ != nullptr) {
-        panel_splitter_->SetVisible(!search_mode_);
-    }
-    if (search_input_ != nullptr) {
-        search_input_->SetVisible(search_mode_);
-    }
-    m_pm.NeedUpdate();
-    if (search_mode_ && search_input_ != nullptr) {
-        search_input_->SetFocus();
-        const int text_len = search_input_->GetText().GetLength();
-        search_input_->SetSel(text_len, text_len);
-    }
+    search_controller_.UpdateSearchUi();
 }
 
 bool AppWindow::LoadBackendData() {
@@ -321,147 +309,15 @@ bool AppWindow::LoadBackendData() {
 }
 
 void AppWindow::RenderGroups() {
-    if (!groups_list_) {
-        return;
-    }
-    groups_list_->RemoveAll();
-    group_ids_.clear();
-
-    std::vector<const backend::Group*> groups;
-    groups.reserve(backend_.Data().groups.size());
-    for (const auto& group : backend_.Data().groups) {
-        groups.push_back(&group);
-    }
-    std::sort(groups.begin(), groups.end(), [](const backend::Group* lhs, const backend::Group* rhs) {
-        return lhs->order < rhs->order;
-    });
-
-    for (const auto* group : groups) {
-        auto* row = new CListContainerElementUI();
-        row->SetFixedHeight(34);
-
-        auto* name = new CLabelUI();
-        name->SetText(launcher::util::Utf8ToWide(group->name).c_str());
-        name->SetAttribute(_T("padding"), _T("8,0,0,0"));
-        name->SetTextColor(0xFF5A5A5A);
-        name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        row->Add(name);
-
-        groups_list_->Add(row);
-        group_ids_.push_back(group->id);
-    }
+    list_controller_.RenderGroups();
 }
 
 void AppWindow::RenderItems() {
-    if (!items_list_) {
-        return;
-    }
-
-    items_list_->RemoveAll();
-    item_ids_.clear();
-    item_group_ids_.clear();
-    selected_item_id_.clear();
-    selected_item_group_id_.clear();
-
-    if (search_mode_) {
-        std::string keyword;
-        if (search_input_ != nullptr) {
-            keyword = launcher::util::WideToUtf8(search_input_->GetText().GetData());
-        }
-
-        for (const auto& group : backend_.Data().groups) {
-            for (const auto& item : group.items) {
-                if (item.item_type == "separator") {
-                    continue;
-                }
-                if (!keyword.empty() && !ContainsCaseInsensitive(item.name, keyword)) {
-                    continue;
-                }
-
-                auto* row = new CListContainerElementUI();
-                row->SetFixedHeight(34);
-                row->SetAttribute(_T("inset"), _T("4,0,4,0"));
-                row->SetAttribute(_T("childpadding"), _T("2"));
-                row->SetAttribute(_T("childvalign"), _T("vcenter"));
-
-                auto* icon = new FileIconControl();
-                icon->SetFixedWidth(26);
-                icon->SetFixedHeight(26);
-                icon->SetBkColor(0xFFEBEBEB);
-                icon->SetIconPath(launcher::util::Utf8ToWide(icon_manager_.ParseItemIconSource(item)));
-                row->Add(icon);
-
-                auto* name = new CLabelUI();
-                name->SetText(launcher::util::Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
-                name->SetTextColor(0xFF5A5A5A);
-                name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-                row->Add(name);
-
-                items_list_->Add(row);
-                item_ids_.push_back(item.id);
-                item_group_ids_.push_back(group.id);
-            }
-        }
-        return;
-    }
-
-    const backend::Group* group = FindActiveGroup();
-    if (!group) {
-        return;
-    }
-
-    for (const auto& item : group->items) {
-        if (item.item_type == "separator") {
-            auto* row = new CListContainerElementUI();
-            row->SetFixedHeight(34);
-
-            auto* name = new CLabelUI();
-            name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
-            name->SetAttribute(_T("padding"), _T("10,0,0,0"));
-            name->SetTextColor(0xFF909090);
-            name->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-            row->Add(name);
-
-            items_list_->Add(row);
-            item_ids_.push_back(item.id);
-            item_group_ids_.push_back(group->id);
-            continue;
-        }
-
-        auto* row = new CListContainerElementUI();
-        row->SetFixedHeight(34);
-        row->SetAttribute(_T("inset"), _T("4,0,4,0"));
-        row->SetAttribute(_T("childpadding"), _T("2"));
-        row->SetAttribute(_T("childvalign"), _T("vcenter"));
-
-        auto* icon = new FileIconControl();
-        icon->SetFixedWidth(26);
-        icon->SetFixedHeight(26);
-        icon->SetBkColor(0xFFEBEBEB);
-        icon->SetIconPath(launcher::util::Utf8ToWide(icon_manager_.ParseItemIconSource(item)));
-        row->Add(icon);
-
-        auto* name = new CLabelUI();
-        name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
-        name->SetTextColor(0xFF5A5A5A);
-        name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        row->Add(name);
-
-        items_list_->Add(row);
-        item_ids_.push_back(item.id);
-        item_group_ids_.push_back(group->id);
-    }
+    list_controller_.RenderItems();
 }
 
 void AppWindow::SelectGroupByIndex(int index) {
-    if (index < 0 || index >= static_cast<int>(group_ids_.size())) {
-        return;
-    }
-    active_group_id_ = group_ids_[index];
-    if (groups_list_) {
-        groups_list_->SelectItem(index, false);
-    }
-    RenderItems();
+    list_controller_.SelectGroupByIndex(index);
 }
 
 void AppWindow::LaunchSelectedItem() {
@@ -510,176 +366,7 @@ void AppWindow::DeleteSelectedItem() {
 }
 
 CControlUI* AppWindow::BuildRootUi() {
-    auto* root = new CVerticalLayoutUI();
-    root->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    root->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    root->SetAttribute(_T("bordersize"), _T("1"));
-    root->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    root->SetAttribute(_T("childpadding"), _T("0"));
-
-    auto* topBar = new appui::TitleBarUI();
-
-    auto* title = new CLabelUI();
-    title->SetText(_T("Poner"));
-    title->SetTextColor(0xFF5A5A5A);
-    title->SetFont(0);
-    title->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-    topBar->Add(title);
-
-    auto* fill = new CControlUI();
-    topBar->Add(fill);
-
-    auto* searchBtn = new appui::IconButtonUI();
-    searchBtn->SetName(_T("searchbtn"));
-    const auto search_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Search, iconlib::Icon::Search);
-    const CDuiString search_img_n = icon_manager_.MakeSvgImageAttr(search_icon);
-    searchBtn->SetSvgImage(search_img_n);
-    topBar->Add(searchBtn);
-
-    auto* menuBtn = new appui::IconButtonUI();
-    menuBtn->SetName(_T("menubtn"));
-    const auto menu_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Menu, iconlib::Icon::Menu);
-    const CDuiString menu_img_n = icon_manager_.MakeSvgImageAttr(menu_icon);
-    menuBtn->SetSvgImage(menu_img_n);
-    topBar->Add(menuBtn);
-
-    auto* closeBtn = new appui::IconButtonUI();
-    closeBtn->SetName(_T("closebtn"));
-    const auto close_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
-    const CDuiString exit_img_n = icon_manager_.MakeSvgImageAttr(close_icon);
-    closeBtn->SetSvgImage(exit_img_n);
-    topBar->Add(closeBtn);
-
-    root->Add(topBar);
-
-    auto* searchBar = new CHorizontalLayoutUI();
-    searchBar->SetName(_T("search_bar"));
-    searchBar->SetVisible(false);
-    searchBar->SetFixedHeight(0);
-    searchBar->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    searchBar->SetAttribute(_T("childpadding"), _T("0"));
-    searchBar->SetAttribute(_T("bkcolor"), _T("0xFFD2D2D2"));
-
-    auto* searchInput = new appui::SearchBoxUI();
-    searchInput->SetName(_T("search_input"));
-    searchInput->SetVisible(false);
-    searchBar->Add(searchInput);
-
-    root->Add(searchBar);
-
-    auto* body = new CHorizontalLayoutUI();
-    body->SetName(_T("body_layout"));
-    body->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    body->SetAttribute(_T("childpadding"), _T("0"));
-
-    auto* groupPanel = new CVerticalLayoutUI();
-    groupPanel->SetName(_T("group_panel"));
-    groupPanel->SetFixedWidth(220);
-    groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
-    groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    groupPanel->SetAttribute(_T("bordersize"), _T("0"));
-    groupPanel->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    groupPanel->SetAttribute(_T("childpadding"), _T("0"));
-
-    auto* groups = new appui::GroupListUI();
-    groups->SetName(_T("groups_list"));
-    groupPanel->Add(groups);
-
-    body->Add(groupPanel);
-
-    auto* splitter = new CControlUI();
-    splitter->SetName(_T("panel_splitter"));
-    splitter->SetFixedWidth(1);
-    splitter->SetAttribute(_T("bkcolor"), _T("0xFFD2D2D2"));
-    body->Add(splitter);
-
-    auto* itemPanel = new CVerticalLayoutUI();
-    itemPanel->SetName(_T("item_panel"));
-    itemPanel->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    itemPanel->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
-    itemPanel->SetAttribute(_T("bordersize"), _T("0"));
-    itemPanel->SetAttribute(_T("inset"), _T("0,0,0,0"));
-    itemPanel->SetAttribute(_T("childpadding"), _T("0"));
-
-    auto* items = new appui::ItemListUI();
-    items->SetName(_T("items_list"));
-    itemPanel->Add(items);
-
-    body->Add(itemPanel);
-    root->Add(body);
-
-    auto* status = new CLabelUI();
-    status->SetName(_T("status_line"));
-    status->SetText(_T("Ready"));
-    status->SetFixedHeight(26);
-    status->SetAttribute(_T("padding"), _T("10,6,0,0"));
-    status->SetAttribute(_T("bkcolor"), _T("0xFFF8F8F8"));
-    status->SetAttribute(_T("bordercolor"), _T("0xFFDCDCDC"));
-    status->SetAttribute(_T("bordersize"), _T("1,1,1,0"));
-    status->SetTextColor(0xFF5A5A5A);
-    root->Add(status);
-
-    auto* groupDialog = new CVerticalLayoutUI();
-    groupDialog->SetName(_T("group_dialog"));
-    groupDialog->SetVisible(false);
-    groupDialog->SetFloat(true);
-    groupDialog->SetFloatAlign(DT_CENTER | DT_VCENTER);
-    groupDialog->SetFixedWidth(360);
-    groupDialog->SetFixedHeight(150);
-    groupDialog->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    groupDialog->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    groupDialog->SetAttribute(_T("bordersize"), _T("1"));
-    groupDialog->SetAttribute(_T("inset"), _T("12,10,12,10"));
-    groupDialog->SetAttribute(_T("childpadding"), _T("8"));
-
-    auto* groupDialogTitle = new CLabelUI();
-    groupDialogTitle->SetName(_T("group_dialog_title"));
-    groupDialogTitle->SetText(_T("Add Group"));
-    groupDialogTitle->SetFixedHeight(24);
-    groupDialogTitle->SetTextColor(0xFF5A5A5A);
-    groupDialogTitle->SetFont(0);
-    groupDialog->Add(groupDialogTitle);
-
-    auto* groupDialogInput = new CEditUI();
-    groupDialogInput->SetName(_T("group_dialog_input"));
-    groupDialogInput->SetFixedHeight(28);
-    groupDialogInput->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
-    groupDialogInput->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
-    groupDialogInput->SetAttribute(_T("textpadding"), _T("6,3,6,3"));
-    groupDialog->Add(groupDialogInput);
-
-    auto* actions = new CHorizontalLayoutUI();
-    actions->SetAttribute(_T("childpadding"), _T("8"));
-    actions->SetAttribute(_T("childalign"), _T("right"));
-
-    auto* okButton = new CButtonUI();
-    okButton->SetName(_T("group_dialog_ok"));
-    okButton->SetText(_T("OK"));
-    okButton->SetFixedWidth(88);
-    okButton->SetFixedHeight(28);
-    okButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
-    okButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
-    okButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
-    okButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    okButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
-    actions->Add(okButton);
-
-    auto* cancelButton = new CButtonUI();
-    cancelButton->SetName(_T("group_dialog_cancel"));
-    cancelButton->SetText(_T("Cancel"));
-    cancelButton->SetFixedWidth(88);
-    cancelButton->SetFixedHeight(28);
-    cancelButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
-    cancelButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
-    cancelButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
-    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
-    cancelButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
-    actions->Add(cancelButton);
-
-    groupDialog->Add(actions);
-    root->Add(groupDialog);
-
-    return root;
+    return ui_builder_.BuildRootUi();
 }
 
 LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
@@ -752,13 +439,7 @@ void AppWindow::Notify(TNotifyUI& msg) {
             return;
         }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("searchbtn")) {
-            search_mode_ = !search_mode_;
-            if (!search_mode_ && search_input_ != nullptr) {
-                search_input_->SetText(_T(""));
-            }
-            UpdateSearchUi();
-            RenderItems();
-            status_.Info(search_mode_ ? "search mode on" : "search mode off");
+            search_controller_.ToggleSearchMode();
             return;
         }
         if (msg.pSender != nullptr && msg.pSender->GetName() == _T("menubtn")) {
@@ -771,9 +452,7 @@ void AppWindow::Notify(TNotifyUI& msg) {
     }
 
     if (_tcscmp(msg.sType, DUI_MSGTYPE_TEXTCHANGED) == 0 && msg.pSender != nullptr && msg.pSender->GetName() == _T("search_input")) {
-        if (search_mode_) {
-            RenderItems();
-        }
+        search_controller_.HandleInputChanged();
         return;
     }
 
@@ -811,29 +490,7 @@ void AppWindow::Notify(TNotifyUI& msg) {
 }
 
 bool AppWindow::SelectListRowFromPoint(CListUI* list, const std::vector<std::string>& ids, const POINT& client_point, std::string* selected_id) {
-    if (list == nullptr) {
-        return false;
-    }
-    const RECT list_rect = list->GetPos();
-    if (!PtInRect(&list_rect, client_point)) {
-        return false;
-    }
-
-    for (int i = 0; i < list->GetCount(); ++i) {
-        CControlUI* item = list->GetItemAt(i);
-        if (item == nullptr) {
-            continue;
-        }
-        const RECT row_rect = item->GetPos();
-        if (PtInRect(&row_rect, client_point)) {
-            list->SelectItem(i, false);
-            if (selected_id != nullptr && i >= 0 && i < static_cast<int>(ids.size())) {
-                *selected_id = ids[i];
-            }
-            return true;
-        }
-    }
-    return true;
+    return list_controller_.SelectListRowFromPoint(list, ids, client_point, selected_id);
 }
 
 void AppWindow::ShowGroupContextMenu(const POINT& screen_point) {
@@ -963,90 +620,15 @@ void AppWindow::ExecuteGroupCommand(UINT command_id) {
 }
 
 void AppWindow::OpenGroupDialog(bool rename_mode, const std::string& group_id) {
-    if (group_dialog_ == nullptr || group_dialog_input_ == nullptr || group_dialog_title_ == nullptr) {
-        status_.Error("group dialog is not available");
-        return;
-    }
-
-    group_dialog_rename_mode_ = rename_mode;
-    group_dialog_group_id_ = group_id;
-
-    if (rename_mode) {
-        const backend::Group* group = nullptr;
-        for (const auto& candidate : backend_.Data().groups) {
-            if (candidate.id == group_id) {
-                group = &candidate;
-                break;
-            }
-        }
-        if (group == nullptr) {
-            status_.Warn("group not found");
-            return;
-        }
-        group_dialog_title_->SetText(_T("Rename Group"));
-        group_dialog_input_->SetText(launcher::util::Utf8ToWide(group->name).c_str());
-    } else {
-        group_dialog_title_->SetText(_T("Add Group"));
-        group_dialog_input_->SetText(_T(""));
-    }
-
-    group_dialog_->SetVisible(true);
-    group_dialog_input_->SetFocus();
-    m_pm.NeedUpdate();
+    dialog_manager_.OpenGroupDialog(rename_mode, group_id);
 }
 
 void AppWindow::CloseGroupDialog() {
-    if (group_dialog_ == nullptr) {
-        return;
-    }
-    group_dialog_->SetVisible(false);
-    group_dialog_group_id_.clear();
-    group_dialog_rename_mode_ = false;
-    m_pm.NeedUpdate();
+    dialog_manager_.CloseGroupDialog();
 }
 
 void AppWindow::ConfirmGroupDialog() {
-    if (group_dialog_input_ == nullptr) {
-        return;
-    }
-
-    const std::string name = launcher::util::WideToUtf8(group_dialog_input_->GetText().GetData());
-    std::string trimmed = name;
-    trimmed.erase(trimmed.begin(), std::find_if(trimmed.begin(), trimmed.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-    while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
-        trimmed.pop_back();
-    }
-
-    if (trimmed.empty()) {
-        status_.Warn("group name cannot be empty");
-        return;
-    }
-
-    std::string error;
-    if (group_dialog_rename_mode_) {
-        if (!backend_.RenameGroup(group_dialog_group_id_, trimmed, &error)) {
-            status_.Error("rename group failed: " + error);
-            return;
-        }
-        status_.Info("group renamed");
-    } else {
-        const std::string created_id = backend_.AddGroup(trimmed, &error);
-        if (created_id.empty()) {
-            status_.Error("add group failed: " + error);
-            return;
-        }
-        active_group_id_ = created_id;
-        status_.Info("group added");
-    }
-
-    CloseGroupDialog();
-    RenderGroups();
-    for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
-        if (group_ids_[i] == active_group_id_) {
-            SelectGroupByIndex(i);
-            break;
-        }
-    }
+    dialog_manager_.ConfirmGroupDialog();
 }
 
 void AppWindow::ExecuteItemCommand(UINT command_id) {
