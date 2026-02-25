@@ -34,6 +34,10 @@ GroupListUI::GroupListUI() {
     SetAttribute(_T("bordercolor"), theme.list_border_color);
     SetAttribute(_T("bordersize"), theme.border_zero);
     SetAttribute(_T("inset"), theme.inset_zero);
+    // CListUI 默认带 Header，占位会造成顶部“空白条”，此处强制隐藏。
+    if (GetHeader() != nullptr) {
+        GetHeader()->SetVisible(false);
+    }
     SetChildPadding(0);
 }
 
@@ -43,6 +47,10 @@ ItemListUI::ItemListUI() {
     SetAttribute(_T("bordercolor"), theme.border_color);
     SetAttribute(_T("bordersize"), theme.border_zero);
     SetAttribute(_T("inset"), theme.inset_zero);
+    // 搜索结果与启动项共用该列表，同样去掉默认 Header 占位。
+    if (GetHeader() != nullptr) {
+        GetHeader()->SetVisible(false);
+    }
     SetChildPadding(0);
 }
 
