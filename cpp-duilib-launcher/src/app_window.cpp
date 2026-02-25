@@ -526,12 +526,16 @@ void AppWindow::RenderGroups() {
     });
 
     for (const auto* group : groups) {
-        auto* row = new CListLabelElementUI();
-        row->SetText(Utf8ToWide(group->name).c_str());
+        auto* row = new CListContainerElementUI();
         row->SetFixedHeight(34);
-        row->SetAttribute(_T("padding"), _T("8,0,0,0"));
-        row->SetTextColor(0xFF5A5A5A);
-        row->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+        auto* name = new CLabelUI();
+        name->SetText(Utf8ToWide(group->name).c_str());
+        name->SetAttribute(_T("padding"), _T("8,0,0,0"));
+        name->SetTextColor(0xFF5A5A5A);
+        name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        row->Add(name);
+
         groups_list_->Add(row);
         group_ids_.push_back(group->id);
     }
@@ -597,12 +601,16 @@ void AppWindow::RenderItems() {
 
     for (const auto& item : group->items) {
         if (item.item_type == "separator") {
-            auto* row = new CListLabelElementUI();
-            row->SetText(Utf8ToWide(item.name).c_str());
+            auto* row = new CListContainerElementUI();
             row->SetFixedHeight(34);
-            row->SetAttribute(_T("padding"), _T("10,0,0,0"));
-            row->SetTextColor(0xFF909090);
-            row->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+            auto* name = new CLabelUI();
+            name->SetText(Utf8ToWide(item.name).c_str());
+            name->SetAttribute(_T("padding"), _T("10,0,0,0"));
+            name->SetTextColor(0xFF909090);
+            name->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            row->Add(name);
+
             items_list_->Add(row);
             item_ids_.push_back(item.id);
             item_group_ids_.push_back(group->id);
