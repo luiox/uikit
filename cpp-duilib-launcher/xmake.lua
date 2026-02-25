@@ -41,7 +41,7 @@ target("nassistant-duilib")
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
     add_includedirs(duilib_dir, {public = true})
 
-    add_files("src/*.cpp")
+    add_files("src/*.cpp", "src/utils/*.cpp")
     add_headerfiles("src/*.h")
     add_packages("nlohmann_json")
 
@@ -68,6 +68,6 @@ target("backend_tests")
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
     add_includedirs("src", duilib_dir)
-    add_files("src/backend.cpp", "tests/backend_tests.cpp")
+    add_files("src/backend.cpp", "src/logger.cpp", "src/utils/*.cpp", "tests/backend_tests.cpp")
     add_packages("nlohmann_json", "gtest")
     add_syslinks("user32", "shell32", "ole32", "oleaut32")

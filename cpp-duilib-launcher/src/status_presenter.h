@@ -12,8 +12,5 @@ public:
     void Error(const std::string& text);
 
 private:
-    static std::wstring Utf8ToWide(const std::string& text);
-
-private:
     DuiLib::CLabelUI* status_label_ = nullptr;
 };

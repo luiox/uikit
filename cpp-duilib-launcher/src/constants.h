@@ -1,0 +1,51 @@
+#pragma once
+
+#include <Windows.h>
+
+namespace launcher::constants {
+
+namespace command {
+constexpr UINT kGroupAdd = 1001;
+constexpr UINT kGroupRename = 1002;
+constexpr UINT kGroupDelete = 1003;
+
+constexpr UINT kItemAdd = 1101;
+constexpr UINT kItemEdit = 1102;
+constexpr UINT kItemDelete = 1103;
+constexpr UINT kItemRunAs = 1104;
+constexpr UINT kItemOpenFolder = 1105;
+constexpr UINT kItemShellMenu = 1106;
+constexpr UINT kItemCopyPath = 1107;
+constexpr UINT kItemMoveBase = 2000;
+
+constexpr UINT kMainNewCustom = 3001;
+constexpr UINT kMainSortByName = 3002;
+constexpr UINT kMainImportData = 3003;
+constexpr UINT kMainExportData = 3004;
+constexpr UINT kMainSettings = 3005;
+constexpr UINT kMainWebSite = 3006;
+constexpr UINT kMainExit = 3007;
+} // namespace command
+
+namespace timer {
+constexpr UINT_PTR kUiStateSave = 0x4E53;
+constexpr UINT_PTR kListDragPoll = 0x4E54;
+} // namespace timer
+
+namespace layout {
+constexpr int kDefaultSplitterWidth = 220;
+constexpr int kMinWindowWidth = 420;
+constexpr int kMinWindowHeight = 280;
+constexpr int kMinGroupPanelWidth = 80;
+constexpr int kMinItemsPanelWidth = 220;
+} // namespace layout
+
+namespace color {
+constexpr unsigned long kStatusInfo = 0xFF445A72;
+constexpr unsigned long kStatusWarn = 0xFF9A6700;
+constexpr unsigned long kStatusError = 0xFFB00020;
+} // namespace color
+
+constexpr UINT kUiStateSaveDelayMs = 800;
+
+} // namespace launcher::constants

@@ -19,6 +19,9 @@
 
 #include <nlohmann/json.hpp>
 
+#include "logger.h"
+#include "utils/string_util.h"
+
 namespace backend {
 
 using nlohmann::json;
@@ -82,30 +85,24 @@ bool WriteTextAtomic(const std::filesystem::path& path, const std::string& conte
     return true;
 }
 
-std::wstring Utf8ToWide(const std::string& text) {
-    if (text.empty()) {
-        return {};
+bool BackupCorruptedJson(const std::filesystem::path& path) {
+    if (!std::filesystem::exists(path)) {
+        return false;
     }
-    const int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
-    if (size <= 0) {
-        return std::wstring(text.begin(), text.end());
-    }
-    std::wstring out(size, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size);
-    return out;
-}
 
-std::string WideToUtf8(const std::wstring& text) {
-    if (text.empty()) {
-        return {};
+    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto backup_path = path.string() + ".bad." + std::to_string(timestamp) + ".bak";
+
+    std::error_code ec;
+    std::filesystem::copy_file(path, backup_path, std::filesystem::copy_options::overwrite_existing, ec);
+    if (ec) {
+        launcher::log::Warn("backup failed for corrupted json: " + path.string() + " error=" + ec.message());
+        return false;
     }
-    const int size = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
-    if (size <= 0) {
-        return std::string(text.begin(), text.end());
-    }
-    std::string out(size, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size, nullptr, nullptr);
-    return out;
+
+    launcher::log::Warn("backup corrupted json: " + path.string() + " -> " + backup_path);
+    return true;
 }
 
 } // namespace
@@ -216,6 +213,8 @@ Settings LauncherBackend::ParsePonerCfg(const std::filesystem::path& cfg_path) c
 }
 
 bool LauncherBackend::Load(std::string* error) {
+    static constexpr int kSupportedDataVersion = 2;
+
     std::error_code ec;
     std::filesystem::create_directories(base_dir_, ec);
 
@@ -224,37 +223,59 @@ bool LauncherBackend::Load(std::string* error) {
             auto raw = ReadTextFile(data_path_);
             if (!raw.empty()) {
                 auto j = json::parse(raw);
-                data_.version = j.value("version", 2);
+                data_.version = j.value("version", kSupportedDataVersion);
+                if (data_.version != kSupportedDataVersion) {
+                    launcher::log::Warn("incompatible launcher.v2.json version=" + std::to_string(data_.version));
+                    BackupCorruptedJson(data_path_);
+                    data_ = DefaultLauncherData();
+                    data_.version = kSupportedDataVersion;
+                    if (!SaveData(error)) {
+                        return false;
+                    }
+                    loaded_ = true;
+                    return true;
+                }
                 data_.groups.clear();
                 if (!j.contains("groups") || !j["groups"].is_array()) {
                     data_ = DefaultLauncherData();
                 } else {
-                for (const auto& jg : j["groups"]) {
-                    Group g;
-                    g.id = jg.value("id", GenerateId("group"));
-                    g.name = jg.value("name", std::string("Common"));
-                    g.order = jg.value("order", 0);
-                    if (jg.contains("items") && jg["items"].is_array()) {
-                    for (const auto& ji : jg["items"]) {
-                        LaunchItem item;
-                        item.id = ji.value("id", GenerateId("item"));
-                        item.item_type = ji.value("itemType", std::string("app"));
-                        item.name = ji.value("name", std::string());
-                        item.target_path = ji.value("targetPath", std::string());
-                        item.icon_location = ji.value("iconLocation", std::string());
-                        item.arguments = ji.value("arguments", std::string());
-                        item.launch_count = ji.value("launchCount", static_cast<std::uint64_t>(0));
-                        item.enabled = ji.value("enabled", true);
-                        g.items.push_back(std::move(item));
+                    for (const auto& jg : j["groups"]) {
+                        Group g;
+                        g.id = jg.value("id", GenerateId("group"));
+                        g.name = jg.value("name", std::string("Common"));
+                        g.order = jg.value("order", 0);
+                        if (jg.contains("items") && jg["items"].is_array()) {
+                            for (const auto& ji : jg["items"]) {
+                                LaunchItem item;
+                                item.id = ji.value("id", GenerateId("item"));
+                                item.item_type = ji.value("itemType", std::string("app"));
+                                item.name = ji.value("name", std::string());
+                                item.target_path = ji.value("targetPath", std::string());
+                                item.icon_location = ji.value("iconLocation", std::string());
+                                item.arguments = ji.value("arguments", std::string());
+                                item.launch_count = ji.value("launchCount", static_cast<std::uint64_t>(0));
+                                item.enabled = ji.value("enabled", true);
+                                g.items.push_back(std::move(item));
+                            }
+                        }
+                        data_.groups.push_back(std::move(g));
                     }
-                    }
-                    data_.groups.push_back(std::move(g));
                 }
+                if (data_.groups.empty()) {
+                    data_ = DefaultLauncherData();
+                    if (!SaveData(error)) {
+                        return false;
+                    }
                 }
             }
         } catch (const std::exception& ex) {
-            SetError(error, std::string("parse launcher.v2.json failed: ") + ex.what());
-            return false;
+            launcher::log::Error(std::string("parse launcher.v2.json failed: ") + ex.what());
+            BackupCorruptedJson(data_path_);
+            data_ = DefaultLauncherData();
+            data_.version = kSupportedDataVersion;
+            if (!SaveData(error)) {
+                return false;
+            }
         }
     } else {
         const auto legacy_data_path = legacy_root_ / "Data.json";
@@ -295,6 +316,7 @@ bool LauncherBackend::Load(std::string* error) {
                     return false;
                 }
             } catch (const std::exception& ex) {
+                launcher::log::Error(std::string("parse legacy Data.json failed: ") + ex.what());
                 SetError(error, std::string("parse legacy Data.json failed: ") + ex.what());
                 return false;
             }
@@ -481,8 +503,25 @@ bool LauncherBackend::DeleteGroup(const std::string& group_id, const std::string
         return false;
     }
 
-    target_it->items.insert(target_it->items.end(), delete_it->items.begin(), delete_it->items.end());
+    std::vector<LaunchItem> moved_items;
+    moved_items.reserve(delete_it->items.size());
+    for (const auto& item : delete_it->items) {
+        moved_items.push_back(item);
+    }
+    target_it->items.insert(target_it->items.end(), moved_items.begin(), moved_items.end());
     data_.groups.erase(delete_it);
+
+    std::vector<Group*> ordered;
+    ordered.reserve(data_.groups.size());
+    for (auto& group : data_.groups) {
+        ordered.push_back(&group);
+    }
+    std::sort(ordered.begin(), ordered.end(), [](const Group* lhs, const Group* rhs) {
+        return lhs->order < rhs->order;
+    });
+    for (int i = 0; i < static_cast<int>(ordered.size()); ++i) {
+        ordered[i]->order = i;
+    }
 
     if (settings_.current_group.has_value() && *settings_.current_group == group_id) {
         settings_.current_group = target_group_id;
@@ -732,8 +771,8 @@ LaunchResult LauncherBackend::Launch(const std::string& group_id, const std::str
     sei.fMask = SEE_MASK_NOCLOSEPROCESS;
     sei.lpVerb = L"open";
 
-    std::wstring target_w = Utf8ToWide(it->target_path);
-    std::wstring args_w = Utf8ToWide(it->arguments);
+    std::wstring target_w = launcher::util::Utf8ToWide(it->target_path);
+    std::wstring args_w = launcher::util::Utf8ToWide(it->arguments);
     sei.lpFile = target_w.c_str();
     sei.lpParameters = args_w.empty() ? nullptr : args_w.c_str();
     sei.nShow = SW_SHOWNORMAL;
@@ -811,7 +850,7 @@ std::optional<std::pair<std::string, std::string>> LauncherBackend::ResolveShort
         return std::nullopt;
     }
 
-    std::wstring link_w = Utf8ToWide(shortcut_path);
+    std::wstring link_w = launcher::util::Utf8ToWide(shortcut_path);
     if (FAILED(persist_file->Load(link_w.c_str(), STGM_READ))) {
         return std::nullopt;
     }
@@ -831,7 +870,7 @@ std::optional<std::pair<std::string, std::string>> LauncherBackend::ResolveShort
     }
 
     std::wstring args_w(args);
-    return std::make_pair(WideToUtf8(target_w), WideToUtf8(args_w));
+    return std::make_pair(launcher::util::WideToUtf8(target_w), launcher::util::WideToUtf8(args_w));
 }
 
 std::size_t LauncherBackend::CreateItemsFromDroppedPaths(const std::string& group_id, const std::vector<std::string>& paths, std::string* error) {

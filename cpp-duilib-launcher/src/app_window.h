@@ -6,10 +6,14 @@
 #include <vector>
 
 #include "backend.h"
+#include "icon_manager.h"
 #include "status_presenter.h"
 
 class AppWindow : public DuiLib::WindowImplBase {
 public:
+    /**
+     * @brief Construct the main launcher window.
+     */
     AppWindow();
     LPCTSTR GetWindowClassName() const override { return _T("NAssistantMainFrame"); }
     DuiLib::CDuiString GetSkinFile() override { return _T(""); }
@@ -72,8 +76,6 @@ private:
     bool CommitListDragReorder();
     bool SelectListRowFromPoint(DuiLib::CListUI* list, const std::vector<std::string>& ids, const POINT& client_point, std::string* selected_id);
 
-    static std::wstring Utf8ToWide(const std::string& text);
-    static std::string WideToUtf8(const std::wstring& text);
     static std::string BasenameNoExt(const std::string& path);
     static std::string ToLowerAscii(std::string value);
     bool ContainsCaseInsensitive(const std::string& text, const std::string& keyword) const;
@@ -85,6 +87,7 @@ private:
 
 private:
     backend::LauncherBackend backend_;
+    IconManager icon_manager_;
     StatusPresenter status_;
 
     DuiLib::CListUI* groups_list_ = nullptr;

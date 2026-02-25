@@ -139,4 +139,52 @@ TEST(BackendTest, MoveItemAcrossGroups) {
     EXPECT_EQ(c2, 1u);
 }
 
+TEST(BackendTest, RecoversFromIncompatibleVersion) {
+    const auto legacy = MakeTempDir("legacy_incompatible_version");
+    const auto base = MakeTempDir("base_incompatible_version");
+
+    WriteText(base / "launcher.v2.json", R"({
+        "version": 999,
+        "groups": []
+    })");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+    ASSERT_EQ(b.Data().version, 2);
+    ASSERT_FALSE(b.Data().groups.empty());
+
+    bool has_backup = false;
+    for (const auto& entry : std::filesystem::directory_iterator(base)) {
+        const auto name = entry.path().filename().string();
+        if (name.find("launcher.v2.json.bad.") == 0) {
+            has_backup = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(has_backup);
+}
+
+TEST(BackendTest, RecoversFromCorruptedJson) {
+    const auto legacy = MakeTempDir("legacy_corrupted_json");
+    const auto base = MakeTempDir("base_corrupted_json");
+
+    WriteText(base / "launcher.v2.json", "{ invalid json");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+    ASSERT_FALSE(b.Data().groups.empty());
+
+    bool has_backup = false;
+    for (const auto& entry : std::filesystem::directory_iterator(base)) {
+        const auto name = entry.path().filename().string();
+        if (name.find("launcher.v2.json.bad.") == 0) {
+            has_backup = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(has_backup);
+}
+
 } // namespace

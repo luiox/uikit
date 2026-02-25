@@ -8,12 +8,14 @@
 #include <string>
 #include <vector>
 
+#include "constants.h"
+#include "logger.h"
+#include "utils/string_util.h"
+
 using namespace DuiLib;
 
 namespace {
 
-constexpr UINT_PTR kUiStateSaveTimerId = 0x4E53;
-constexpr UINT_PTR kListDragPollTimerId = 0x4E54;
 constexpr bool kDragDebugLog = true;
 constexpr int kListDragStartThresholdPx = 2;
 
@@ -24,7 +26,7 @@ void DebugLog(const std::string& text) {
     std::string line = "[drag] " + text + "\n";
     std::fputs(line.c_str(), stderr);
     std::fflush(stderr);
-    ::OutputDebugStringA(line.c_str());
+    launcher::log::Debug(line);
 }
 
 } // namespace
@@ -53,7 +55,7 @@ int AppWindow::HitTestListIndex(CListUI* list, const POINT& client_point) const 
 
 void AppWindow::ResetListDragState() {
     if (list_drag_polling_) {
-        ::KillTimer(m_hWnd, kListDragPollTimerId);
+        ::KillTimer(m_hWnd, launcher::constants::timer::kListDragPoll);
         list_drag_polling_ = false;
     }
     drag_list_kind_ = DragListKind::None;
@@ -139,7 +141,7 @@ void AppWindow::HandleFileDrop(HDROP drop_handle) {
         std::wstring path(len + 1, L'\0');
         DragQueryFileW(drop_handle, index, path.data(), len + 1);
         path.resize(len);
-        files.push_back(WideToUtf8(path));
+        files.push_back(launcher::util::WideToUtf8(path));
     }
     DragFinish(drop_handle);
 
@@ -193,6 +195,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         const int y = static_cast<short>(HIWORD(lParam));
         const POINT pt = normalize_point(x, y);
 
+        // 先初始化拖拽状态，再根据鼠标命中区域决定是否进入列表拖拽准备态。
         ResetListDragState();
         const int group_index = HitTestListIndex(groups_list_, pt);
         if (group_index >= 0) {
@@ -202,7 +205,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
             list_drag_from_index_ = group_index;
             list_drag_hover_index_ = group_index;
             SetCapture(m_hWnd);
-            ::SetTimer(m_hWnd, kListDragPollTimerId, 16, nullptr);
+            ::SetTimer(m_hWnd, launcher::constants::timer::kListDragPoll, 16, nullptr);
             list_drag_polling_ = true;
         } else {
             const int item_index = HitTestListIndex(items_list_, pt);
@@ -213,13 +216,14 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
                 list_drag_from_index_ = item_index;
                 list_drag_hover_index_ = item_index;
                 SetCapture(m_hWnd);
-                ::SetTimer(m_hWnd, kListDragPollTimerId, 16, nullptr);
+                ::SetTimer(m_hWnd, launcher::constants::timer::kListDragPoll, 16, nullptr);
                 list_drag_polling_ = true;
             }
         }
 
         DebugLog("down g=" + std::to_string(group_index) + " i=" + std::to_string(HitTestListIndex(items_list_, pt)));
 
+        // 优先命中分隔条，避免与列表拖拽冲突。
         if (panel_splitter_ != nullptr && group_panel_ != nullptr) {
             RECT rc = panel_splitter_->GetPos();
             rc.left -= 3;
@@ -300,6 +304,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
             splitter_pending_width_ = next_width;
         }
 
+        // 宽度更新做节流，减少高频拖动导致的重绘压力。
         const DWORD now = ::GetTickCount();
         const bool time_ready = (now - splitter_last_update_tick_) >= 12;
         const int current_width = group_panel_->GetFixedWidth();
@@ -369,22 +374,28 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     }
 
     if (uMsg == WM_SIZE) {
+        m_pm.NeedUpdate();
         if (wParam != SIZE_MINIMIZED) {
             MarkUiStateDirty();
         }
     }
 
-    if (uMsg == WM_TIMER && wParam == kUiStateSaveTimerId) {
-        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+    if (uMsg == WM_MOVE) {
+        m_pm.NeedUpdate();
+        MarkUiStateDirty();
+    }
+
+    if (uMsg == WM_TIMER && wParam == launcher::constants::timer::kUiStateSave) {
+        ::KillTimer(m_hWnd, launcher::constants::timer::kUiStateSave);
         ui_state_timer_active_ = false;
         FlushUiStateIfDirty();
         bHandled = TRUE;
         return 0;
     }
 
-    if (uMsg == WM_TIMER && wParam == kListDragPollTimerId) {
+    if (uMsg == WM_TIMER && wParam == launcher::constants::timer::kListDragPoll) {
         if (!(list_drag_prepared_ || list_dragging_)) {
-            ::KillTimer(m_hWnd, kListDragPollTimerId);
+            ::KillTimer(m_hWnd, launcher::constants::timer::kListDragPoll);
             list_drag_polling_ = false;
             bHandled = TRUE;
             return 0;
@@ -520,7 +531,7 @@ LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandl
         ReleaseCapture();
     }
     if (ui_state_timer_active_) {
-        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+        ::KillTimer(m_hWnd, launcher::constants::timer::kUiStateSave);
         ui_state_timer_active_ = false;
     }
     SaveUiState();

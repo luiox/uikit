@@ -9,40 +9,18 @@
 #include <cctype>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <iterator>
 #include <string>
 
+#include "constants.h"
 #include "file_icon_control.h"
-#include "icons.h"
+#include "logger.h"
 #include "ui_controls.h"
+#include "utils/string_util.h"
 
 using namespace DuiLib;
 
 namespace {
-
-constexpr UINT kGroupCmdAdd = 1001;
-constexpr UINT kGroupCmdRename = 1002;
-constexpr UINT kGroupCmdDelete = 1003;
-constexpr UINT kItemCmdAdd = 1101;
-constexpr UINT kItemCmdEdit = 1102;
-constexpr UINT kItemCmdDelete = 1103;
-constexpr UINT kItemCmdRunAs = 1104;
-constexpr UINT kItemCmdOpenFolder = 1105;
-constexpr UINT kItemCmdShellMenu = 1106;
-constexpr UINT kItemCmdCopyPath = 1107;
-constexpr UINT kItemCmdMoveBase = 2000;
-
-constexpr UINT kMainCmdNewCustom = 3001;
-constexpr UINT kMainCmdSortByName = 3002;
-constexpr UINT kMainCmdImportData = 3003;
-constexpr UINT kMainCmdExportData = 3004;
-constexpr UINT kMainCmdSettings = 3005;
-constexpr UINT kMainCmdWebSite = 3006;
-constexpr UINT kMainCmdExit = 3007;
-constexpr UINT_PTR kUiStateSaveTimerId = 0x4E53;
-// UI 状态防抖写入间隔：窗口拖拽/尺寸变化等高频事件会在静默一小段时间后再落盘。
-constexpr UINT kUiStateSaveDelayMs = 800;
 
 struct UiStateSnapshot {
     int splitter_width = 220;
@@ -67,17 +45,6 @@ std::filesystem::path GetAppBaseDir() {
     return out;
 }
 
-std::string ParseIconSource(const backend::LaunchItem& item) {
-    if (!item.icon_location.empty()) {
-        const auto comma = item.icon_location.find(',');
-        if (comma == std::string::npos) {
-            return item.icon_location;
-        }
-        return item.icon_location.substr(0, comma);
-    }
-    return item.target_path;
-}
-
 bool IsSenderFromList(DuiLib::CControlUI* sender, DuiLib::CListUI* list) {
     if (sender == nullptr || list == nullptr) {
         return false;
@@ -94,13 +61,6 @@ bool IsSenderFromList(DuiLib::CControlUI* sender, DuiLib::CListUI* list) {
         walk = walk->GetParent();
     }
     return false;
-}
-
-std::filesystem::path GetEmbeddedIconCacheDir() {
-    auto dir = GetAppBaseDir() / "iconlib_cache";
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    return dir;
 }
 
 std::filesystem::path GetUiStatePath() {
@@ -166,165 +126,12 @@ bool WriteUiStateAtomically(const std::filesystem::path& ini_path, const UiState
     return true;
 }
 
-void ReplaceAllInPlace(std::string* text, const std::string& from, const std::string& to) {
-    if (text == nullptr || from.empty() || from == to) {
-        return;
-    }
-    std::size_t start = 0;
-    while ((start = text->find(from, start)) != std::string::npos) {
-        text->replace(start, from.length(), to);
-        start += to.length();
-    }
-}
-
-std::string ApplyIconThemeColor(std::string svg_text) {
-    static constexpr const char* kThemeColor = "rgb(128,128,128)";
-    ReplaceAllInPlace(&svg_text, "currentColor", kThemeColor);
-    ReplaceAllInPlace(&svg_text, "#000000", kThemeColor);
-    ReplaceAllInPlace(&svg_text, "#000", kThemeColor);
-    ReplaceAllInPlace(&svg_text, "black", kThemeColor);
-    ReplaceAllInPlace(&svg_text, "rgb(0,0,0)", kThemeColor);
-    return svg_text;
-}
-
-std::filesystem::path GetThemedIconCacheDir() {
-    auto dir = GetEmbeddedIconCacheDir() / "theme_128_128_128";
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    return dir;
-}
-
-std::filesystem::path BuildThemedIconPath(const std::filesystem::path& source_or_name) {
-    const auto stem = source_or_name.stem().string();
-    return GetThemedIconCacheDir() / (stem + "_128_128_128.svg");
-}
-
-bool WriteThemedSvg(const std::filesystem::path& out_path, const std::string& raw_svg) {
-    std::error_code ec;
-    std::filesystem::create_directories(out_path.parent_path(), ec);
-    std::ofstream stream(out_path, std::ios::binary | std::ios::trunc);
-    if (!stream.is_open()) {
-        return false;
-    }
-    const std::string themed = ApplyIconThemeColor(raw_svg);
-    stream.write(themed.data(), static_cast<std::streamsize>(themed.size()));
-    stream.close();
-    return true;
-}
-
-std::filesystem::path GetDynamicIconPath(iconlib::Icon icon) {
-    const char* rel = iconlib::GetDynamicPath(icon);
-    if (rel == nullptr || rel[0] == '\0') {
-        return {};
-    }
-    const auto source = std::filesystem::current_path() / rel;
-    if (!std::filesystem::exists(source)) {
-        return {};
-    }
-    std::ifstream stream(source, std::ios::binary);
-    if (!stream.is_open()) {
-        return source;
-    }
-    const std::string raw((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    const auto out = BuildThemedIconPath(source);
-    if (WriteThemedSvg(out, raw)) {
-        return out;
-    }
-    return source;
-}
-
-std::filesystem::path GetEmbeddedIconPath(iconlib::Icon icon) {
-    const iconlib::IconAsset* asset = iconlib::FindIcon(icon);
-    if (asset == nullptr || asset->svg == nullptr || asset->size == 0) {
-        return {};
-    }
-
-    const auto out = BuildThemedIconPath(std::filesystem::path(asset->fileName));
-    if (!std::filesystem::exists(out)) {
-        const std::string raw(asset->svg, asset->svg + asset->size);
-        if (!WriteThemedSvg(out, raw)) {
-            return {};
-        }
-    }
-    return out;
-}
-
-std::filesystem::path ResolveIconPath(iconlib::Icon icon) {
-#if ICONLIB_ENABLE_EMBED
-    return GetEmbeddedIconPath(icon);
-#else
-    return GetDynamicIconPath(icon);
-#endif
-}
-
-iconlib::Icon ResolveTopBarIcon(iconlib::Icon preferred, iconlib::Icon fallback) {
-    const auto preferred_path = ResolveIconPath(preferred);
-    if (!preferred_path.empty() && std::filesystem::exists(preferred_path)) {
-        return preferred;
-    }
-    const auto fallback_path = ResolveIconPath(fallback);
-    if (!fallback_path.empty() && std::filesystem::exists(fallback_path)) {
-        return fallback;
-    }
-    return iconlib::Icon::None;
-}
-
-CDuiString MakeSvgImageAttr(iconlib::Icon icon, int draw_px = 16, int box_px = 26) {
-    if (icon == iconlib::Icon::None) {
-        return {};
-    }
-    const auto path = ResolveIconPath(icon);
-    if (path.empty()) {
-        return {};
-    }
-    if (draw_px <= 0 || box_px <= 0 || draw_px > box_px) {
-        draw_px = 16;
-        box_px = 26;
-    }
-    const int offset = (box_px - draw_px) / 2;
-    const int left = offset;
-    const int top = offset;
-    const int right = left + draw_px;
-    const int bottom = top + draw_px;
-
-    std::wstring path_w = path.wstring();
-    std::replace(path_w.begin(), path_w.end(), L'\\', L'/');
-    CDuiString out;
-    out.Format(_T("file='%s' dest='%d,%d,%d,%d'"), path_w.c_str(), left, top, right, bottom);
-    return out;
-}
-
 } // namespace
 
 AppWindow::AppWindow()
-    : backend_(GetAppBaseDir(), std::filesystem::current_path()) {
+    : backend_(GetAppBaseDir(), std::filesystem::current_path()),
+      icon_manager_(GetAppBaseDir()) {
     m_vctStaticName.push_back(_T("apptitlebar"));
-}
-
-std::wstring AppWindow::Utf8ToWide(const std::string& text) {
-    if (text.empty()) {
-        return {};
-    }
-    const int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0);
-    if (size <= 0) {
-        return std::wstring(text.begin(), text.end());
-    }
-    std::wstring out(size, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size);
-    return out;
-}
-
-std::string AppWindow::WideToUtf8(const std::wstring& text) {
-    if (text.empty()) {
-        return {};
-    }
-    const int size = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
-    if (size <= 0) {
-        return std::string(text.begin(), text.end());
-    }
-    std::string out(size, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, text.c_str(), static_cast<int>(text.size()), out.data(), size, nullptr, nullptr);
-    return out;
 }
 
 std::string AppWindow::BasenameNoExt(const std::string& path) {
@@ -450,9 +257,9 @@ void AppWindow::SaveUiState() {
 
 void AppWindow::ScheduleUiStateSave() {
     if (ui_state_timer_active_) {
-        ::KillTimer(m_hWnd, kUiStateSaveTimerId);
+        ::KillTimer(m_hWnd, launcher::constants::timer::kUiStateSave);
     }
-    ::SetTimer(m_hWnd, kUiStateSaveTimerId, kUiStateSaveDelayMs, nullptr);
+    ::SetTimer(m_hWnd, launcher::constants::timer::kUiStateSave, launcher::constants::kUiStateSaveDelayMs, nullptr);
     ui_state_timer_active_ = true;
 }
 
@@ -496,8 +303,10 @@ void AppWindow::UpdateSearchUi() {
 }
 
 bool AppWindow::LoadBackendData() {
+    launcher::log::Info("loading backend data");
     std::string error;
     if (!backend_.Load(&error)) {
+        launcher::log::Error("backend load failed: " + error);
         status_.Error("load failed: " + error);
         return false;
     }
@@ -506,6 +315,7 @@ bool AppWindow::LoadBackendData() {
     if (!group_ids_.empty()) {
         SelectGroupByIndex(0);
     }
+    launcher::log::Info("backend data loaded");
     status_.Info("ready");
     return true;
 }
@@ -531,7 +341,7 @@ void AppWindow::RenderGroups() {
         row->SetFixedHeight(34);
 
         auto* name = new CLabelUI();
-        name->SetText(Utf8ToWide(group->name).c_str());
+        name->SetText(launcher::util::Utf8ToWide(group->name).c_str());
         name->SetAttribute(_T("padding"), _T("8,0,0,0"));
         name->SetTextColor(0xFF5A5A5A);
         name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
@@ -556,7 +366,7 @@ void AppWindow::RenderItems() {
     if (search_mode_) {
         std::string keyword;
         if (search_input_ != nullptr) {
-            keyword = WideToUtf8(search_input_->GetText().GetData());
+            keyword = launcher::util::WideToUtf8(search_input_->GetText().GetData());
         }
 
         for (const auto& group : backend_.Data().groups) {
@@ -578,11 +388,11 @@ void AppWindow::RenderItems() {
                 icon->SetFixedWidth(26);
                 icon->SetFixedHeight(26);
                 icon->SetBkColor(0xFFEBEBEB);
-                icon->SetIconPath(Utf8ToWide(ParseIconSource(item)));
+                icon->SetIconPath(launcher::util::Utf8ToWide(icon_manager_.ParseItemIconSource(item)));
                 row->Add(icon);
 
                 auto* name = new CLabelUI();
-                name->SetText(Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
+                name->SetText(launcher::util::Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
                 name->SetTextColor(0xFF5A5A5A);
                 name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
                 row->Add(name);
@@ -606,7 +416,7 @@ void AppWindow::RenderItems() {
             row->SetFixedHeight(34);
 
             auto* name = new CLabelUI();
-            name->SetText(Utf8ToWide(item.name).c_str());
+            name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
             name->SetAttribute(_T("padding"), _T("10,0,0,0"));
             name->SetTextColor(0xFF909090);
             name->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE);
@@ -628,11 +438,11 @@ void AppWindow::RenderItems() {
         icon->SetFixedWidth(26);
         icon->SetFixedHeight(26);
         icon->SetBkColor(0xFFEBEBEB);
-        icon->SetIconPath(Utf8ToWide(ParseIconSource(item)));
+        icon->SetIconPath(launcher::util::Utf8ToWide(icon_manager_.ParseItemIconSource(item)));
         row->Add(icon);
 
         auto* name = new CLabelUI();
-        name->SetText(Utf8ToWide(item.name).c_str());
+        name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
         name->SetTextColor(0xFF5A5A5A);
         name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
@@ -721,22 +531,22 @@ CControlUI* AppWindow::BuildRootUi() {
 
     auto* searchBtn = new appui::IconButtonUI();
     searchBtn->SetName(_T("searchbtn"));
-    const auto search_icon = ResolveTopBarIcon(iconlib::Icon::Search, iconlib::Icon::Search);
-    const CDuiString search_img_n = MakeSvgImageAttr(search_icon);
+    const auto search_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Search, iconlib::Icon::Search);
+    const CDuiString search_img_n = icon_manager_.MakeSvgImageAttr(search_icon);
     searchBtn->SetSvgImage(search_img_n);
     topBar->Add(searchBtn);
 
     auto* menuBtn = new appui::IconButtonUI();
     menuBtn->SetName(_T("menubtn"));
-    const auto menu_icon = ResolveTopBarIcon(iconlib::Icon::Menu, iconlib::Icon::Menu);
-    const CDuiString menu_img_n = MakeSvgImageAttr(menu_icon);
+    const auto menu_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Menu, iconlib::Icon::Menu);
+    const CDuiString menu_img_n = icon_manager_.MakeSvgImageAttr(menu_icon);
     menuBtn->SetSvgImage(menu_img_n);
     topBar->Add(menuBtn);
 
     auto* closeBtn = new appui::IconButtonUI();
     closeBtn->SetName(_T("closebtn"));
-    const auto close_icon = ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
-    const CDuiString exit_img_n = MakeSvgImageAttr(close_icon);
+    const auto close_icon = icon_manager_.ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
+    const CDuiString exit_img_n = icon_manager_.MakeSvgImageAttr(close_icon);
     closeBtn->SetSvgImage(exit_img_n);
     topBar->Add(closeBtn);
 
@@ -1028,9 +838,9 @@ bool AppWindow::SelectListRowFromPoint(CListUI* list, const std::vector<std::str
 
 void AppWindow::ShowGroupContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, kGroupCmdAdd, L"Add Group");
-    AppendMenuW(menu, MF_STRING, kGroupCmdRename, L"Edit Group Name");
-    AppendMenuW(menu, MF_STRING, kGroupCmdDelete, L"Delete Group");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kGroupAdd, L"Add Group");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kGroupRename, L"Edit Group Name");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kGroupDelete, L"Delete Group");
 
     SetForegroundWindow(m_hWnd);
     const UINT command_id = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, screen_point.x, screen_point.y, 0, m_hWnd, nullptr);
@@ -1043,14 +853,14 @@ void AppWindow::ShowGroupContextMenu(const POINT& screen_point) {
 
 void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, kItemCmdRunAs, L"Run as administrator");
-    AppendMenuW(menu, MF_STRING, kItemCmdOpenFolder, L"Open file location");
-    AppendMenuW(menu, MF_STRING, kItemCmdShellMenu, L"Explorer menu");
-    AppendMenuW(menu, MF_STRING, kItemCmdCopyPath, L"Copy full path");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemRunAs, L"Run as administrator");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemOpenFolder, L"Open file location");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemShellMenu, L"Explorer menu");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemCopyPath, L"Copy full path");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kItemCmdAdd, L"Add Item");
-    AppendMenuW(menu, MF_STRING, kItemCmdEdit, L"Edit Item");
-    AppendMenuW(menu, MF_STRING, kItemCmdDelete, L"Delete Item");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemAdd, L"Add Item");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemEdit, L"Edit Item");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kItemDelete, L"Delete Item");
 
     HMENU move_menu = CreatePopupMenu();
     for (int i = 0; i < static_cast<int>(group_ids_.size()); ++i) {
@@ -1065,7 +875,7 @@ void AppWindow::ShowItemContextMenu(const POINT& screen_point) {
             }
         }
         if (group != nullptr) {
-            AppendMenuW(move_menu, MF_STRING, kItemCmdMoveBase + static_cast<UINT>(i), Utf8ToWide(group->name).c_str());
+            AppendMenuW(move_menu, MF_STRING, launcher::constants::command::kItemMoveBase + static_cast<UINT>(i), launcher::util::Utf8ToWide(group->name).c_str());
         }
     }
     AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(move_menu), L"Move To Group");
@@ -1083,16 +893,16 @@ void AppWindow::ShowMainContextMenu(const POINT& screen_point) {
     HMENU menu = CreatePopupMenu();
     HMENU new_menu = CreatePopupMenu();
 
-    AppendMenuW(new_menu, MF_STRING, kMainCmdNewCustom, L"Custom");
+    AppendMenuW(new_menu, MF_STRING, launcher::constants::command::kMainNewCustom, L"Custom");
     AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(new_menu), L"New Item");
-    AppendMenuW(menu, MF_STRING, kMainCmdSortByName, L"Sort By Name");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainSortByName, L"Sort By Name");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMainCmdImportData, L"Import Data");
-    AppendMenuW(menu, MF_STRING, kMainCmdExportData, L"Export Data");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainImportData, L"Import Data");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainExportData, L"Export Data");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, kMainCmdSettings, L"Settings");
-    AppendMenuW(menu, MF_STRING, kMainCmdWebSite, L"Website");
-    AppendMenuW(menu, MF_STRING, kMainCmdExit, L"Exit");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainSettings, L"Settings");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainWebSite, L"Website");
+    AppendMenuW(menu, MF_STRING, launcher::constants::command::kMainExit, L"Exit");
 
     SetForegroundWindow(m_hWnd);
     const UINT command_id = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON, screen_point.x, screen_point.y, 0, m_hWnd, nullptr);
@@ -1105,25 +915,25 @@ void AppWindow::ShowMainContextMenu(const POINT& screen_point) {
 
 void AppWindow::ExecuteMainCommand(UINT command_id) {
     switch (command_id) {
-    case kMainCmdNewCustom:
+    case launcher::constants::command::kMainNewCustom:
         AddItemFromFile();
         return;
-    case kMainCmdSortByName:
+    case launcher::constants::command::kMainSortByName:
         status_.Warn("sort by name is not implemented yet");
         return;
-    case kMainCmdImportData:
+    case launcher::constants::command::kMainImportData:
         status_.Warn("import data is not implemented yet");
         return;
-    case kMainCmdExportData:
+    case launcher::constants::command::kMainExportData:
         status_.Warn("export data is not implemented yet");
         return;
-    case kMainCmdSettings:
+    case launcher::constants::command::kMainSettings:
         status_.Warn("settings window is not implemented yet");
         return;
-    case kMainCmdWebSite:
+    case launcher::constants::command::kMainWebSite:
         ShellExecuteW(nullptr, L"open", L"https://www.52pojie.cn/?Poner", nullptr, nullptr, SW_SHOWNORMAL);
         return;
-    case kMainCmdExit:
+    case launcher::constants::command::kMainExit:
         ::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
         return;
     default:
@@ -1132,12 +942,12 @@ void AppWindow::ExecuteMainCommand(UINT command_id) {
 }
 
 void AppWindow::ExecuteGroupCommand(UINT command_id) {
-    if (command_id == kGroupCmdAdd) {
+    if (command_id == launcher::constants::command::kGroupAdd) {
         OpenGroupDialog(false, std::string());
         return;
     }
 
-    if (command_id == kGroupCmdRename) {
+    if (command_id == launcher::constants::command::kGroupRename) {
         const backend::Group* group = FindActiveGroup();
         if (group == nullptr) {
             status_.Warn("no group selected");
@@ -1147,7 +957,7 @@ void AppWindow::ExecuteGroupCommand(UINT command_id) {
         return;
     }
 
-    if (command_id == kGroupCmdDelete) {
+    if (command_id == launcher::constants::command::kGroupDelete) {
         DeleteActiveGroup();
     }
 }
@@ -1174,7 +984,7 @@ void AppWindow::OpenGroupDialog(bool rename_mode, const std::string& group_id) {
             return;
         }
         group_dialog_title_->SetText(_T("Rename Group"));
-        group_dialog_input_->SetText(Utf8ToWide(group->name).c_str());
+        group_dialog_input_->SetText(launcher::util::Utf8ToWide(group->name).c_str());
     } else {
         group_dialog_title_->SetText(_T("Add Group"));
         group_dialog_input_->SetText(_T(""));
@@ -1200,7 +1010,7 @@ void AppWindow::ConfirmGroupDialog() {
         return;
     }
 
-    const std::string name = WideToUtf8(group_dialog_input_->GetText().GetData());
+    const std::string name = launcher::util::WideToUtf8(group_dialog_input_->GetText().GetData());
     std::string trimmed = name;
     trimmed.erase(trimmed.begin(), std::find_if(trimmed.begin(), trimmed.end(), [](unsigned char ch) { return !std::isspace(ch); }));
     while (!trimmed.empty() && std::isspace(static_cast<unsigned char>(trimmed.back()))) {
@@ -1240,36 +1050,36 @@ void AppWindow::ConfirmGroupDialog() {
 }
 
 void AppWindow::ExecuteItemCommand(UINT command_id) {
-    if (command_id == kItemCmdRunAs) {
+    if (command_id == launcher::constants::command::kItemRunAs) {
         RunSelectedItemAsAdmin();
         return;
     }
-    if (command_id == kItemCmdOpenFolder) {
+    if (command_id == launcher::constants::command::kItemOpenFolder) {
         OpenSelectedItemFolder();
         return;
     }
-    if (command_id == kItemCmdShellMenu) {
+    if (command_id == launcher::constants::command::kItemShellMenu) {
         ShowSelectedItemShellMenu();
         return;
     }
-    if (command_id == kItemCmdCopyPath) {
+    if (command_id == launcher::constants::command::kItemCopyPath) {
         CopySelectedItemPath();
         return;
     }
-    if (command_id == kItemCmdAdd) {
+    if (command_id == launcher::constants::command::kItemAdd) {
         AddItemFromFile();
         return;
     }
-    if (command_id == kItemCmdEdit) {
+    if (command_id == launcher::constants::command::kItemEdit) {
         EditSelectedItem();
         return;
     }
-    if (command_id == kItemCmdDelete) {
+    if (command_id == launcher::constants::command::kItemDelete) {
         DeleteSelectedItem();
         return;
     }
-    if (command_id >= kItemCmdMoveBase) {
-        const int group_index = static_cast<int>(command_id - kItemCmdMoveBase);
+    if (command_id >= launcher::constants::command::kItemMoveBase) {
+        const int group_index = static_cast<int>(command_id - launcher::constants::command::kItemMoveBase);
         if (group_index < 0 || group_index >= static_cast<int>(group_ids_.size())) {
             status_.Warn("invalid target group");
             return;
@@ -1307,8 +1117,8 @@ bool AppWindow::AddItemFromFile() {
 
     backend::ItemInput input;
     input.item_type = std::string("app");
-    input.name = BasenameNoExt(WideToUtf8(file_path));
-    input.target_path = WideToUtf8(file_path);
+    input.name = BasenameNoExt(launcher::util::WideToUtf8(file_path));
+    input.target_path = launcher::util::WideToUtf8(file_path);
     input.icon_location = input.target_path;
     input.arguments.clear();
     input.enabled = true;
@@ -1340,8 +1150,8 @@ bool AppWindow::EditSelectedItem() {
     backend::ItemInput input;
     input.id = item->id;
     input.item_type = item->item_type;
-    input.name = BasenameNoExt(WideToUtf8(file_path));
-    input.target_path = WideToUtf8(file_path);
+    input.name = BasenameNoExt(launcher::util::WideToUtf8(file_path));
+    input.target_path = launcher::util::WideToUtf8(file_path);
     input.icon_location = input.target_path;
     input.arguments = item->arguments;
     input.enabled = item->enabled;
@@ -1417,8 +1227,8 @@ bool AppWindow::RunSelectedItemAsAdmin() {
         return false;
     }
 
-    const std::wstring target_w = Utf8ToWide(item->target_path);
-    const std::wstring args_w = Utf8ToWide(item->arguments);
+    const std::wstring target_w = launcher::util::Utf8ToWide(item->target_path);
+    const std::wstring args_w = launcher::util::Utf8ToWide(item->arguments);
     HINSTANCE instance = ShellExecuteW(
         m_hWnd,
         L"runas",
@@ -1446,7 +1256,7 @@ bool AppWindow::OpenSelectedItemFolder() {
         return false;
     }
 
-    PIDLIST_ABSOLUTE pidl = ILCreateFromPathW(Utf8ToWide(item->target_path).c_str());
+    PIDLIST_ABSOLUTE pidl = ILCreateFromPathW(launcher::util::Utf8ToWide(item->target_path).c_str());
     if (pidl == nullptr) {
         status_.Error("open file location failed");
         return false;
@@ -1473,7 +1283,7 @@ bool AppWindow::ShowSelectedItemShellMenu() {
         return false;
     }
 
-    const std::wstring path_w = Utf8ToWide(item->target_path);
+    const std::wstring path_w = launcher::util::Utf8ToWide(item->target_path);
     HINSTANCE instance = ShellExecuteW(m_hWnd, L"properties", path_w.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
     if (reinterpret_cast<INT_PTR>(instance) <= 32) {
         status_.Error("open explorer menu failed");
@@ -1495,7 +1305,7 @@ bool AppWindow::CopySelectedItemPath() {
         return false;
     }
 
-    const std::wstring text = Utf8ToWide(item->target_path);
+    const std::wstring text = launcher::util::Utf8ToWide(item->target_path);
     if (!OpenClipboard(m_hWnd)) {
         status_.Error("copy path failed");
         return false;

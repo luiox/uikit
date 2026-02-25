@@ -8,6 +8,7 @@
 
 namespace backend {
 
+/** @brief Single launchable entry in a group. */
 struct LaunchItem {
     std::string id;
     std::string item_type;
@@ -19,6 +20,7 @@ struct LaunchItem {
     bool enabled = true;
 };
 
+/** @brief A launcher group containing ordered launch items. */
 struct Group {
     std::string id;
     std::string name;
@@ -26,11 +28,13 @@ struct Group {
     std::vector<LaunchItem> items;
 };
 
+/** @brief Persistent launcher dataset stored in launcher.v2.json. */
 struct LauncherData {
     int version = 2;
     std::vector<Group> groups;
 };
 
+/** @brief Runtime settings loaded from nassistant.settings.json. */
 struct Settings {
     std::string hotkey = "Alt+1";
     bool execute_hide = true;
@@ -40,6 +44,7 @@ struct Settings {
     double main_window_height = 700.0;
 };
 
+/** @brief Input payload used for add/edit item operations. */
 struct ItemInput {
     std::optional<std::string> id;
     std::optional<std::string> item_type;
@@ -50,19 +55,32 @@ struct ItemInput {
     std::optional<bool> enabled;
 };
 
+/** @brief Result returned by Launch operation. */
 struct LaunchResult {
     bool ok = false;
     std::string message;
 };
 
+/**
+ * @brief Launcher data service handling persistence and core CRUD behaviors.
+ */
 class LauncherBackend {
 public:
     LauncherBackend(std::filesystem::path base_dir, std::filesystem::path legacy_root);
 
+    /** @brief Load data and settings; recovers from incompatible/corrupted JSON when possible. */
     bool Load(std::string* error = nullptr);
+    /** @brief Save launcher dataset to launcher.v2.json. */
     bool SaveData(std::string* error = nullptr) const;
+    /** @brief Save settings to nassistant.settings.json. */
     bool SaveSettings(std::string* error = nullptr) const;
 
+    /**
+     * @brief Add a new group.
+     * @param name Group name (trimmed).
+     * @param error Optional output error message.
+     * @return New group id, or empty string on failure.
+     */
     std::string AddGroup(const std::string& name, std::string* error = nullptr);
     bool RenameGroup(const std::string& group_id, const std::string& name, std::string* error = nullptr);
     bool DeleteGroup(const std::string& group_id, const std::string& target_group_id, std::string* error = nullptr);
