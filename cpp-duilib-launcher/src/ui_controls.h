@@ -18,8 +18,8 @@ struct Theme {
     LPCTSTR border_zero = _T("0");
     LPCTSTR border_one = _T("1");
     LPCTSTR inset_zero = _T("0,0,0,0");
-    LPCTSTR title_inset = _T("12,4,0,0");
-    LPCTSTR title_border_size = _T("0,0,0,1");
+    LPCTSTR title_inset = _T("12,0,0,0");
+    LPCTSTR title_border_size = _T("0,0,0,0");
     LPCTSTR search_padding = _T("6,2,6,2");
 };
 

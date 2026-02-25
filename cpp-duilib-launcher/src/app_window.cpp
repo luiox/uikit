@@ -389,47 +389,6 @@ void AppWindow::FlushUiStateIfDirty() {
     SaveUiState();
 }
 
-void AppWindow::DrawSplitterPreview(int preview_x) {
-    if (!splitter_dragging_ || panel_splitter_ == nullptr || preview_x < 0) {
-        return;
-    }
-
-    const RECT split_rc = panel_splitter_->GetPos();
-    HDC dc = ::GetDC(m_hWnd);
-    if (dc == nullptr) {
-        return;
-    }
-
-    if (splitter_preview_visible_) {
-        RECT old_rc{splitter_preview_x_, split_rc.top, splitter_preview_x_ + 1, split_rc.bottom};
-        ::DrawFocusRect(dc, &old_rc);
-    }
-
-    RECT new_rc{preview_x, split_rc.top, preview_x + 1, split_rc.bottom};
-    ::DrawFocusRect(dc, &new_rc);
-    ::ReleaseDC(m_hWnd, dc);
-
-    splitter_preview_x_ = preview_x;
-    splitter_preview_visible_ = true;
-}
-
-void AppWindow::ClearSplitterPreview() {
-    if (!splitter_preview_visible_ || panel_splitter_ == nullptr) {
-        return;
-    }
-
-    const RECT split_rc = panel_splitter_->GetPos();
-    HDC dc = ::GetDC(m_hWnd);
-    if (dc != nullptr) {
-        RECT old_rc{splitter_preview_x_, split_rc.top, splitter_preview_x_ + 1, split_rc.bottom};
-        ::DrawFocusRect(dc, &old_rc);
-        ::ReleaseDC(m_hWnd, dc);
-    }
-
-    splitter_preview_visible_ = false;
-    splitter_preview_x_ = -1;
-}
-
 bool AppWindow::IsSearchMode() const {
     return search_mode_;
 }
@@ -437,6 +396,7 @@ bool AppWindow::IsSearchMode() const {
 void AppWindow::UpdateSearchUi() {
     if (search_bar_ != nullptr) {
         search_bar_->SetVisible(search_mode_);
+        search_bar_->SetFixedHeight(search_mode_ ? 30 : 0);
     }
     if (group_panel_ != nullptr) {
         group_panel_->SetVisible(!search_mode_);
@@ -446,11 +406,13 @@ void AppWindow::UpdateSearchUi() {
     }
     if (search_input_ != nullptr) {
         search_input_->SetVisible(search_mode_);
-        if (search_mode_) {
-            search_input_->SetFocus();
-        }
     }
     m_pm.NeedUpdate();
+    if (search_mode_ && search_input_ != nullptr) {
+        search_input_->SetFocus();
+        const int text_len = search_input_->GetText().GetLength();
+        search_input_->SetSel(text_len, text_len);
+    }
 }
 
 bool AppWindow::LoadBackendData() {
@@ -654,6 +616,8 @@ CControlUI* AppWindow::BuildRootUi() {
     root->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     root->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     root->SetAttribute(_T("bordersize"), _T("1"));
+    root->SetAttribute(_T("inset"), _T("0,0,0,0"));
+    root->SetAttribute(_T("childpadding"), _T("0"));
 
     auto* topBar = new appui::TitleBarUI();
 
@@ -693,10 +657,10 @@ CControlUI* AppWindow::BuildRootUi() {
     auto* searchBar = new CHorizontalLayoutUI();
     searchBar->SetName(_T("search_bar"));
     searchBar->SetVisible(false);
-    searchBar->SetFixedHeight(36);
-    searchBar->SetAttribute(_T("inset"), _T("10,4,10,4"));
+    searchBar->SetFixedHeight(0);
+    searchBar->SetAttribute(_T("inset"), _T("0,0,0,0"));
     searchBar->SetAttribute(_T("childpadding"), _T("0"));
-    searchBar->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+    searchBar->SetAttribute(_T("bkcolor"), _T("0xFFD2D2D2"));
 
     auto* searchInput = new appui::SearchBoxUI();
     searchInput->SetName(_T("search_input"));
@@ -716,6 +680,8 @@ CControlUI* AppWindow::BuildRootUi() {
     groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
     groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     groupPanel->SetAttribute(_T("bordersize"), _T("0"));
+    groupPanel->SetAttribute(_T("inset"), _T("0,0,0,0"));
+    groupPanel->SetAttribute(_T("childpadding"), _T("0"));
 
     auto* groups = new appui::GroupListUI();
     groups->SetName(_T("groups_list"));
@@ -734,6 +700,8 @@ CControlUI* AppWindow::BuildRootUi() {
     itemPanel->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     itemPanel->SetAttribute(_T("bordercolor"), _T("0xFFB8C3CF"));
     itemPanel->SetAttribute(_T("bordersize"), _T("0"));
+    itemPanel->SetAttribute(_T("inset"), _T("0,0,0,0"));
+    itemPanel->SetAttribute(_T("childpadding"), _T("0"));
 
     auto* items = new appui::ItemListUI();
     items->SetName(_T("items_list"));
@@ -823,6 +791,7 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
 
     m_pm.Init(m_hWnd, GetManagerName(), this);
     m_pm.AddPreMessageFilter(this);
+    m_pm.AddFont(1, _T("微软雅黑"), 16, false, false, false);
 
     CControlUI* root = BuildRootUi();
     if (root == nullptr) {
@@ -1580,10 +1549,12 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
             rc.right += 3;
             POINT pt{x, y};
             if (PtInRect(&rc, pt)) {
+                // 开始拖拽分割线：记录起点和初始宽度。
                 splitter_dragging_ = true;
                 splitter_drag_start_x_ = x;
                 splitter_start_width_ = group_panel_->GetFixedWidth();
                 splitter_pending_width_ = splitter_start_width_;
+                splitter_last_update_tick_ = ::GetTickCount();
                 SetCapture(m_hWnd);
                 bHandled = TRUE;
                 return 0;
@@ -1611,23 +1582,43 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
 
         if (splitter_pending_width_ != next_width) {
             splitter_pending_width_ = next_width;
-            const RECT group_rc = group_panel_->GetPos();
-            const int preview_x = group_rc.left + next_width;
-            DrawSplitterPreview(preview_x);
+        }
+
+        // 实时预览：拖拽过程中直接更新左侧宽度，提供连续反馈。
+        // 使用轻量节流避免在高频鼠标消息下触发过多布局重算导致卡顿。
+        const DWORD now = ::GetTickCount();
+        const bool time_ready = (now - splitter_last_update_tick_) >= 12;
+        const int current_width = group_panel_->GetFixedWidth();
+        const bool delta_large = std::abs(current_width - splitter_pending_width_) >= 3;
+        if ((time_ready || delta_large) && current_width != splitter_pending_width_) {
+            group_panel_->SetFixedWidth(splitter_pending_width_);
+            m_pm.NeedUpdate();
+            splitter_last_update_tick_ = now;
         }
         bHandled = TRUE;
         return 0;
     }
 
     if (uMsg == WM_LBUTTONUP && splitter_dragging_) {
+        // 结束拖拽：落最终值并标记持久化。
         splitter_dragging_ = false;
         ReleaseCapture();
-        ClearSplitterPreview();
         if (group_panel_ != nullptr && splitter_pending_width_ >= 0 && group_panel_->GetFixedWidth() != splitter_pending_width_) {
             group_panel_->SetFixedWidth(splitter_pending_width_);
             m_pm.NeedUpdate();
-            MarkUiStateDirty();
         }
+        MarkUiStateDirty();
+        bHandled = TRUE;
+        return 0;
+    }
+
+    if (uMsg == WM_CAPTURECHANGED && splitter_dragging_) {
+        splitter_dragging_ = false;
+        if (group_panel_ != nullptr && splitter_pending_width_ >= 0 && group_panel_->GetFixedWidth() != splitter_pending_width_) {
+            group_panel_->SetFixedWidth(splitter_pending_width_);
+            m_pm.NeedUpdate();
+        }
+        MarkUiStateDirty();
         bHandled = TRUE;
         return 0;
     }
@@ -1725,7 +1716,6 @@ LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandl
         splitter_dragging_ = false;
         ReleaseCapture();
     }
-    ClearSplitterPreview();
     if (ui_state_timer_active_) {
         ::KillTimer(m_hWnd, kUiStateSaveTimerId);
         ui_state_timer_active_ = false;

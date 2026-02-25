@@ -72,8 +72,6 @@ private:
     void MarkUiStateDirty();
     void ScheduleUiStateSave();
     void FlushUiStateIfDirty();
-    void DrawSplitterPreview(int preview_x);
-    void ClearSplitterPreview();
 
 private:
     backend::LauncherBackend backend_;
@@ -105,8 +103,7 @@ private:
     int splitter_drag_start_x_ = 0;
     int splitter_start_width_ = 220;
     int splitter_pending_width_ = -1;
-    int splitter_preview_x_ = -1;
-    bool splitter_preview_visible_ = false;
+    DWORD splitter_last_update_tick_ = 0;
 
     bool has_restored_window_ = false;
     bool start_maximized_ = false;

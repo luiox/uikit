@@ -48,11 +48,14 @@ ItemListUI::ItemListUI() {
 
 SearchBoxUI::SearchBoxUI() {
     const Theme& theme = GetTheme();
-    SetFixedHeight(28);
+    SetFixedHeight(30);
+    SetFont(1);
     SetTextColor(theme.text);
-    SetBkColor(theme.white);
-    SetAttribute(_T("bordercolor"), theme.border_color);
-    SetAttribute(_T("textpadding"), theme.search_padding);
+    SetBkColor(0xFFD2D2D2);
+    SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
+    SetAttribute(_T("bordersize"), _T("0"));
+    SetAttribute(_T("nativebkcolor"), _T("0xFFD2D2D2"));
+    SetAttribute(_T("textpadding"), _T("8,4,8,4"));
 }
 
 TitleBarUI::TitleBarUI() {
