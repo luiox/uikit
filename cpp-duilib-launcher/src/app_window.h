@@ -18,6 +18,7 @@ public:
     bool ShouldStartMaximized() const { return start_maximized_; }
 
     void Notify(DuiLib::TNotifyUI& msg) override;
+    LRESULT MessageHandler(UINT uMsg, WPARAM wParam, LPARAM lParam, bool& bHandled) override;
     LRESULT OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
     LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) override;
     LRESULT HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) override;
@@ -26,6 +27,12 @@ protected:
     DuiLib::CControlUI* CreateControl(LPCTSTR pstrClass) override { return nullptr; }
 
 private:
+    enum class DragListKind {
+        None,
+        Groups,
+        Items,
+    };
+
     DuiLib::CControlUI* BuildRootUi();
     bool LoadBackendData();
     void RenderGroups();
@@ -60,6 +67,9 @@ private:
     std::string GenerateNewGroupName() const;
     const backend::Group* FindActiveGroup() const;
     const backend::LaunchItem* FindSelectedItem() const;
+    int HitTestListIndex(DuiLib::CListUI* list, const POINT& client_point) const;
+    void ResetListDragState();
+    bool CommitListDragReorder();
     bool SelectListRowFromPoint(DuiLib::CListUI* list, const std::vector<std::string>& ids, const POINT& client_point, std::string* selected_id);
 
     static std::wstring Utf8ToWide(const std::string& text);
@@ -104,6 +114,14 @@ private:
     int splitter_start_width_ = 220;
     int splitter_pending_width_ = -1;
     DWORD splitter_last_update_tick_ = 0;
+
+    DragListKind drag_list_kind_ = DragListKind::None;
+    bool list_drag_prepared_ = false;
+    bool list_dragging_ = false;
+    bool list_drag_polling_ = false;
+    POINT list_drag_down_point_{0, 0};
+    int list_drag_from_index_ = -1;
+    int list_drag_hover_index_ = -1;
 
     bool has_restored_window_ = false;
     bool start_maximized_ = false;

@@ -69,6 +69,8 @@ public:
     bool UpsertItem(const std::string& group_id, const ItemInput& input, std::string* error = nullptr);
     bool DeleteItem(const std::string& group_id, const std::string& item_id, std::string* error = nullptr);
     bool MoveItem(const std::string& group_id, const std::string& item_id, const std::string& target_group_id, std::string* error = nullptr);
+    bool ReorderGroup(const std::string& group_id, int target_index, std::string* error = nullptr);
+    bool ReorderItemInGroup(const std::string& group_id, const std::string& item_id, int target_index, std::string* error = nullptr);
     LaunchResult Launch(const std::string& group_id, const std::string& item_id, std::string* error = nullptr);
     std::size_t CreateItemsFromDroppedPaths(const std::string& group_id, const std::vector<std::string>& paths, std::string* error = nullptr);
 

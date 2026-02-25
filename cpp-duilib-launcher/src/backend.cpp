@@ -601,6 +601,99 @@ bool LauncherBackend::MoveItem(const std::string& group_id, const std::string& i
     return SaveData(error);
 }
 
+bool LauncherBackend::ReorderGroup(const std::string& group_id, int target_index, std::string* error) {
+    if (!EnsureLoaded(error)) {
+        return false;
+    }
+    if (data_.groups.empty()) {
+        SetError(error, "group list is empty");
+        return false;
+    }
+
+    std::vector<Group*> ordered;
+    ordered.reserve(data_.groups.size());
+    for (auto& group : data_.groups) {
+        ordered.push_back(&group);
+    }
+    std::sort(ordered.begin(), ordered.end(), [](const Group* lhs, const Group* rhs) {
+        return lhs->order < rhs->order;
+    });
+
+    const auto from_it = std::find_if(ordered.begin(), ordered.end(), [&](const Group* group) {
+        return group->id == group_id;
+    });
+    if (from_it == ordered.end()) {
+        SetError(error, "group not found");
+        return false;
+    }
+
+    const int count = static_cast<int>(ordered.size());
+    if (target_index < 0 || target_index >= count) {
+        SetError(error, "target index out of range");
+        return false;
+    }
+
+    const int from_index = static_cast<int>(std::distance(ordered.begin(), from_it));
+    if (from_index == target_index) {
+        return true;
+    }
+
+    if (from_index < target_index) {
+        std::rotate(ordered.begin() + from_index, ordered.begin() + from_index + 1, ordered.begin() + target_index + 1);
+    } else {
+        std::rotate(ordered.begin() + target_index, ordered.begin() + from_index, ordered.begin() + from_index + 1);
+    }
+
+    for (int i = 0; i < static_cast<int>(ordered.size()); ++i) {
+        ordered[i]->order = i;
+    }
+
+    return SaveData(error);
+}
+
+bool LauncherBackend::ReorderItemInGroup(const std::string& group_id, const std::string& item_id, int target_index, std::string* error) {
+    if (!EnsureLoaded(error)) {
+        return false;
+    }
+
+    auto* group = FindGroup(group_id);
+    if (!group) {
+        SetError(error, "group not found");
+        return false;
+    }
+
+    const int count = static_cast<int>(group->items.size());
+    if (count == 0) {
+        SetError(error, "item list is empty");
+        return false;
+    }
+    if (target_index < 0 || target_index >= count) {
+        SetError(error, "target index out of range");
+        return false;
+    }
+
+    const auto from_it = std::find_if(group->items.begin(), group->items.end(), [&](const LaunchItem& item) {
+        return item.id == item_id;
+    });
+    if (from_it == group->items.end()) {
+        SetError(error, "item not found");
+        return false;
+    }
+
+    const int from_index = static_cast<int>(std::distance(group->items.begin(), from_it));
+    if (from_index == target_index) {
+        return true;
+    }
+
+    if (from_index < target_index) {
+        std::rotate(group->items.begin() + from_index, group->items.begin() + from_index + 1, group->items.begin() + target_index + 1);
+    } else {
+        std::rotate(group->items.begin() + target_index, group->items.begin() + from_index, group->items.begin() + from_index + 1);
+    }
+
+    return SaveData(error);
+}
+
 LaunchResult LauncherBackend::Launch(const std::string& group_id, const std::string& item_id, std::string* error) {
     LaunchResult result;
     if (!EnsureLoaded(error)) {

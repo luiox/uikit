@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -42,8 +43,11 @@ constexpr UINT kMainCmdSettings = 3005;
 constexpr UINT kMainCmdWebSite = 3006;
 constexpr UINT kMainCmdExit = 3007;
 constexpr UINT_PTR kUiStateSaveTimerId = 0x4E53;
+constexpr UINT_PTR kListDragPollTimerId = 0x4E54;
 // UI 状态防抖写入间隔：窗口拖拽/尺寸变化等高频事件会在静默一小段时间后再落盘。
 constexpr UINT kUiStateSaveDelayMs = 800;
+constexpr bool kDragDebugLog = true;
+constexpr int kListDragStartThresholdPx = 2;
 
 struct UiStateSnapshot {
     int splitter_width = 220;
@@ -55,6 +59,16 @@ struct UiStateSnapshot {
     int height = 0;
     int maximized = 0;
 };
+
+void DebugLog(const std::string& text) {
+    if (!kDragDebugLog) {
+        return;
+    }
+    std::string line = "[drag] " + text + "\n";
+    std::fputs(line.c_str(), stderr);
+    std::fflush(stderr);
+    ::OutputDebugStringA(line.c_str());
+}
 
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
@@ -440,7 +454,9 @@ void AppWindow::SaveUiState() {
     if (!WriteUiStateAtomically(ini_path, snapshot)) {
         ui_state_dirty_ = true;
         ScheduleUiStateSave();
-        status_.Warn("ui state save failed, retry scheduled");
+        std::fputs("[ui_state] save failed, retry scheduled\n", stderr);
+        std::fflush(stderr);
+        ::OutputDebugStringA("[ui_state] save failed, retry scheduled\n");
         return;
     }
 
@@ -877,7 +893,6 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     ::SetWindowLong(*this, GWL_STYLE, styleValue | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 
     m_pm.Init(m_hWnd, GetManagerName(), this);
-    m_pm.AddPreMessageFilter(this);
     m_pm.AddFont(1, _T("微软雅黑"), 16, false, false, false);
 
     CControlUI* root = BuildRootUi();
@@ -915,6 +930,16 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     __InitWindow();
     bHandled = TRUE;
     return 0;
+}
+
+LRESULT AppWindow::MessageHandler(UINT uMsg, WPARAM wParam, LPARAM lParam, bool& bHandled) {
+    BOOL custom_handled = FALSE;
+    const LRESULT custom_result = HandleCustomMessage(uMsg, wParam, lParam, custom_handled);
+    if (custom_handled) {
+        bHandled = true;
+        return custom_result;
+    }
+    return WindowImplBase::MessageHandler(uMsg, wParam, lParam, bHandled);
 }
 
 void AppWindow::Notify(TNotifyUI& msg) {
@@ -1583,6 +1608,107 @@ const backend::LaunchItem* AppWindow::FindSelectedItem() const {
     return nullptr;
 }
 
+int AppWindow::HitTestListIndex(CListUI* list, const POINT& client_point) const {
+    if (list == nullptr) {
+        return -1;
+    }
+    const RECT list_rect = list->GetPos();
+    if (!PtInRect(&list_rect, client_point)) {
+        return -1;
+    }
+
+    for (int i = 0; i < list->GetCount(); ++i) {
+        CControlUI* item = list->GetItemAt(i);
+        if (item == nullptr || !item->IsVisible()) {
+            continue;
+        }
+        const RECT row_rect = item->GetPos();
+        if (PtInRect(&row_rect, client_point)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void AppWindow::ResetListDragState() {
+    if (list_drag_polling_) {
+        ::KillTimer(m_hWnd, kListDragPollTimerId);
+        list_drag_polling_ = false;
+    }
+    drag_list_kind_ = DragListKind::None;
+    list_drag_prepared_ = false;
+    list_dragging_ = false;
+    list_drag_from_index_ = -1;
+    list_drag_hover_index_ = -1;
+    list_drag_down_point_.x = 0;
+    list_drag_down_point_.y = 0;
+}
+
+bool AppWindow::CommitListDragReorder() {
+    if (list_drag_from_index_ < 0 || list_drag_hover_index_ < 0 || list_drag_from_index_ == list_drag_hover_index_) {
+        DebugLog("commit skipped from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
+        return false;
+    }
+
+    std::string error;
+    if (drag_list_kind_ == DragListKind::Groups) {
+        if (list_drag_from_index_ >= static_cast<int>(group_ids_.size()) || list_drag_hover_index_ >= static_cast<int>(group_ids_.size())) {
+            return false;
+        }
+
+        const std::string dragged_group_id = group_ids_[list_drag_from_index_];
+        DebugLog("reorder groups request id=" + dragged_group_id + " from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
+        if (!backend_.ReorderGroup(dragged_group_id, list_drag_hover_index_, &error)) {
+            status_.Error("reorder group failed: " + error);
+            return false;
+        }
+
+        RenderGroups();
+        SelectGroupByIndex(list_drag_hover_index_);
+        m_pm.NeedUpdate();
+        DebugLog("commit groups from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
+        status_.Info("group reordered");
+        return true;
+    }
+
+    if (drag_list_kind_ == DragListKind::Items) {
+        if (search_mode_) {
+            status_.Warn("item reorder is disabled in search mode");
+            return false;
+        }
+        if (list_drag_from_index_ >= static_cast<int>(item_ids_.size()) || list_drag_hover_index_ >= static_cast<int>(item_ids_.size())) {
+            return false;
+        }
+        if (active_group_id_.empty()) {
+            return false;
+        }
+
+        const std::string dragged_item_id = item_ids_[list_drag_from_index_];
+        DebugLog("reorder items request id=" + dragged_item_id + " from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
+        if (!backend_.ReorderItemInGroup(active_group_id_, dragged_item_id, list_drag_hover_index_, &error)) {
+            status_.Error("reorder item failed: " + error);
+            return false;
+        }
+
+        RenderItems();
+        m_pm.NeedUpdate();
+        if (items_list_ != nullptr) {
+            items_list_->SelectItem(list_drag_hover_index_, false);
+        }
+        if (list_drag_hover_index_ >= 0 && list_drag_hover_index_ < static_cast<int>(item_ids_.size())) {
+            selected_item_id_ = item_ids_[list_drag_hover_index_];
+            if (list_drag_hover_index_ < static_cast<int>(item_group_ids_.size())) {
+                selected_item_group_id_ = item_group_ids_[list_drag_hover_index_];
+            }
+        }
+        DebugLog("commit items from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
+        status_.Info("item reordered");
+        return true;
+    }
+
+    return false;
+}
+
 void AppWindow::HandleFileDrop(HDROP drop_handle) {
     const UINT count = DragQueryFileW(drop_handle, 0xFFFFFFFF, nullptr, 0);
     std::vector<std::string> files;
@@ -1613,6 +1739,20 @@ void AppWindow::HandleFileDrop(HDROP drop_handle) {
 }
 
 LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
+    auto normalize_point = [&](int x, int y) {
+        POINT pt{x, y};
+        RECT client{};
+        ::GetClientRect(m_hWnd, &client);
+        if (!PtInRect(&client, pt)) {
+            POINT screen_pt{x, y};
+            ::ScreenToClient(m_hWnd, &screen_pt);
+            if (PtInRect(&client, screen_pt)) {
+                pt = screen_pt;
+            }
+        }
+        return pt;
+    };
+
     if (uMsg == WM_GETMINMAXINFO) {
         // 限制最小窗口尺寸，避免顶部按钮/布局被挤压不可见。
         auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
@@ -1631,13 +1771,43 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     if (uMsg == WM_LBUTTONDOWN) {
         const int x = static_cast<short>(LOWORD(lParam));
         const int y = static_cast<short>(HIWORD(lParam));
+        const POINT pt = normalize_point(x, y);
+
+        // 记录列表拖拽候选（按下后超过阈值才真正进入拖拽）。
+        ResetListDragState();
+        const int group_index = HitTestListIndex(groups_list_, pt);
+        if (group_index >= 0) {
+            drag_list_kind_ = DragListKind::Groups;
+            list_drag_prepared_ = true;
+            list_drag_down_point_ = pt;
+            list_drag_from_index_ = group_index;
+            list_drag_hover_index_ = group_index;
+            SetCapture(m_hWnd);
+            ::SetTimer(m_hWnd, kListDragPollTimerId, 16, nullptr);
+            list_drag_polling_ = true;
+        } else {
+            const int item_index = HitTestListIndex(items_list_, pt);
+            if (item_index >= 0 && !search_mode_) {
+                drag_list_kind_ = DragListKind::Items;
+                list_drag_prepared_ = true;
+                list_drag_down_point_ = pt;
+                list_drag_from_index_ = item_index;
+                list_drag_hover_index_ = item_index;
+                SetCapture(m_hWnd);
+                ::SetTimer(m_hWnd, kListDragPollTimerId, 16, nullptr);
+                list_drag_polling_ = true;
+            }
+        }
+
+        DebugLog("down g=" + std::to_string(group_index) + " i=" + std::to_string(HitTestListIndex(items_list_, pt)));
+
         if (panel_splitter_ != nullptr && group_panel_ != nullptr) {
             RECT rc = panel_splitter_->GetPos();
             rc.left -= 3;
             rc.right += 3;
-            POINT pt{x, y};
             if (PtInRect(&rc, pt)) {
                 // 开始拖拽分割线：记录起点和初始宽度。
+                ResetListDragState();
                 splitter_dragging_ = true;
                 splitter_drag_start_x_ = x;
                 splitter_start_width_ = group_panel_->GetFixedWidth();
@@ -1648,6 +1818,46 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
                 return 0;
             }
         }
+    }
+
+    if (uMsg == WM_MOUSEMOVE && list_drag_prepared_ && !list_dragging_) {
+        const int x = static_cast<short>(LOWORD(lParam));
+        const int y = static_cast<short>(HIWORD(lParam));
+        const POINT pt = normalize_point(x, y);
+        const int dx = std::abs(pt.x - list_drag_down_point_.x);
+        const int dy = std::abs(pt.y - list_drag_down_point_.y);
+        if ((wParam & MK_LBUTTON) == 0) {
+            DebugLog("cancel prepared: lbutton released");
+            ReleaseCapture();
+            ResetListDragState();
+            bHandled = TRUE;
+            return 0;
+        }
+        if (dx >= kListDragStartThresholdPx || dy >= kListDragStartThresholdPx) {
+            list_dragging_ = true;
+            DebugLog("start drag from=" + std::to_string(list_drag_from_index_));
+        }
+    }
+
+    if (uMsg == WM_MOUSEMOVE && list_dragging_) {
+        const POINT pt = normalize_point(static_cast<short>(LOWORD(lParam)), static_cast<short>(HIWORD(lParam)));
+        CListUI* target_list = nullptr;
+        if (drag_list_kind_ == DragListKind::Groups) {
+            target_list = groups_list_;
+        } else if (drag_list_kind_ == DragListKind::Items) {
+            target_list = items_list_;
+        }
+
+        const int hover_index = HitTestListIndex(target_list, pt);
+        if (hover_index >= 0 && hover_index != list_drag_hover_index_) {
+            list_drag_hover_index_ = hover_index;
+            if (target_list != nullptr) {
+                target_list->SelectItem(hover_index, false);
+            }
+            DebugLog("hover -> " + std::to_string(hover_index));
+        }
+        bHandled = TRUE;
+        return 0;
     }
 
     if (uMsg == WM_MOUSEMOVE && splitter_dragging_ && group_panel_ != nullptr) {
@@ -1700,6 +1910,20 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         return 0;
     }
 
+    if (uMsg == WM_LBUTTONUP && list_dragging_) {
+        ReleaseCapture();
+        CommitListDragReorder();
+        ResetListDragState();
+        bHandled = TRUE;
+        return 0;
+    }
+
+    if (uMsg == WM_LBUTTONUP && list_drag_prepared_) {
+        ReleaseCapture();
+        DebugLog("prepared only, no drag");
+        ResetListDragState();
+    }
+
     if (uMsg == WM_CAPTURECHANGED && splitter_dragging_) {
         splitter_dragging_ = false;
         if (group_panel_ != nullptr && splitter_pending_width_ >= 0 && group_panel_->GetFixedWidth() != splitter_pending_width_) {
@@ -1709,6 +1933,22 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         MarkUiStateDirty();
         bHandled = TRUE;
         return 0;
+    }
+
+    if (uMsg == WM_CAPTURECHANGED && (list_dragging_ || list_drag_prepared_)) {
+        // 列表拖拽依赖轮询定时器推进，捕获变化不立即打断。
+        // 某些控件会在按下后短暂切换 capture，若此处直接重置会导致“只能 down 无法拖拽”。
+        const bool left_down = (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        if (!left_down) {
+            if (list_dragging_) {
+                CommitListDragReorder();
+            }
+            DebugLog("capture changed -> finalize drag state");
+            ResetListDragState();
+            bHandled = TRUE;
+            return 0;
+        }
+        DebugLog("capture changed while holding left button, keep dragging");
     }
 
     // 鼠标拖动窗口边框结束后，统一触发一次状态持久化。
@@ -1727,6 +1967,62 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         ::KillTimer(m_hWnd, kUiStateSaveTimerId);
         ui_state_timer_active_ = false;
         FlushUiStateIfDirty();
+        bHandled = TRUE;
+        return 0;
+    }
+
+    if (uMsg == WM_TIMER && wParam == kListDragPollTimerId) {
+        if (!(list_drag_prepared_ || list_dragging_)) {
+            ::KillTimer(m_hWnd, kListDragPollTimerId);
+            list_drag_polling_ = false;
+            bHandled = TRUE;
+            return 0;
+        }
+
+        POINT pt_screen{};
+        ::GetCursorPos(&pt_screen);
+        POINT pt = pt_screen;
+        ::ScreenToClient(m_hWnd, &pt);
+
+        const bool left_down = (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        if (!left_down) {
+            if (list_dragging_) {
+                CommitListDragReorder();
+            }
+            ReleaseCapture();
+            DebugLog("poll release");
+            ResetListDragState();
+            bHandled = TRUE;
+            return 0;
+        }
+
+        if (list_drag_prepared_ && !list_dragging_) {
+            const int dx = std::abs(pt.x - list_drag_down_point_.x);
+            const int dy = std::abs(pt.y - list_drag_down_point_.y);
+            if (dx >= kListDragStartThresholdPx || dy >= kListDragStartThresholdPx) {
+                list_dragging_ = true;
+                DebugLog("start drag(from poll) from=" + std::to_string(list_drag_from_index_));
+            }
+        }
+
+        if (list_dragging_) {
+            CListUI* target_list = nullptr;
+            if (drag_list_kind_ == DragListKind::Groups) {
+                target_list = groups_list_;
+            } else if (drag_list_kind_ == DragListKind::Items) {
+                target_list = items_list_;
+            }
+
+            const int hover_index = HitTestListIndex(target_list, pt);
+            if (hover_index >= 0 && hover_index != list_drag_hover_index_) {
+                list_drag_hover_index_ = hover_index;
+                if (target_list != nullptr) {
+                    target_list->SelectItem(hover_index, false);
+                }
+                DebugLog("hover(from poll) -> " + std::to_string(hover_index));
+            }
+        }
+
         bHandled = TRUE;
         return 0;
     }

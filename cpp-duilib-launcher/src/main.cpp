@@ -1,11 +1,31 @@
 #include <windows.h>
 #include <UIlib.h>
+#include <cstdio>
 
 #include "app_window.h"
 
 using namespace DuiLib;
 
+namespace {
+
+void SetupConsoleOutput() {
+    if (!::AttachConsole(ATTACH_PARENT_PROCESS)) {
+        ::AllocConsole();
+    }
+
+    FILE* out_stream = nullptr;
+    FILE* err_stream = nullptr;
+    freopen_s(&out_stream, "CONOUT$", "w", stdout);
+    freopen_s(&err_stream, "CONOUT$", "w", stderr);
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+}
+
+} // namespace
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
+    SetupConsoleOutput();
+
     HRESULT hr = CoInitialize(nullptr);
     if (FAILED(hr)) {
         return 1;
