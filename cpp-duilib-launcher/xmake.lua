@@ -51,7 +51,7 @@ target("nassistant-duilib")
 
     after_build(function (target)
         if is_mode("debug") then
-            os.cp("../icon-lib/icons", path.join(target:targetdir(), "icons"))
+            os.cp(path.join(os.scriptdir(), "..", "icon-lib", "icons"), path.join(target:targetdir(), "icons"))
         end
     end)
 

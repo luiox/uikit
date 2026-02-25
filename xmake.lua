@@ -8,3 +8,4 @@ add_requires("nlohmann_json", "gtest")
 
 includes("icon-lib")
 includes("cpp-duilib-launcher")
+includes("ant_demo")
