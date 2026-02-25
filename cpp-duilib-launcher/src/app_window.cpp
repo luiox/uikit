@@ -42,7 +42,19 @@ constexpr UINT kMainCmdSettings = 3005;
 constexpr UINT kMainCmdWebSite = 3006;
 constexpr UINT kMainCmdExit = 3007;
 constexpr UINT_PTR kUiStateSaveTimerId = 0x4E53;
-constexpr UINT kUiStateSaveDelayMs = 120000;
+// UI 状态防抖写入间隔：窗口拖拽/尺寸变化等高频事件会在静默一小段时间后再落盘。
+constexpr UINT kUiStateSaveDelayMs = 800;
+
+struct UiStateSnapshot {
+    int splitter_width = 220;
+    int left = 0;
+    int top = 0;
+    int right = 0;
+    int bottom = 0;
+    int width = 0;
+    int height = 0;
+    int maximized = 0;
+};
 
 std::filesystem::path GetAppBaseDir() {
     PWSTR local_app_data = nullptr;
@@ -114,9 +126,45 @@ bool ReadIniInt(const std::filesystem::path& ini_path, const wchar_t* section, c
     return true;
 }
 
-void WriteIniInt(const std::filesystem::path& ini_path, const wchar_t* section, const wchar_t* key, int value) {
+bool WriteIniInt(const std::filesystem::path& ini_path, const wchar_t* section, const wchar_t* key, int value) {
     const std::wstring value_text = std::to_wstring(value);
-    WritePrivateProfileStringW(section, key, value_text.c_str(), ini_path.wstring().c_str());
+    return ::WritePrivateProfileStringW(section, key, value_text.c_str(), ini_path.wstring().c_str()) != FALSE;
+}
+
+bool FlushIniFile(const std::filesystem::path& ini_path) {
+    return ::WritePrivateProfileStringW(nullptr, nullptr, nullptr, ini_path.wstring().c_str()) != FALSE;
+}
+
+bool WriteUiStateAtomically(const std::filesystem::path& ini_path, const UiStateSnapshot& snapshot) {
+    std::filesystem::path tmp_path = ini_path;
+    tmp_path += L".tmp";
+
+    std::error_code ec;
+    std::filesystem::remove(tmp_path, ec);
+
+    bool ok = true;
+    ok = ok && WriteIniInt(tmp_path, L"layout", L"splitter_width", snapshot.splitter_width);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"left", snapshot.left);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"top", snapshot.top);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"right", snapshot.right);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"bottom", snapshot.bottom);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"width", snapshot.width);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"height", snapshot.height);
+    ok = ok && WriteIniInt(tmp_path, L"window", L"maximized", snapshot.maximized);
+
+    if (!ok || !FlushIniFile(tmp_path)) {
+        std::filesystem::remove(tmp_path, ec);
+        return false;
+    }
+
+    const std::wstring tmp = tmp_path.wstring();
+    const std::wstring dst = ini_path.wstring();
+    if (!::MoveFileExW(tmp.c_str(), dst.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        std::filesystem::remove(tmp_path, ec);
+        return false;
+    }
+
+    return true;
 }
 
 void ReplaceAllInPlace(std::string* text, const std::string& from, const std::string& to) {
@@ -303,6 +351,7 @@ bool AppWindow::ContainsCaseInsensitive(const std::string& text, const std::stri
 void AppWindow::RestoreUiState() {
     const auto ini_path = GetUiStatePath();
 
+    // 恢复分栏宽度（仅在有效范围内生效）。
     if (group_panel_ != nullptr) {
         int splitter_width = 0;
         if (ReadIniInt(ini_path, L"layout", L"splitter_width", &splitter_width)) {
@@ -316,23 +365,37 @@ void AppWindow::RestoreUiState() {
         }
     }
 
+    // 兼容两种格式：
+    // 1) 老格式：left/top/right/bottom
+    // 2) 新格式：left/top/width/height
     int left = 0;
     int top = 0;
-    int right = 0;
-    int bottom = 0;
-    if (!ReadIniInt(ini_path, L"window", L"left", &left) ||
-        !ReadIniInt(ini_path, L"window", L"top", &top) ||
-        !ReadIniInt(ini_path, L"window", L"right", &right) ||
-        !ReadIniInt(ini_path, L"window", L"bottom", &bottom)) {
-        return;
+    int width = 0;
+    int height = 0;
+
+    const bool has_left = ReadIniInt(ini_path, L"window", L"left", &left);
+    const bool has_top = ReadIniInt(ini_path, L"window", L"top", &top);
+    const bool has_width = ReadIniInt(ini_path, L"window", L"width", &width);
+    const bool has_height = ReadIniInt(ini_path, L"window", L"height", &height);
+
+    if (!(has_left && has_top && has_width && has_height)) {
+        int right = 0;
+        int bottom = 0;
+        if (!ReadIniInt(ini_path, L"window", L"left", &left) ||
+            !ReadIniInt(ini_path, L"window", L"top", &top) ||
+            !ReadIniInt(ini_path, L"window", L"right", &right) ||
+            !ReadIniInt(ini_path, L"window", L"bottom", &bottom)) {
+            return;
+        }
+        width = right - left;
+        height = bottom - top;
     }
 
-    const int width = right - left;
-    const int height = bottom - top;
     if (width < 320 || height < 220) {
         return;
     }
 
+    // 创建后恢复窗口位置与大小，避免每次启动都回到默认尺寸。
     has_restored_window_ = true;
     ::SetWindowPos(m_hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
 
@@ -345,12 +408,15 @@ void AppWindow::RestoreUiState() {
 void AppWindow::SaveUiState() {
     const auto ini_path = GetUiStatePath();
 
+    UiStateSnapshot snapshot{};
+
+    // 先从当前 UI 组装快照（内存为准），再一次性写盘。
     if (group_panel_ != nullptr) {
         int splitter_width = group_panel_->GetFixedWidth();
         if (splitter_width < 80) {
             splitter_width = 80;
         }
-        WriteIniInt(ini_path, L"layout", L"splitter_width", splitter_width);
+        snapshot.splitter_width = splitter_width;
     }
 
     WINDOWPLACEMENT placement{};
@@ -359,12 +425,24 @@ void AppWindow::SaveUiState() {
         return;
     }
 
+    // 使用 rcNormalPosition 记录“正常窗口”状态下的几何信息，
+    // 这样从最大化退出后仍能恢复到用户期望的普通尺寸。
     const RECT rc = placement.rcNormalPosition;
-    WriteIniInt(ini_path, L"window", L"left", rc.left);
-    WriteIniInt(ini_path, L"window", L"top", rc.top);
-    WriteIniInt(ini_path, L"window", L"right", rc.right);
-    WriteIniInt(ini_path, L"window", L"bottom", rc.bottom);
-    WriteIniInt(ini_path, L"window", L"maximized", placement.showCmd == SW_SHOWMAXIMIZED ? 1 : 0);
+    snapshot.left = rc.left;
+    snapshot.top = rc.top;
+    snapshot.right = rc.right;
+    snapshot.bottom = rc.bottom;
+    snapshot.width = rc.right - rc.left;
+    snapshot.height = rc.bottom - rc.top;
+    snapshot.maximized = placement.showCmd == SW_SHOWMAXIMIZED ? 1 : 0;
+
+    // 事务性写入：先写临时文件，再原子替换正式配置，避免中途损坏。
+    if (!WriteUiStateAtomically(ini_path, snapshot)) {
+        ui_state_dirty_ = true;
+        ScheduleUiStateSave();
+        status_.Warn("ui state save failed, retry scheduled");
+        return;
+    }
 
     ui_state_dirty_ = false;
 }
@@ -378,6 +456,7 @@ void AppWindow::ScheduleUiStateSave() {
 }
 
 void AppWindow::MarkUiStateDirty() {
+    // 状态变更后采用延迟写盘，避免频繁 IO。
     ui_state_dirty_ = true;
     ScheduleUiStateSave();
 }
@@ -1527,6 +1606,7 @@ void AppWindow::HandleFileDrop(HDROP drop_handle) {
 
 LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
     if (uMsg == WM_GETMINMAXINFO) {
+        // 限制最小窗口尺寸，避免顶部按钮/布局被挤压不可见。
         auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
         if (info != nullptr) {
             if (info->ptMinTrackSize.x < 420) {
@@ -1623,8 +1703,16 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         return 0;
     }
 
+    // 鼠标拖动窗口边框结束后，统一触发一次状态持久化。
     if (uMsg == WM_EXITSIZEMOVE) {
         MarkUiStateDirty();
+    }
+
+    // 兜底：窗口尺寸变化（含程序内触发）也记录到配置。
+    if (uMsg == WM_SIZE) {
+        if (wParam != SIZE_MINIMIZED) {
+            MarkUiStateDirty();
+        }
     }
 
     if (uMsg == WM_TIMER && wParam == kUiStateSaveTimerId) {
@@ -1720,7 +1808,8 @@ LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandl
         ::KillTimer(m_hWnd, kUiStateSaveTimerId);
         ui_state_timer_active_ = false;
     }
-    FlushUiStateIfDirty();
+    // 关闭窗口前强制落盘，确保最新窗口大小/位置被保存。
+    SaveUiState();
     PostQuitMessage(0);
     bHandled = FALSE;
     return 0;
