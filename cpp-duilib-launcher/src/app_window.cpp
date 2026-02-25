@@ -435,6 +435,9 @@ bool AppWindow::IsSearchMode() const {
 }
 
 void AppWindow::UpdateSearchUi() {
+    if (search_bar_ != nullptr) {
+        search_bar_->SetVisible(search_mode_);
+    }
     if (group_panel_ != nullptr) {
         group_panel_->SetVisible(!search_mode_);
     }
@@ -443,7 +446,6 @@ void AppWindow::UpdateSearchUi() {
     }
     if (search_input_ != nullptr) {
         search_input_->SetVisible(search_mode_);
-        search_input_->SetFixedWidth(search_mode_ ? 320 : 0);
         if (search_mode_) {
             search_input_->SetFocus();
         }
@@ -659,7 +661,6 @@ CControlUI* AppWindow::BuildRootUi() {
     title->SetText(_T("Poner"));
     title->SetTextColor(0xFF5A5A5A);
     title->SetFont(0);
-    title->SetFixedWidth(220);
     title->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     topBar->Add(title);
 
@@ -680,12 +681,6 @@ CControlUI* AppWindow::BuildRootUi() {
     menuBtn->SetSvgImage(menu_img_n);
     topBar->Add(menuBtn);
 
-    auto* searchInput = new appui::SearchBoxUI();
-    searchInput->SetName(_T("search_input"));
-    searchInput->SetVisible(false);
-    searchInput->SetFixedWidth(0);
-    topBar->Add(searchInput);
-
     auto* closeBtn = new appui::IconButtonUI();
     closeBtn->SetName(_T("closebtn"));
     const auto close_icon = ResolveTopBarIcon(iconlib::Icon::Close, iconlib::Icon::Clear);
@@ -694,6 +689,21 @@ CControlUI* AppWindow::BuildRootUi() {
     topBar->Add(closeBtn);
 
     root->Add(topBar);
+
+    auto* searchBar = new CHorizontalLayoutUI();
+    searchBar->SetName(_T("search_bar"));
+    searchBar->SetVisible(false);
+    searchBar->SetFixedHeight(36);
+    searchBar->SetAttribute(_T("inset"), _T("10,4,10,4"));
+    searchBar->SetAttribute(_T("childpadding"), _T("0"));
+    searchBar->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
+
+    auto* searchInput = new appui::SearchBoxUI();
+    searchInput->SetName(_T("search_input"));
+    searchInput->SetVisible(false);
+    searchBar->Add(searchInput);
+
+    root->Add(searchBar);
 
     auto* body = new CHorizontalLayoutUI();
     body->SetName(_T("body_layout"));
@@ -832,6 +842,7 @@ LRESULT AppWindow::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHand
     groups_list_ = static_cast<CListUI*>(m_pm.FindControl(_T("groups_list")));
     items_list_ = static_cast<CListUI*>(m_pm.FindControl(_T("items_list")));
     status_line_ = static_cast<CLabelUI*>(m_pm.FindControl(_T("status_line")));
+    search_bar_ = m_pm.FindControl(_T("search_bar"));
     group_panel_ = static_cast<CVerticalLayoutUI*>(m_pm.FindControl(_T("group_panel")));
     panel_splitter_ = m_pm.FindControl(_T("panel_splitter"));
     search_input_ = static_cast<CEditUI*>(m_pm.FindControl(_T("search_input")));
@@ -1546,6 +1557,20 @@ void AppWindow::HandleFileDrop(HDROP drop_handle) {
 }
 
 LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) {
+    if (uMsg == WM_GETMINMAXINFO) {
+        auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
+        if (info != nullptr) {
+            if (info->ptMinTrackSize.x < 420) {
+                info->ptMinTrackSize.x = 420;
+            }
+            if (info->ptMinTrackSize.y < 280) {
+                info->ptMinTrackSize.y = 280;
+            }
+            bHandled = TRUE;
+            return 0;
+        }
+    }
+
     if (uMsg == WM_LBUTTONDOWN) {
         const int x = static_cast<short>(LOWORD(lParam));
         const int y = static_cast<short>(HIWORD(lParam));

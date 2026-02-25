@@ -82,6 +82,7 @@ private:
     DuiLib::CListUI* groups_list_ = nullptr;
     DuiLib::CListUI* items_list_ = nullptr;
     DuiLib::CLabelUI* status_line_ = nullptr;
+    DuiLib::CControlUI* search_bar_ = nullptr;
     DuiLib::CVerticalLayoutUI* group_panel_ = nullptr;
     DuiLib::CControlUI* panel_splitter_ = nullptr;
     DuiLib::CEditUI* search_input_ = nullptr;
