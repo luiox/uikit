@@ -6,6 +6,8 @@
 #include <QMouseEvent>
 #include "StyleSheet.h"
 
+namespace ant {
+
 AntBaseSpinBox::AntBaseSpinBox(QWidget* parent)
 	: QSpinBox(parent), m_buttonX(0),
 	borderColor(theme.borderColor),
@@ -16,16 +18,17 @@ AntBaseSpinBox::AntBaseSpinBox(QWidget* parent)
 	setContextMenuPolicy(Qt::NoContextMenu);
 
 	auto theme = DesignSystem::instance()->currentTheme();
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
 	setStyleSheet(StyleSheet::AntBaseSpinBox(borderColor, primaryColor));
 
 	m_plusBtn = new QToolButton(this);
-	m_plusBtn->setIcon(QIcon(":/Imgs/upArrow.svg"));
+	m_plusBtn->setIcon(IconProvider::icon(IconRole::ArrowUp, isDark, QSize(14, 14), theme.textColor));
 	m_plusBtn->setCursor(Qt::PointingHandCursor);
 	m_plusBtn->setStyleSheet("QToolButton { border: none; background: transparent; }");
 	connect(m_plusBtn, &QToolButton::clicked, this, [this]() { stepBy(1); });
 
 	m_minusBtn = new QToolButton(this);
-	m_minusBtn->setIcon(QIcon(":/Imgs/downArrow.svg"));
+	m_minusBtn->setIcon(IconProvider::icon(IconRole::ArrowDown, isDark, QSize(14, 14), theme.textColor));
 	m_minusBtn->setCursor(Qt::PointingHandCursor);
 	m_minusBtn->setStyleSheet("QToolButton { border: none; background: transparent; }");
 	connect(m_minusBtn, &QToolButton::clicked, this, [this]() { stepBy(-1); });
@@ -42,6 +45,9 @@ AntBaseSpinBox::AntBaseSpinBox(QWidget* parent)
 		{
 			auto theme = DesignSystem::instance()->currentTheme();
 			setStyleSheet(StyleSheet::AntBaseSpinBox(theme.borderColor, theme.primaryColor));
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+			m_plusBtn->setIcon(IconProvider::icon(IconRole::ArrowUp, isDark, QSize(14, 14), theme.textColor));
+			m_minusBtn->setIcon(IconProvider::icon(IconRole::ArrowDown, isDark, QSize(14, 14), theme.textColor));
 		});
 }
 
@@ -125,3 +131,5 @@ void AntBaseSpinBox::focusOutEvent(QFocusEvent* event)
 	if (parentWidget())
 		parentWidget()->update();  // 通知外层去掉阴影
 }
+
+} // namespace ant

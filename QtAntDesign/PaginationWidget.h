@@ -3,6 +3,9 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QHBoxLayout>
+#include "IconProvider.h"
+
+namespace ant {
 
 class PaginationWidget : public QWidget
 {
@@ -16,10 +19,10 @@ public:
 signals:
 	void currentPageChanged(int page);
 private:
-	void updateBtnIcon(QPushButton* btn, const QString& iconPathNormal, const QString& iconPathDisabled);
+	void updateBtnIcon(QPushButton* btn, IconRole normalRole, IconRole disabledRole);
 private:
 	void refreshButtons();
-	QPushButton* createNavButton(const QString& iconPathNormal, const QString& iconPathDisabled);
+	QPushButton* createNavButton(IconRole normalRole, IconRole disabledRole);
 
 	QSize btnSize;
 	int m_totalPages;
@@ -28,3 +31,7 @@ private:
 	QPushButton* m_prevButton;
 	QPushButton* m_nextButton;
 };
+
+} // namespace ant
+
+using ant::PaginationWidget;

@@ -4,18 +4,21 @@
 #include <QEnterEvent>
 #include "DesignSystem.h"
 
+namespace ant {
+
 AntTabWidget::AntTabWidget(const QString& title, const QString& icon, int tabwidth, int tabHeight, QWidget* parent)
 	: QWidget(parent), m_title(title), m_icon(icon), m_tabWidth(tabwidth), m_tabHeight(tabHeight)
 {
 	resize(m_tabWidth, m_tabHeight);
-	m_svgRenderer = new QSvgRenderer(m_icon, this);  // 使用 QSvgRenderer 加载图标
+	const QByteArray svgBytes = IconProvider::svgData(m_icon);
+	m_svgRenderer = svgBytes.isEmpty() ? new QSvgRenderer(m_icon, this) : new QSvgRenderer(svgBytes, this);
 
 	hoverBgColor = DesignSystem::instance()->currentTheme().tabHoverColor;
 	textColor = DesignSystem::instance()->currentTheme().tabTextColor;
 
 	// 关闭按钮
-	QIcon closeBtnIcon = DesignSystem::instance()->themeMode() == DesignSystem::ThemeMode::Light ?
-		QIcon(":/Imgs/closeItem.svg") : QIcon(":/Imgs/closeItemDark.svg");
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::ThemeMode::Dark;
+	QIcon closeBtnIcon = IconProvider::icon(IconRole::TabClose, isDark, QSize(14, 14), DesignSystem::instance()->currentTheme().tabTextColor);
 	m_closeButton = new QPushButton(this);
 	m_closeButton->setIcon(closeBtnIcon);
 	m_closeButton->setIconSize(QSize(14, 14)); // 图标大小可按需调整
@@ -43,8 +46,8 @@ AntTabWidget::AntTabWidget(const QString& title, const QString& icon, int tabwid
 
 	connect(DesignSystem::instance(), &DesignSystem::themeChanged, this, [this]()
 		{
-			QIcon closeBtnIcon = DesignSystem::instance()->themeMode() == DesignSystem::ThemeMode::Light ?
-				QIcon(":/Imgs/closeItem.svg") : QIcon(":/Imgs/closeItemDark.svg");
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::ThemeMode::Dark;
+			QIcon closeBtnIcon = IconProvider::icon(IconRole::TabClose, isDark, QSize(14, 14), DesignSystem::instance()->currentTheme().tabTextColor);
 			m_closeButton->setIcon(closeBtnIcon);
 			m_closeButton->setStyleSheet(QString(R"(
 			QPushButton {
@@ -181,3 +184,5 @@ void AntTabWidget::resizeEvent(QResizeEvent* event)
 	int y = m_iconTopOffset + (height() - m_closeButton->height()) / 2;
 	m_closeButton->move(x, y);
 }
+
+} // namespace ant

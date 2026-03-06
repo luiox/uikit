@@ -4,23 +4,26 @@
 #include <QLineEdit>
 #include "StyleSheet.h"
 
+namespace ant {
+
 AntBaseDoubleSpinBox::AntBaseDoubleSpinBox(QWidget* parent)
 	: QDoubleSpinBox(parent), m_buttonX(0)
 {
 	setObjectName("AntBaseDoubleSpinBox");
 	setButtonSymbols(QAbstractSpinBox::NoButtons);
 	setContextMenuPolicy(Qt::NoContextMenu);
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
 
 	setStyleSheet(StyleSheet::AntBaseDoubleSpinBoxQss(theme.borderColor, theme.primaryColor));
 
 	m_plusBtn = new QToolButton(this);
-	m_plusBtn->setIcon(QIcon(":/Imgs/upArrow.svg"));
+	m_plusBtn->setIcon(IconProvider::icon(IconRole::ArrowUp, isDark, QSize(14, 14), theme.textColor));
 	m_plusBtn->setCursor(Qt::PointingHandCursor);
 	m_plusBtn->setStyleSheet("QToolButton { border: none; background: transparent; }");
 	connect(m_plusBtn, &QToolButton::clicked, this, [this]() { stepBy(1); });
 
 	m_minusBtn = new QToolButton(this);
-	m_minusBtn->setIcon(QIcon(":/Imgs/downArrow.svg"));
+	m_minusBtn->setIcon(IconProvider::icon(IconRole::ArrowDown, isDark, QSize(14, 14), theme.textColor));
 	m_minusBtn->setCursor(Qt::PointingHandCursor);
 	m_minusBtn->setStyleSheet("QToolButton { border: none; background: transparent; }");
 	connect(m_minusBtn, &QToolButton::clicked, this, [this]() { stepBy(-1); });
@@ -37,6 +40,9 @@ AntBaseDoubleSpinBox::AntBaseDoubleSpinBox(QWidget* parent)
 		{
 			auto theme = DesignSystem::instance()->currentTheme();
 			setStyleSheet(StyleSheet::AntBaseDoubleSpinBoxQss(theme.borderColor, theme.primaryColor));
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+			m_plusBtn->setIcon(IconProvider::icon(IconRole::ArrowUp, isDark, QSize(14, 14), theme.textColor));
+			m_minusBtn->setIcon(IconProvider::icon(IconRole::ArrowDown, isDark, QSize(14, 14), theme.textColor));
 		});
 }
 
@@ -131,3 +137,5 @@ void AntBaseDoubleSpinBox::focusOutEvent(QFocusEvent* event)
 	if (parentWidget())
 		parentWidget()->update();
 }
+
+} // namespace ant

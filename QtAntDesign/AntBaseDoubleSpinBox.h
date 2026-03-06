@@ -6,6 +6,8 @@
 #include <QGraphicsDropShadowEffect>
 #include "DesignSystem.h"
 
+namespace ant {
+
 class AntBaseDoubleSpinBox : public QDoubleSpinBox
 {
 	Q_OBJECT
@@ -20,8 +22,8 @@ protected:
 	void leaveEvent(QEvent* event) override;
 	void stepBy(int steps) override;
 	void resizeEvent(QResizeEvent* event) override;
-	void focusInEvent(QFocusEvent* event);
-	void focusOutEvent(QFocusEvent* event);
+	void focusInEvent(QFocusEvent* event) override;
+	void focusOutEvent(QFocusEvent* event) override;
 private:
 	void updateButtonsPosition();
 	int buttonX() const;
@@ -36,3 +38,7 @@ private:
 
 	int m_buttonX;
 };
+
+} // namespace ant
+
+using ant::AntBaseDoubleSpinBox;

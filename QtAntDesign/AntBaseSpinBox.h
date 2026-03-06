@@ -4,6 +4,8 @@
 #include <QPropertyAnimation>
 #include "DesignSystem.h"
 
+namespace ant {
+
 class AntBaseSpinBox : public QSpinBox
 {
 	Q_OBJECT
@@ -22,9 +24,9 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 	void enterEvent(QEnterEvent* event) override;
 	void leaveEvent(QEvent* event) override;
-	void stepBy(int steps);
-	void focusInEvent(QFocusEvent* event);
-	void focusOutEvent(QFocusEvent* event);
+	void stepBy(int steps) override;
+	void focusInEvent(QFocusEvent* event) override;
+	void focusOutEvent(QFocusEvent* event) override;
 private:
 	void updateButtonsPosition();
 private:
@@ -37,3 +39,7 @@ private:
 	int m_buttonX;
 	
 };
+
+} // namespace ant
+
+using ant::AntBaseSpinBox;

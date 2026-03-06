@@ -3,6 +3,8 @@
 #include "DesignSystem.h"
 #include <QLabel>
 
+namespace ant {
+
 PaginationWidget::PaginationWidget(QSize buttonSize, QWidget* parent)
 	: QWidget(parent), m_totalPages(1), m_currentPage(1), btnSize(buttonSize)
 {
@@ -12,15 +14,14 @@ PaginationWidget::PaginationWidget(QSize buttonSize, QWidget* parent)
 	m_layout->setContentsMargins(0, 0, 0, 0);
 	m_layout->setSpacing(10);
 
-	auto* ins = DesignSystem::instance();
-	m_prevButton = createNavButton(ins->prevBtnIcon(), ins->prevBtnDisableIcon());
+	m_prevButton = createNavButton(IconRole::Prev, IconRole::PrevDisabled);
 	connect(m_prevButton, &QPushButton::clicked, this, [this]()
 		{
 			if (m_currentPage > 1)
 				setCurrentPage(m_currentPage - 1);
 		});
 
-	m_nextButton = createNavButton(ins->nextBtnIcon(), ins->nextBtnDisableIcon());
+	m_nextButton = createNavButton(IconRole::Next, IconRole::NextDisabled);
 	connect(m_nextButton, &QPushButton::clicked, this, [this]()
 		{
 			if (m_currentPage < m_totalPages)
@@ -47,43 +48,38 @@ PaginationWidget::PaginationWidget(QSize buttonSize, QWidget* parent)
 
 					if (i == 0)
 					{
-						// 后退箭头
-						updateBtnIcon(btn, DesignSystem::instance()->prevBtnIcon(), DesignSystem::instance()->prevBtnDisableIcon());
+						updateBtnIcon(btn, IconRole::Prev, IconRole::PrevDisabled);
 					}
 					else if (i == m_layout->count() - 1)
 					{
-						// 前进箭头
-						updateBtnIcon(btn, DesignSystem::instance()->nextBtnIcon(), DesignSystem::instance()->nextBtnDisableIcon());
+						updateBtnIcon(btn, IconRole::Next, IconRole::NextDisabled);
 					}
 				}
 			}
 		});
 }
 
-void PaginationWidget::updateBtnIcon(QPushButton* btn, const QString& iconPathNormal, const QString& iconPathDisabled)
+void PaginationWidget::updateBtnIcon(QPushButton* btn, IconRole normalRole, IconRole disabledRole)
 {
 	auto theme = DesignSystem::instance()->currentTheme();
 	btn->setStyleSheet(StyleSheet::paginationWidgetQss(theme.primaryColor, theme.widgetHoverBgColor));
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
 	QIcon icon;
-	icon.addFile(iconPathNormal, QSize(), QIcon::Normal);
-	icon.addFile(iconPathDisabled, QSize(), QIcon::Disabled);
+	icon.addPixmap(IconProvider::pixmap(normalRole, isDark, QSize(btnSize.width() - 17, btnSize.height() - 17), theme.textColor), QIcon::Normal);
+	icon.addPixmap(IconProvider::pixmap(disabledRole, isDark, QSize(btnSize.width() - 17, btnSize.height() - 17), theme.disabledColor), QIcon::Disabled);
 	btn->setIcon(icon);
 }
 
-QPushButton* PaginationWidget::createNavButton(const QString& iconPathNormal, const QString& iconPathDisabled)
+QPushButton* PaginationWidget::createNavButton(IconRole normalRole, IconRole disabledRole)
 {
 	auto theme = DesignSystem::instance()->currentTheme();
 	QPushButton* btn = new QPushButton(this);
 	btn->setFixedSize(btnSize);
 	btn->setCursor(Qt::PointingHandCursor);
 
-	QIcon icon;
-	icon.addFile(iconPathNormal, QSize(), QIcon::Normal);
-	icon.addFile(iconPathDisabled, QSize(), QIcon::Disabled);
-	btn->setIcon(icon);
-
 	btn->setIconSize(QSize(btnSize.width() - 17, btnSize.height() - 17));
 	btn->setStyleSheet(StyleSheet::paginationWidgetQss(theme.primaryColor, theme.widgetHoverBgColor));
+	updateBtnIcon(btn, normalRole, disabledRole);
 	return btn;
 }
 
@@ -200,3 +196,5 @@ void PaginationWidget::refreshButtons()
 	m_prevButton->setEnabled(m_currentPage > 1);
 	m_nextButton->setEnabled(m_currentPage < m_totalPages);
 }
+
+} // namespace ant

@@ -4,6 +4,9 @@
 #include <QString>
 #include <QSvgRenderer>
 #include <QPushButton>
+#include "IconProvider.h"
+
+namespace ant {
 
 class AntTabWidget : public QWidget
 {
@@ -42,3 +45,7 @@ private:
 	int m_tabWidth;
 	int m_tabHeight;
 };
+
+} // namespace ant
+
+using ant::AntTabWidget;

@@ -3,19 +3,33 @@
 #include <QFontMetrics>
 #include "DesignSystem.h"
 
+namespace ant {
+
 NoDataWidget::NoDataWidget(QWidget* parent)
 	: QWidget(parent)
 {
-	// 预加载 svg
-	m_svgRenderer.load(m_svgPath);
+	updateRenderer();
 
 	m_bgColor = DesignSystem::instance()->backgroundColor();
 
 	connect(DesignSystem::instance(), &DesignSystem::themeChanged, this, [this]()
 		{
 			m_bgColor = DesignSystem::instance()->backgroundColor();
+			updateRenderer();
 			update();
 		});
+}
+
+void NoDataWidget::updateRenderer()
+{
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const QByteArray bytes = IconProvider::svgData(m_iconRole, isDark, DesignSystem::instance()->currentTheme().disabledColor);
+	if (!bytes.isEmpty())
+	{
+		m_svgRenderer.load(bytes);
+		return;
+	}
+	m_svgRenderer.load(m_svgPath);
 }
 
 void NoDataWidget::paintEvent(QPaintEvent* event)
@@ -56,3 +70,5 @@ void NoDataWidget::paintEvent(QPaintEvent* event)
 
 	painter.drawText(textX, textY, m_text);
 }
+
+} // namespace ant
