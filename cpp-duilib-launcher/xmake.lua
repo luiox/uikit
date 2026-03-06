@@ -32,10 +32,10 @@ target("nassistant-duilib")
     if is_mode("debug") then
         set_symbols("debug")
         set_optimize("none")
-        add_deps("iconlib_dynamic")
+        add_deps("libicon_core_dynamic")
     else
         set_optimize("faster")
-        add_deps("iconlib_embed")
+        add_deps("libicon_core_embed")
     end
 
     add_defines("UNICODE", "_UNICODE", "WIN32", "_WINDOWS")
@@ -51,7 +51,7 @@ target("nassistant-duilib")
 
     after_build(function (target)
         if is_mode("debug") then
-            os.cp(path.join(os.scriptdir(), "..", "icon-lib", "icons"), path.join(target:targetdir(), "icons"))
+            os.cp(path.join(os.scriptdir(), "..", "libicon-core", "icons"), path.join(target:targetdir(), "icons"))
         end
     end)
 

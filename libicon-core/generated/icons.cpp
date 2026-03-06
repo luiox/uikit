@@ -2,9 +2,9 @@
 
 #include <cstring>
 
-namespace iconlib {
+namespace icon {
 
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
 static const char kSvg_Close[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z\"></path></svg>";
 static const char kSvg_Minimize[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"feather feather-minimize\"><path d=\"M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3\"></path></svg>";
 static const char kSvg_Maximize[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"feather feather-maximize\"><path d=\"M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3\"></path></svg>";
@@ -87,75 +87,75 @@ static const char kSvg_Clear[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" widt
 #endif
 
 static const IconAsset kIcons[] = {
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Close, "close", "icons/close.svg", kSvg_Close, 313},
 #else
     {Icon::Close, "close", "icons/close.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Minimize, "minimize", "icons/minimize.svg", kSvg_Minimize, 331},
 #else
     {Icon::Minimize, "minimize", "icons/minimize.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Maximize, "maximize", "icons/maximize.svg", kSvg_Maximize, 331},
 #else
     {Icon::Maximize, "maximize", "icons/maximize.svg", nullptr, 0},
 #endif
     {Icon::Restore, "restore", "icons/restore.svg", nullptr, 0},
     {Icon::Help, "help", "icons/help.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Info, "info", "icons/info.svg", kSvg_Info, 347},
 #else
     {Icon::Info, "info", "icons/info.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Warning, "warning", "icons/warning.svg", kSvg_Warning, 366},
 #else
     {Icon::Warning, "warning", "icons/warning.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Error, "error", "icons/error.svg", kSvg_Error, 253},
 #else
     {Icon::Error, "error", "icons/error.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Settings, "settings", "icons/settings.svg", kSvg_Settings, 1011},
 #else
     {Icon::Settings, "settings", "icons/settings.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Menu, "menu", "icons/menu.svg", kSvg_Menu, 346},
 #else
     {Icon::Menu, "menu", "icons/menu.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::File, "file", "icons/file.svg", kSvg_File, 337},
 #else
     {Icon::File, "file", "icons/file.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Folder, "folder", "icons/folder.svg", kSvg_Folder, 311},
 #else
     {Icon::Folder, "folder", "icons/folder.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::FolderOpen, "folder_open", "icons/folder_open.svg", kSvg_FolderOpen, 361},
 #else
     {Icon::FolderOpen, "folder_open", "icons/folder_open.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Image, "image", "icons/image.svg", kSvg_Image, 369},
 #else
     {Icon::Image, "image", "icons/image.svg", nullptr, 0},
 #endif
     {Icon::Audio, "audio", "icons/audio.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Video, "video", "icons/video.svg", kSvg_Video, 329},
 #else
     {Icon::Video, "video", "icons/video.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Archive, "archive", "icons/archive.svg", kSvg_Archive, 361},
 #else
     {Icon::Archive, "archive", "icons/archive.svg", nullptr, 0},
@@ -164,341 +164,341 @@ static const IconAsset kIcons[] = {
     {Icon::Word, "word", "icons/word.svg", nullptr, 0},
     {Icon::Excel, "excel", "icons/excel.svg", nullptr, 0},
     {Icon::Ppt, "ppt", "icons/ppt.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Code, "code", "icons/code.svg", kSvg_Code, 307},
 #else
     {Icon::Code, "code", "icons/code.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::New, "new", "icons/new.svg", kSvg_New, 304},
 #else
     {Icon::New, "new", "icons/new.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Open, "open", "icons/open.svg", kSvg_Open, 311},
 #else
     {Icon::Open, "open", "icons/open.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Save, "save", "icons/save.svg", kSvg_Save, 392},
 #else
     {Icon::Save, "save", "icons/save.svg", nullptr, 0},
 #endif
     {Icon::SaveAs, "save_as", "icons/save_as.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Delete, "delete", "icons/delete.svg", kSvg_Delete, 374},
 #else
     {Icon::Delete, "delete", "icons/delete.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Edit, "edit", "icons/edit.svg", kSvg_Edit, 365},
 #else
     {Icon::Edit, "edit", "icons/edit.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Copy, "copy", "icons/copy.svg", kSvg_Copy, 351},
 #else
     {Icon::Copy, "copy", "icons/copy.svg", nullptr, 0},
 #endif
     {Icon::Paste, "paste", "icons/paste.svg", nullptr, 0},
     {Icon::Cut, "cut", "icons/cut.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Undo, "undo", "icons/undo.svg", kSvg_Undo, 386},
 #else
     {Icon::Undo, "undo", "icons/undo.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Redo, "redo", "icons/redo.svg", kSvg_Redo, 380},
 #else
     {Icon::Redo, "redo", "icons/redo.svg", nullptr, 0},
 #endif
     {Icon::SelectAll, "select_all", "icons/select_all.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Find, "find", "icons/find.svg", kSvg_Find, 308},
 #else
     {Icon::Find, "find", "icons/find.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Replace, "replace", "icons/replace.svg", kSvg_Replace, 400},
 #else
     {Icon::Replace, "replace", "icons/replace.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Back, "back", "icons/back.svg", kSvg_Back, 312},
 #else
     {Icon::Back, "back", "icons/back.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Forward, "forward", "icons/forward.svg", kSvg_Forward, 314},
 #else
     {Icon::Forward, "forward", "icons/forward.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Up, "up", "icons/up.svg", kSvg_Up, 310},
 #else
     {Icon::Up, "up", "icons/up.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Refresh, "refresh", "icons/refresh.svg", kSvg_Refresh, 400},
 #else
     {Icon::Refresh, "refresh", "icons/refresh.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Home, "home", "icons/home.svg", kSvg_Home, 332},
 #else
     {Icon::Home, "home", "icons/home.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::ZoomIn, "zoom_in", "icons/zoom_in.svg", kSvg_ZoomIn, 397},
 #else
     {Icon::ZoomIn, "zoom_in", "icons/zoom_in.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::ZoomOut, "zoom_out", "icons/zoom_out.svg", kSvg_ZoomOut, 354},
 #else
     {Icon::ZoomOut, "zoom_out", "icons/zoom_out.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Fullscreen, "fullscreen", "icons/fullscreen.svg", kSvg_Fullscreen, 331},
 #else
     {Icon::Fullscreen, "fullscreen", "icons/fullscreen.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::FullscreenExit, "fullscreen_exit", "icons/fullscreen_exit.svg", kSvg_FullscreenExit, 331},
 #else
     {Icon::FullscreenExit, "fullscreen_exit", "icons/fullscreen_exit.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Grid, "grid", "icons/grid.svg", kSvg_Grid, 404},
 #else
     {Icon::Grid, "grid", "icons/grid.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Search, "search", "icons/search.svg", kSvg_Search, 308},
 #else
     {Icon::Search, "search", "icons/search.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Filter, "filter", "icons/filter.svg", kSvg_Filter, 290},
 #else
     {Icon::Filter, "filter", "icons/filter.svg", nullptr, 0},
 #endif
     {Icon::Sort, "sort", "icons/sort.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::SortAsc, "sort_asc", "icons/sort_asc.svg", kSvg_SortAsc, 310},
 #else
     {Icon::SortAsc, "sort_asc", "icons/sort_asc.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::SortDesc, "sort_desc", "icons/sort_desc.svg", kSvg_SortDesc, 313},
 #else
     {Icon::SortDesc, "sort_desc", "icons/sort_desc.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Check, "check", "icons/check.svg", kSvg_Check, 262},
 #else
     {Icon::Check, "check", "icons/check.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Circle, "circle", "icons/circle.svg", kSvg_Circle, 258},
 #else
     {Icon::Circle, "circle", "icons/circle.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Square, "square", "icons/square.svg", kSvg_Square, 280},
 #else
     {Icon::Square, "square", "icons/square.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Star, "star", "icons/star.svg", kSvg_Star, 339},
 #else
     {Icon::Star, "star", "icons/star.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Heart, "heart", "icons/heart.svg", kSvg_Heart, 371},
 #else
     {Icon::Heart, "heart", "icons/heart.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Flag, "flag", "icons/flag.svg", kSvg_Flag, 334},
 #else
     {Icon::Flag, "flag", "icons/flag.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Tag, "tag", "icons/tag.svg", kSvg_Tag, 355},
 #else
     {Icon::Tag, "tag", "icons/tag.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Clock, "clock", "icons/clock.svg", kSvg_Clock, 304},
 #else
     {Icon::Clock, "clock", "icons/clock.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Calendar, "calendar", "icons/calendar.svg", kSvg_Calendar, 410},
 #else
     {Icon::Calendar, "calendar", "icons/calendar.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Link, "link", "icons/link.svg", kSvg_Link, 371},
 #else
     {Icon::Link, "link", "icons/link.svg", nullptr, 0},
 #endif
     {Icon::Unlink, "unlink", "icons/unlink.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Web, "web", "icons/web.svg", kSvg_Web, 409},
 #else
     {Icon::Web, "web", "icons/web.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Download, "download", "icons/download.svg", kSvg_Download, 370},
 #else
     {Icon::Download, "download", "icons/download.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Upload, "upload", "icons/upload.svg", kSvg_Upload, 365},
 #else
     {Icon::Upload, "upload", "icons/upload.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Cloud, "cloud", "icons/cloud.svg", kSvg_Cloud, 280},
 #else
     {Icon::Cloud, "cloud", "icons/cloud.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Share, "share", "icons/share.svg", kSvg_Share, 364},
 #else
     {Icon::Share, "share", "icons/share.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::External, "external", "icons/external.svg", kSvg_External, 388},
 #else
     {Icon::External, "external", "icons/external.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Play, "play", "icons/play.svg", kSvg_Play, 263},
 #else
     {Icon::Play, "play", "icons/play.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Pause, "pause", "icons/pause.svg", kSvg_Pause, 312},
 #else
     {Icon::Pause, "pause", "icons/pause.svg", nullptr, 0},
 #endif
     {Icon::Stop, "stop", "icons/stop.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Prev, "prev", "icons/prev.svg", kSvg_Prev, 313},
 #else
     {Icon::Prev, "prev", "icons/prev.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Next, "next", "icons/next.svg", kSvg_Next, 315},
 #else
     {Icon::Next, "next", "icons/next.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Volume, "volume", "icons/volume.svg", kSvg_Volume, 280},
 #else
     {Icon::Volume, "volume", "icons/volume.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::VolumeMute, "volume_mute", "icons/volume_mute.svg", kSvg_VolumeMute, 370},
 #else
     {Icon::VolumeMute, "volume_mute", "icons/volume_mute.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Mic, "mic", "icons/mic.svg", kSvg_Mic, 418},
 #else
     {Icon::Mic, "mic", "icons/mic.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Computer, "computer", "icons/computer.svg", kSvg_Computer, 370},
 #else
     {Icon::Computer, "computer", "icons/computer.svg", nullptr, 0},
 #endif
     {Icon::ControlPanel, "control_panel", "icons/control_panel.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Cmd, "cmd", "icons/cmd.svg", kSvg_Cmd, 310},
 #else
     {Icon::Cmd, "cmd", "icons/cmd.svg", nullptr, 0},
 #endif
     {Icon::Registry, "registry", "icons/registry.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Shutdown, "shutdown", "icons/shutdown.svg", kSvg_Shutdown, 308},
 #else
     {Icon::Shutdown, "shutdown", "icons/shutdown.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Restart, "restart", "icons/restart.svg", kSvg_Restart, 321},
 #else
     {Icon::Restart, "restart", "icons/restart.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Lock, "lock", "icons/lock.svg", kSvg_Lock, 321},
 #else
     {Icon::Lock, "lock", "icons/lock.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Unlock, "unlock", "icons/unlock.svg", kSvg_Unlock, 322},
 #else
     {Icon::Unlock, "unlock", "icons/unlock.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Key, "key", "icons/key.svg", kSvg_Key, 352},
 #else
     {Icon::Key, "key", "icons/key.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Printer, "printer", "icons/printer.svg", kSvg_Printer, 407},
 #else
     {Icon::Printer, "printer", "icons/printer.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Battery, "battery", "icons/battery.svg", kSvg_Battery, 326},
 #else
     {Icon::Battery, "battery", "icons/battery.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Wifi, "wifi", "icons/wifi.svg", kSvg_Wifi, 401},
 #else
     {Icon::Wifi, "wifi", "icons/wifi.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::App, "app", "icons/app.svg", kSvg_App, 462},
 #else
     {Icon::App, "app", "icons/app.svg", nullptr, 0},
 #endif
     {Icon::Group, "group", "icons/group.svg", nullptr, 0},
     {Icon::Tab, "tab", "icons/tab.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Pin, "pin", "icons/pin.svg", kSvg_Pin, 480},
 #else
     {Icon::Pin, "pin", "icons/pin.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Unpin, "unpin", "icons/unpin.svg", kSvg_Unpin, 204},
 #else
     {Icon::Unpin, "unpin", "icons/unpin.svg", nullptr, 0},
 #endif
     {Icon::Drag, "drag", "icons/drag.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Plus, "plus", "icons/plus.svg", kSvg_Plus, 304},
 #else
     {Icon::Plus, "plus", "icons/plus.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Minus, "minus", "icons/minus.svg", kSvg_Minus, 261},
 #else
     {Icon::Minus, "minus", "icons/minus.svg", nullptr, 0},
 #endif
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::History, "history", "icons/history.svg", kSvg_History, 304},
 #else
     {Icon::History, "history", "icons/history.svg", nullptr, 0},
 #endif
     {Icon::Freq, "freq", "icons/freq.svg", nullptr, 0},
     {Icon::SearchHistory, "search_history", "icons/search_history.svg", nullptr, 0},
-#if ICONLIB_ENABLE_EMBED
+#if LIBICON_CORE_ENABLE_EMBED
     {Icon::Clear, "clear", "icons/clear.svg", kSvg_Clear, 346},
 #else
     {Icon::Clear, "clear", "icons/clear.svg", nullptr, 0},
@@ -569,4 +569,4 @@ const char* GetEmbeddedSvg(const char* id) {
     return item->svg;
 }
 
-} // namespace iconlib
+} // namespace icon

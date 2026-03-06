@@ -46,7 +46,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_list = new QListWidget(this);
     m_list->addItem(QStringLiteral("Verify the Qt6 xmake build pipeline"));
     m_list->addItem(QStringLiteral("Next: add a unified icon access layer to QtAntDesign"));
-    m_list->addItem(QStringLiteral("Then: migrate core widgets to icon-lib"));
+    m_list->addItem(QStringLiteral("Then: migrate core widgets to libicon-core"));
 
     rootLayout->addWidget(m_titleLabel);
     rootLayout->addWidget(descLabel);

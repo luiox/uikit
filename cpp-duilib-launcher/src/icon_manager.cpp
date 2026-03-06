@@ -9,7 +9,7 @@ constexpr const char* kThemeColor = "rgb(128,128,128)";
 }
 
 IconManager::IconManager(std::filesystem::path base_dir)
-    : cache_dir_(std::move(base_dir) / "iconlib_cache" / "theme_128_128_128") {
+    : cache_dir_(std::move(base_dir) / "libicon_core_cache" / "theme_128_128_128") {
     std::error_code ec;
     std::filesystem::create_directories(cache_dir_, ec);
 }
@@ -63,8 +63,8 @@ std::filesystem::path IconManager::BuildThemedIconPath(const std::filesystem::pa
     return cache_dir_ / (stem + "_128_128_128.svg");
 }
 
-std::filesystem::path IconManager::GetDynamicIconPath(iconlib::Icon icon) const {
-    const char* rel = iconlib::GetDynamicPath(icon);
+std::filesystem::path IconManager::GetDynamicIconPath(icon::Icon icon) const {
+    const char* rel = icon::GetDynamicPath(icon);
     if (rel == nullptr || rel[0] == '\0') {
         return {};
     }
@@ -85,8 +85,8 @@ std::filesystem::path IconManager::GetDynamicIconPath(iconlib::Icon icon) const 
     return source;
 }
 
-std::filesystem::path IconManager::GetEmbeddedIconPath(iconlib::Icon icon) const {
-    const iconlib::IconAsset* asset = iconlib::FindIcon(icon);
+std::filesystem::path IconManager::GetEmbeddedIconPath(icon::Icon icon) const {
+    const icon::IconAsset* asset = icon::FindIcon(icon);
     if (asset == nullptr || asset->svg == nullptr || asset->size == 0) {
         return {};
     }
@@ -101,15 +101,15 @@ std::filesystem::path IconManager::GetEmbeddedIconPath(iconlib::Icon icon) const
     return out;
 }
 
-std::filesystem::path IconManager::ResolveIconPath(iconlib::Icon icon) const {
-#if ICONLIB_ENABLE_EMBED
+std::filesystem::path IconManager::ResolveIconPath(icon::Icon icon) const {
+#if LIBICON_CORE_ENABLE_EMBED
     return GetEmbeddedIconPath(icon);
 #else
     return GetDynamicIconPath(icon);
 #endif
 }
 
-iconlib::Icon IconManager::ResolveTopBarIcon(iconlib::Icon preferred, iconlib::Icon fallback) const {
+icon::Icon IconManager::ResolveTopBarIcon(icon::Icon preferred, icon::Icon fallback) const {
     const auto preferred_path = ResolveIconPath(preferred);
     if (!preferred_path.empty() && std::filesystem::exists(preferred_path)) {
         return preferred;
@@ -118,11 +118,11 @@ iconlib::Icon IconManager::ResolveTopBarIcon(iconlib::Icon preferred, iconlib::I
     if (!fallback_path.empty() && std::filesystem::exists(fallback_path)) {
         return fallback;
     }
-    return iconlib::Icon::None;
+    return icon::Icon::None;
 }
 
-DuiLib::CDuiString IconManager::MakeSvgImageAttr(iconlib::Icon icon, int draw_px, int box_px) const {
-    if (icon == iconlib::Icon::None) {
+DuiLib::CDuiString IconManager::MakeSvgImageAttr(icon::Icon icon, int draw_px, int box_px) const {
+    if (icon == icon::Icon::None) {
         return {};
     }
     const auto path = ResolveIconPath(icon);

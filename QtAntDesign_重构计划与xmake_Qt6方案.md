@@ -6,7 +6,7 @@
 
 目标分为三层：
 
-1. **统一图标访问入口**：优先接入 `icon-lib`，避免业务代码直接依赖 `:/Imgs/...`。
+1. **统一图标访问入口**：优先接入 `libicon-core`，并通过 `libicon-qt` 输出 Qt 图标对象，避免业务代码直接依赖 `:/Imgs/...`。
 2. **把组件和 demo 分离**：先保住核心控件，再逐步剥离演示页面和示例素材。
 3. **建立跨项目可复用的资源规范**：Qt、DuiLib、后续其他 UI 工程都尽量复用同一套图标语义和生成资产。
 
@@ -58,7 +58,7 @@
 
 ### 3.3 保留过渡期 fallback
 
-新接口允许优先从 `icon-lib` 取图标，如果没有覆盖，再回退到旧 `qrc`，保证迁移可以渐进完成。
+新接口允许优先从 `libicon-core` / `libicon-qt` 取图标，如果没有覆盖，再回退到旧 `qrc`，保证迁移可以渐进完成。
 
 ---
 
@@ -75,9 +75,9 @@
 
 职责：
 
-- `iconlib::Icon -> QIcon`
-- `iconlib::Icon -> QPixmap`
-- `iconlib::Icon -> QByteArray / SVG 数据`
+- `icon::Icon -> QIcon`
+- `icon::Icon -> QPixmap`
+- `icon::Icon -> QByteArray / SVG 数据`
 - 支持主题染色
 - 支持 fallback 到旧 `:/Imgs/...`
 - 做缓存，避免频繁重新解析 SVG
@@ -152,12 +152,13 @@ ant::icon(ant::IconRole::NavHome)
 qt-ant-core/        -- 主题、图标、基础工具
 qt-ant-widgets/     -- 可复用控件
 qt-ant-demo/        -- 演示程序
-icon-lib/           -- 统一图标资产
+libicon-core/       -- 统一图标资产
+libicon-qt/         -- Qt 图标适配层
 ```
 
 拆分后：
 
-- `qt-ant-core` 依赖 `icon-lib`
+- `qt-ant-core` 依赖 `libicon-core` 与 `libicon-qt`
 - `qt-ant-widgets` 依赖 `qt-ant-core`
 - `qt-ant-demo` 依赖前两者 + demo 资源
 
@@ -170,7 +171,7 @@ icon-lib/           -- 统一图标资产
 内容：
 
 - 建立 Qt 图标适配层
-- 接入 `icon-lib`
+- 接入 `libicon-core` + `libicon-qt`
 - 替换 `DesignSystem` 与少量公共控件
 - 保留旧 `qrc` fallback
 
@@ -205,7 +206,7 @@ icon-lib/           -- 统一图标资产
 
 **推荐顺序：**
 
-1. 先做 `icon-lib` 接入层
+1. 先做 `libicon-core` / `libicon-qt` 接入层
 2. 再迁核心控件
 3. 最后拆 demo 与库
 
@@ -362,7 +363,7 @@ msvc2022_64
 1. Qt 路径始终传 SDK 根目录。
 2. Qt Demo 单独放一个目录，先验证规则和工具链。
 3. 先用纯代码 Widgets Demo 跑通，再逐步引入 `ui/qrc`。
-4. 真正做库项目时，把 `icon-lib` 接入为独立子模块，不再到处散写 `:/Imgs/...`。
+4. 真正做库项目时，把 `libicon-core` 与 `libicon-qt` 接入为独立子模块，不再到处散写 `:/Imgs/...`。
 
 ---
 
@@ -391,5 +392,5 @@ xmake run qt6_widget_demo
 如果你希望下一步继续推进，我建议直接做：
 
 1. 给 `QtAntDesign` 加一个 `QtIconProvider`
-2. 把 `DesignSystem` 先接到 `icon-lib`
+2. 把 `DesignSystem` 先接到 `libicon-qt`
 3. 先迁移窗口按钮、导航按钮、消息提示图标

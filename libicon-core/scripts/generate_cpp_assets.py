@@ -69,7 +69,7 @@ def build():
     header.append("#include <cstddef>")
     header.append("#include <cstdint>")
     header.append("")
-    header.append("namespace iconlib {")
+    header.append("namespace icon {")
     header.append("")
     header.append("enum class Icon : uint32_t {")
     header.append("    None = 0,")
@@ -97,17 +97,17 @@ def build():
     header.append("const char* GetEmbeddedSvg(Icon icon);")
     header.append("const char* GetEmbeddedSvg(const char* id);")
     header.append("")
-    header.append("} // namespace iconlib")
+    header.append("} // namespace icon")
 
     cpp = []
     cpp.append('#include "icons.h"')
     cpp.append("")
     cpp.append("#include <cstring>")
     cpp.append("")
-    cpp.append("namespace iconlib {")
+    cpp.append("namespace icon {")
     cpp.append("")
 
-    cpp.append("#if ICONLIB_ENABLE_EMBED")
+    cpp.append("#if LIBICON_CORE_ENABLE_EMBED")
     for row in resolved:
         if row["svg"] is None:
             continue
@@ -125,7 +125,7 @@ def build():
             )
         else:
             size = len(row["svg"].encode("utf-8"))
-            cpp.append("#if ICONLIB_ENABLE_EMBED")
+            cpp.append("#if LIBICON_CORE_ENABLE_EMBED")
             cpp.append(
                 f'    {{Icon::{row["enum"]}, "{row["id"]}", "{file_name}", kSvg_{row["enum"]}, {size}}},'
             )
@@ -201,7 +201,7 @@ def build():
     cpp.append("    return item->svg;")
     cpp.append("}")
     cpp.append("")
-    cpp.append("} // namespace iconlib")
+    cpp.append("} // namespace icon")
 
     OUT_H.write_text("\n".join(header) + "\n", encoding="utf-8")
     OUT_CPP.write_text("\n".join(cpp) + "\n", encoding="utf-8")

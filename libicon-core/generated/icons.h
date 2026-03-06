@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace iconlib {
+namespace icon {
 
 enum class Icon : uint32_t {
     None = 0,
@@ -129,4 +129,4 @@ const char* GetDynamicPath(const char* id);
 const char* GetEmbeddedSvg(Icon icon);
 const char* GetEmbeddedSvg(const char* id);
 
-} // namespace iconlib
+} // namespace icon
