@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QEvent>
 #include "AntInput.h"
+#include "IconProvider.h"
 
 // 判断是否在windows平台
 #ifdef Q_OS_WIN
@@ -20,6 +21,8 @@
 #pragma comment(lib, "Dwmapi.lib")
 
 #endif  // Q_OS_WIN
+
+namespace ant {
 
 // 检测鼠标是否在边缘
 enum ResizeRegion {
@@ -84,8 +87,8 @@ private:
 	struct ButtonInfo
 	{
 		CustomToolButton* button;
-		QString normalIcon;
-		QString activeIcon;
+		IconRole normalIcon;
+		IconRole activeIcon;
 		QWidget* page;
 	};
 	QList<ButtonInfo> buttonInfos;
@@ -118,3 +121,7 @@ private:
 
 	AntInput* antInput = nullptr;
 };
+
+} // namespace ant
+
+using ant::QtAntDesign;

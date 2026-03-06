@@ -9,6 +9,29 @@
 #include <QFont>
 #include "DesignSystem.h"
 
+namespace {
+
+QColor messageColor(ant::AntMessage::Type type)
+{
+	switch (type)
+	{
+	case ant::AntMessage::Info:
+		return QColor(22, 119, 255);
+	case ant::AntMessage::Success:
+		return QColor(82, 196, 26);
+	case ant::AntMessage::Error:
+		return QColor(255, 77, 79);
+	case ant::AntMessage::Warning:
+		return QColor(250, 173, 20);
+	default:
+		return QColor(82, 196, 26);
+	}
+}
+
+} // namespace
+
+namespace ant {
+
 AntMessage::AntMessage(QWidget* parent, Type type, const QString& message)
 	: QWidget(parent),
 	m_type(type),
@@ -58,19 +81,19 @@ void AntMessage::initResources()
 	switch (m_type)
 	{
 	case AntMessage::Info:
-		m_svgPath = QString(":/Imgs/info.svg");
+		m_iconRole = IconRole::MsgInfo;
 		break;
 	case AntMessage::Success:
-		m_svgPath = QString(":/Imgs/true.svg");
+		m_iconRole = IconRole::MsgSuccess;
 		break;
 	case AntMessage::Error:
-		m_svgPath = QString(":/Imgs/error.svg");
+		m_iconRole = IconRole::MsgError;
 		break;
 	case AntMessage::Warning:
-		m_svgPath = QString(":/Imgs/warning.svg");
+		m_iconRole = IconRole::MsgWarning;
 		break;
 	default:
-		m_svgPath = QString(":/Imgs/true.svg");
+		m_iconRole = IconRole::MsgSuccess;
 		break;
 	}
 }
@@ -108,9 +131,13 @@ void AntMessage::paintEvent(QPaintEvent* event)
 	int padding = 18;
 	int iconWidth = 20;
 	int spacing = 10;
-	QSvgRenderer svgRenderer(m_svgPath);
 	QRect iconRect(padding, (height() - iconWidth) / 2, iconWidth, iconWidth);
-	svgRenderer.render(&painter, iconRect);
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const QPixmap pm = IconProvider::pixmap(m_iconRole, isDark, QSize(iconWidth, iconWidth), messageColor(m_type));
+	if (!pm.isNull())
+	{
+		painter.drawPixmap(iconRect, pm);
+	}
 
 	// 文本绘制
 	QRect textRect = rect().adjusted(padding + iconWidth + spacing, 0, -padding, 0);
@@ -146,3 +173,5 @@ qreal AntMessage::getCustomOpacity()
 {
 	return m_customOpacity;
 }
+
+} // namespace ant

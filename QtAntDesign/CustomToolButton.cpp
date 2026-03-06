@@ -5,6 +5,8 @@
 #include <QMouseEvent>
 #include "DesignSystem.h"
 
+namespace ant {
+
 CustomToolButton::CustomToolButton(QSize iconSize, QWidget* parent)
 	: QToolButton(parent), hovered(false), m_iconSize(iconSize)
 {
@@ -16,17 +18,23 @@ CustomToolButton::CustomToolButton(QSize iconSize, QWidget* parent)
 
 CustomToolButton::~CustomToolButton()
 {
-	if (m_normalRenderer) delete m_normalRenderer;
-	if (m_activeRenderer) delete m_activeRenderer;
 }
 
 void CustomToolButton::setSvgIcons(const QString& normalPath, const QString& activePath)
 {
-	if (m_normalRenderer) delete m_normalRenderer;
-	if (m_activeRenderer) delete m_activeRenderer;
+	m_normalRole = IconRole::None;
+	m_activeRole = IconRole::None;
+	m_normalPath = normalPath;
+	m_activePath = activePath;
+	update();
+}
 
-	m_normalRenderer = new QSvgRenderer(normalPath, this);
-	m_activeRenderer = new QSvgRenderer(activePath, this);
+void CustomToolButton::setIconRoles(IconRole normalRole, IconRole activeRole)
+{
+	m_normalRole = normalRole;
+	m_activeRole = activeRole;
+	m_normalPath.clear();
+	m_activePath.clear();
 	update();
 }
 
@@ -76,13 +84,29 @@ void CustomToolButton::paintEvent(QPaintEvent* event)
 		painter.fillPath(path, bgColor);
 	}
 
-	// 根据 isChecked 选择 SVG 渲染器
-	QSvgRenderer* currentRenderer = m_checked ? m_activeRenderer : m_normalRenderer;
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const IconRole currentRole = m_checked ? m_activeRole : m_normalRole;
+	const QString currentPath = m_checked ? m_activePath : m_normalPath;
+	const QColor tint = m_checked
+		? DesignSystem::instance()->primaryColor()
+		: DesignSystem::instance()->currentTheme().tabTextColor;
 
-	if (currentRenderer)
+	QPixmap pm;
+	if (currentRole != IconRole::None)
+	{
+		pm = IconProvider::pixmap(currentRole, isDark, m_iconSize, tint);
+	}
+	else if (!currentPath.isEmpty())
+	{
+		pm = IconProvider::pixmap(currentPath, m_iconSize, tint);
+	}
+
+	if (!pm.isNull())
 	{
 		QPoint iconTopLeft((width() - m_iconSize.width()) / 2, (height() - m_iconSize.height()) / 2);
 		QRect iconRect(iconTopLeft, m_iconSize);
-		currentRenderer->render(&painter, iconRect);
+		painter.drawPixmap(iconRect, pm);
 	}
 }
+
+} // namespace ant

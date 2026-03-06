@@ -33,13 +33,6 @@ find_package(Qt6 REQUIRED COMPONENTS
     Svg
 )
 
-# 根据平台判断是否需要链接 Dwmapi
-if(WIN32)  # Windows 平台
-    target_link_libraries(${PROJECT_NAME} PRIVATE Dwmapi)
-elseif(UNIX)  # Linux 或其他 UNIX-like 系统
-
-endif()
-
 # -------------------------------
 # 文件分组
 # -------------------------------
@@ -65,6 +58,8 @@ add_executable(${PROJECT_NAME}
     ${RESOURCE_FILES}
     ${THIRD_PARTY_SRC}
     ${THIRD_PARTY_HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/libicon-core/generated/icons.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libicon-qt/src/IconManager.cpp
 )
 
 # 将主项目放到单独的解决方案文件夹
@@ -91,9 +86,13 @@ endif()
 # 设置 include 目录，让 VS IntelliSense 能找到 ui_*.h
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"                               # ui_*.h
+    "${CMAKE_CURRENT_SOURCE_DIR}/libicon-core/generated"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libicon-qt/src"
     "${SRC_DIR}/ThirdParty/QR-Code-generator-master"            # qrcodegen.hpp
     "${SRC_DIR}/ThirdParty/FastGaussianBlur-main"               # 其他第三方库
 )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE LIBICON_CORE_ENABLE_EMBED=1)
 
 
 # -------------------------------

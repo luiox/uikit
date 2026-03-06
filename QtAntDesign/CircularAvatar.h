@@ -8,6 +8,9 @@
 #include <QElapsedTimer>
 #include "BubbleViewController.h"
 #include "DialogViewController.h"
+#include "IconProvider.h"
+
+namespace ant {
 
 class CircularAvatar : public QWidget
 {
@@ -15,6 +18,7 @@ class CircularAvatar : public QWidget
 
 public:
 	CircularAvatar(QSize size, QString prevImgPath, QString afterImgPath, QWidget* parent);
+	CircularAvatar(QSize size, IconRole prevRole, IconRole afterRole, QWidget* parent);
 	~CircularAvatar();
 	// 设置圆头像
 	void setAvatar(QString svgFilePath);
@@ -22,6 +26,7 @@ public:
 	void checkShouldHideBubble();
 	// 设置点击前点击后的头像
 	void setImgs(QString prevImgPath, QString afterImgPath);
+	void setImgs(IconRole prevRole, IconRole afterRole);
 	// 添加对话框
 	void addDialog(DialogViewController* dialog);
 	// 允许登录
@@ -53,3 +58,7 @@ private:
 	// 登录状态
 	bool m_isLogin = false;
 };
+
+} // namespace ant
+
+using ant::CircularAvatar;

@@ -3,8 +3,12 @@
 #include <QObject>
 #include <QColor>
 #include <QFont>
+#include <QIcon>
 #include "TransparentMask.h"
 #include "MaskWidget.h"
+#include "IconProvider.h"
+
+namespace ant {
 
 struct Theme
 {
@@ -149,14 +153,14 @@ public:
 	QIcon& btnRestoreIcon();
 
 	// 导航栏图标
-	QString& btnHomeIconPath();
-	QString& btnFuncIconPath();
-	QString& btnSettingsIconPath();
-	QString& btnAboutIconPath();
-	QString& btnHomeActiveIconPath();
-	QString& btnFuncActiveIconPath();
-	QString& btnSettingsActiveIconPath();
-	QString& btnAboutActiveIconPath();
+	IconRole btnHomeIconRole() const;
+	IconRole btnFuncIconRole() const;
+	IconRole btnSettingsIconRole() const;
+	IconRole btnAboutIconRole() const;
+	IconRole btnHomeActiveIconRole() const;
+	IconRole btnFuncActiveIconRole() const;
+	IconRole btnSettingsActiveIconRole() const;
+	IconRole btnAboutActiveIconRole() const;
 
 	// 前进后退图标
 	QString& prevBtnIcon();
@@ -194,14 +198,6 @@ private:
 	QIcon btnMax;
 	QIcon btnClose;
 	QIcon btnRestore;
-	QString btnHome;
-	QString btnHomeActive;
-	QString btnFunc;
-	QString btnFuncActive;
-	QString btnSettings;
-	QString btnSettingsActive;
-	QString btnAbout;
-	QString btnAboutActive;
 	QString prevBtn;
 	QString nextBtn;
 	QString prevDisBtn;
@@ -209,3 +205,9 @@ private:
 	// 多媒体文件路径
 	QString homeVideoPath;
 };
+
+} // namespace ant
+
+using ant::DesignSystem;
+using ant::IconRole;
+using ant::Theme;

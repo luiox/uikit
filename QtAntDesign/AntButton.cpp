@@ -4,6 +4,8 @@
 #include <QOverload>
 #include "DesignSystem.h"
 
+namespace ant {
+
 AntButton::AntButton(QString btnText, qreal textSize, QWidget* parent)
 	:QPushButton(parent),
 	m_radius(6),
@@ -35,7 +37,28 @@ AntButton::~AntButton()
 
 void AntButton::setSvgIcon(const QString& iconPath)
 {
-	m_svgRenderer = new QSvgRenderer(iconPath, this);
+	m_iconRole = IconRole::None;
+	if (m_svgRenderer)
+	{
+		delete m_svgRenderer;
+		m_svgRenderer = nullptr;
+	}
+	const QByteArray svgBytes = IconProvider::svgData(iconPath);
+	m_svgRenderer = svgBytes.isEmpty() ? new QSvgRenderer(iconPath, this) : new QSvgRenderer(svgBytes, this);
+	update(); // 更新按钮显示
+}
+
+void AntButton::setIconRole(IconRole role)
+{
+	m_iconRole = role;
+	if (m_svgRenderer)
+	{
+		delete m_svgRenderer;
+		m_svgRenderer = nullptr;
+	}
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const QByteArray svgBytes = IconProvider::svgData(role, isDark, DesignSystem::instance()->currentTheme().textColor);
+	m_svgRenderer = svgBytes.isEmpty() ? nullptr : new QSvgRenderer(svgBytes, this);
 	update(); // 更新按钮显示
 }
 
@@ -222,3 +245,5 @@ void AntButton::paintEvent(QPaintEvent* event)
 		painter.drawPath(ringPath);
 	}
 }
+
+} // namespace ant

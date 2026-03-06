@@ -5,6 +5,9 @@
 #include <QTimer>
 #include <QPropertyAnimation>
 #include <QParallelAnimationGroup>
+#include "IconProvider.h"
+
+namespace ant {
 
 class AntMessage : public QWidget
 {
@@ -56,7 +59,7 @@ private:
 	QPoint m_endPos;
 	Type m_type;
 	QString m_message;
-	QString m_svgPath;
+	IconRole m_iconRole = IconRole::None;
 	qreal m_customOpacity;
 
 	QTimer* timer;
@@ -64,3 +67,7 @@ private:
 	QPropertyAnimation* m_opacityAnim;
 	QParallelAnimationGroup* m_animGroup;
 };
+
+} // namespace ant
+
+using ant::AntMessage;

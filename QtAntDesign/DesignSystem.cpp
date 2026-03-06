@@ -1,6 +1,9 @@
 ﻿#include "DesignSystem.h"
 #include <QApplication>
 #include <QDir>
+#include <QFile>
+
+namespace ant {
 
 DesignSystem* DesignSystem::m_instance = nullptr;
 
@@ -187,14 +190,10 @@ void DesignSystem::switchTheme()
 
 QIcon& DesignSystem::setThemeIcon()
 {
-	if (m_mode == Light)
-	{
-		m_themeIcon = QIcon(":/Imgs/sun.svg");
-	}
-	else
-	{
-		m_themeIcon = QIcon(":/Imgs/moon.svg");
-	}
+	m_themeIcon = IconProvider::icon(
+		m_mode == Light ? IconRole::ThemeSun : IconRole::ThemeMoon,
+		m_mode == Dark,
+		QSize(18, 18));
 	return m_themeIcon;
 }
 
@@ -220,170 +219,70 @@ MaskWidget* DesignSystem::getDarkMask()
 
 QIcon& DesignSystem::btnMinIcon()
 {
-	if (m_mode == Light)
-	{
-		btnMin = QIcon(":/Imgs/Minimize.svg");
-	}
-	else
-	{
-		btnMin = QIcon(":/Imgs/MinimizeDark.svg");
-	}
+	btnMin = IconProvider::icon(IconRole::WindowMin, m_mode == Dark, QSize(16, 16), currentTheme().tabTextColor);
 
 	return btnMin;
 }
 
 QIcon& DesignSystem::btnMaxIcon()
 {
-	if (m_mode == Light)
-	{
-		btnMax = QIcon(":/Imgs/Maximize.svg");
-	}
-	else
-	{
-		btnMax = QIcon(":/Imgs/MaximizeDark.svg");
-	}
+	btnMax = IconProvider::icon(IconRole::WindowMax, m_mode == Dark, QSize(16, 16), currentTheme().tabTextColor);
 
 	return btnMax;
 }
 
 QIcon& DesignSystem::btnCloseIcon()
 {
-	if (m_mode == Light)
-	{
-		btnClose = QIcon(":/Imgs/ShutDown.svg");
-	}
-	else
-	{
-		btnClose = QIcon(":/Imgs/ShutDownDark.svg");
-	}
+	btnClose = IconProvider::icon(IconRole::WindowClose, m_mode == Dark, QSize(16, 16), currentTheme().tabTextColor);
 
 	return btnClose;
 }
 
 QIcon& DesignSystem::btnRestoreIcon()
 {
-	if (m_mode == Light)
-	{
-		btnRestore = QIcon(":/Imgs/Restore.svg");
-	}
-	else
-	{
-		btnRestore = QIcon(":/Imgs/RestoreDark.svg");
-	}
+	btnRestore = IconProvider::icon(IconRole::WindowRestore, m_mode == Dark, QSize(16, 16), currentTheme().tabTextColor);
 
 	return btnRestore;
 }
 
-QString& DesignSystem::btnHomeIconPath()
+IconRole DesignSystem::btnHomeIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnHome = ":/Imgs/home.svg";
-	}
-	else
-	{
-		btnHome = ":/Imgs/homeDark.svg";
-	}
-
-	return btnHome;
+	return IconRole::NavHome;
 }
 
-QString& DesignSystem::btnFuncIconPath()
+IconRole DesignSystem::btnFuncIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnFunc = ":/Imgs/function.svg";
-	}
-	else
-	{
-		btnFunc = ":/Imgs/functionDark.svg";
-	}
-
-	return btnFunc;
+	return IconRole::NavFunction;
 }
 
-QString& DesignSystem::btnSettingsIconPath()
+IconRole DesignSystem::btnSettingsIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnSettings = ":/Imgs/settings.svg";
-	}
-	else
-	{
-		btnSettings = ":/Imgs/settingsDark.svg";
-	}
-
-	return btnSettings;
+	return IconRole::NavSettings;
 }
 
-QString& DesignSystem::btnAboutIconPath()
+IconRole DesignSystem::btnAboutIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnAbout = ":/Imgs/about.svg";
-	}
-	else
-	{
-		btnAbout = ":/Imgs/aboutDark.svg";
-	}
-
-	return btnAbout;
+	return IconRole::NavAbout;
 }
 
-QString& DesignSystem::btnHomeActiveIconPath()
+IconRole DesignSystem::btnHomeActiveIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnHomeActive = ":/Imgs/home_active.svg";
-	}
-	else
-	{
-		btnHomeActive = ":/Imgs/home_activeDark.svg";
-	}
-
-	return btnHomeActive;
+	return IconRole::NavHomeActive;
 }
 
-QString& DesignSystem::btnFuncActiveIconPath()
+IconRole DesignSystem::btnFuncActiveIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnFuncActive = ":/Imgs/function_active.svg";
-	}
-	else
-	{
-		btnFuncActive = ":/Imgs/functionDark_active.svg";
-	}
-
-	return btnFuncActive;
+	return IconRole::NavFunctionActive;
 }
 
-QString& DesignSystem::btnSettingsActiveIconPath()
+IconRole DesignSystem::btnSettingsActiveIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnSettingsActive = ":/Imgs/settings_active.svg";
-	}
-	else
-	{
-		btnSettingsActive = ":/Imgs/settings_activeDark.svg";
-	}
-
-	return btnSettingsActive;
+	return IconRole::NavSettingsActive;
 }
 
-QString& DesignSystem::btnAboutActiveIconPath()
+IconRole DesignSystem::btnAboutActiveIconRole() const
 {
-	if (m_mode == Light)
-	{
-		btnAboutActive = ":/Imgs/about_active.svg";
-	}
-	else
-	{
-		btnAboutActive = ":/Imgs/about_activeDark.svg";
-	}
-
-	return btnAboutActive;
+	return IconRole::NavAboutActive;
 }
 
 QString& DesignSystem::prevBtnIcon()
@@ -501,3 +400,5 @@ QColor DesignSystem::disabledColor() const
 {
 	return m_currentTheme.disabledColor;
 }
+
+} // namespace ant

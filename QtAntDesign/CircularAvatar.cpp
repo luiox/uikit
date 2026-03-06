@@ -5,6 +5,8 @@
 #include <QTimer>
 #include "AntTooltipManager.h"
 
+namespace ant {
+
 CircularAvatar::CircularAvatar(QSize size, QString prevImgPath, QString afterImgPath, QWidget* parent)
 	: QWidget(parent)
 {
@@ -19,8 +21,13 @@ CircularAvatar::CircularAvatar(QSize size, QString prevImgPath, QString afterImg
 		connect(m_bubble, &BubbleViewController::exitLogin, this, &CircularAvatar::allowLogin);
 	}
 
-	// 设置图集
 	setImgs(prevImgPath, afterImgPath);
+}
+
+CircularAvatar::CircularAvatar(QSize size, IconRole prevRole, IconRole afterRole, QWidget* parent)
+	: CircularAvatar(size, QString(), QString(), parent)
+{
+	setImgs(prevRole, afterRole);
 }
 
 CircularAvatar::~CircularAvatar()
@@ -29,8 +36,41 @@ CircularAvatar::~CircularAvatar()
 
 void CircularAvatar::setImgs(QString prevImgPath, QString afterImgPath)
 {
-	m_prevSvg = new QSvgRenderer(prevImgPath, this);
-	m_afterSvg = new QSvgRenderer(afterImgPath, this);
+	if (m_prevSvg)
+	{
+		delete m_prevSvg;
+		m_prevSvg = nullptr;
+	}
+	if (m_afterSvg)
+	{
+		delete m_afterSvg;
+		m_afterSvg = nullptr;
+	}
+
+	const QByteArray prevBytes = IconProvider::svgData(prevImgPath);
+	const QByteArray afterBytes = IconProvider::svgData(afterImgPath);
+	m_prevSvg = prevBytes.isEmpty() ? new QSvgRenderer(prevImgPath, this) : new QSvgRenderer(prevBytes, this);
+	m_afterSvg = afterBytes.isEmpty() ? new QSvgRenderer(afterImgPath, this) : new QSvgRenderer(afterBytes, this);
+	update();
+}
+
+void CircularAvatar::setImgs(IconRole prevRole, IconRole afterRole)
+{
+	if (m_prevSvg)
+	{
+		delete m_prevSvg;
+		m_prevSvg = nullptr;
+	}
+	if (m_afterSvg)
+	{
+		delete m_afterSvg;
+		m_afterSvg = nullptr;
+	}
+
+	const QByteArray prevBytes = IconProvider::svgData(prevRole);
+	const QByteArray afterBytes = IconProvider::svgData(afterRole);
+	m_prevSvg = prevBytes.isEmpty() ? nullptr : new QSvgRenderer(prevBytes, this);
+	m_afterSvg = afterBytes.isEmpty() ? nullptr : new QSvgRenderer(afterBytes, this);
 	update();
 }
 
@@ -49,7 +89,7 @@ void CircularAvatar::allowLogin(bool loginState)
 
 void CircularAvatar::setAvatar(QString svgFilePath)
 {
-	// 扩展接口
+	Q_UNUSED(svgFilePath);
 }
 
 void CircularAvatar::paintEvent(QPaintEvent* e)
@@ -57,15 +97,12 @@ void CircularAvatar::paintEvent(QPaintEvent* e)
 	Q_UNUSED(e);
 
 	QPainter p(this);
-
 	p.setRenderHint(QPainter::Antialiasing, true);
 
-	// 创建圆形裁剪路径
 	QPainterPath path;
 	path.addEllipse(rect());
 	p.setClipPath(path);
 
-	// 渲染 SVG 画头像
 	if (m_prevSvg && m_prevSvg->isValid() && m_afterSvg && m_afterSvg->isValid())
 	{
 		if (!m_isClicked)
@@ -86,7 +123,6 @@ void CircularAvatar::enterEvent(QEnterEvent* e)
 	setCursor(Qt::PointingHandCursor);
 	if (!m_lastEnterTime.isValid() || m_lastEnterTime.elapsed() > m_enterIntervalMs)
 	{
-		// 会把计时器重置到当前时间点
 		m_lastEnterTime.restart();
 
 		if (!m_isEnter)
@@ -95,9 +131,7 @@ void CircularAvatar::enterEvent(QEnterEvent* e)
 
 			if (m_isLogin)
 			{
-				// 将气泡框移动到头像右侧的位置上
 				QPoint rightPos = mapToGlobal(rect().topRight());
-				// 自己调整到合适的位置即可
 				emit playAnim(QPoint(rightPos.x(), rightPos.y() - 6));
 			}
 			else
@@ -112,7 +146,6 @@ void CircularAvatar::leaveEvent(QEvent* e)
 {
 	QWidget::leaveEvent(e);
 	setCursor(Qt::ArrowCursor);
-	// 延迟判断防止光标不在2个控件上
 	QTimer::singleShot(100, this, [this]()
 		{
 			checkShouldHideBubble();
@@ -130,8 +163,8 @@ void CircularAvatar::mousePressEvent(QMouseEvent* event)
 
 void CircularAvatar::checkShouldHideBubble()
 {
-	bool avatarHovered = this->underMouse();
-	bool bubbleHovered = m_bubble && m_bubble->underMouse();
+	const bool avatarHovered = this->underMouse();
+	const bool bubbleHovered = m_bubble && m_bubble->underMouse();
 
 	if (!avatarHovered && !bubbleHovered)
 	{
@@ -139,3 +172,5 @@ void CircularAvatar::checkShouldHideBubble()
 		emit hideAnim();
 	}
 }
+
+} // namespace ant

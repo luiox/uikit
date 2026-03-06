@@ -13,6 +13,7 @@
 #include "AboutPage.h"
 #include <QToolButton>
 #include <QLabel>
+#include <QDir>
 #include <QShowEvent>
 #include <QWindow>
 #include "NotificationManager.h"
@@ -21,10 +22,13 @@
 #include "MaskWidget.h"
 #include "ThemeSwitcher.h"
 
+namespace ant {
+
 QtAntDesign::QtAntDesign(QWidget* parent)
 	: QWidget(parent)
 {
 	ui.setupUi(this);
+	IconProvider::setDynamicRoot(QDir::currentPath());
 
 	setObjectName("QtAntDesign");
 #ifdef Q_OS_LINUX
@@ -144,7 +148,7 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 	// 导航栏添加控件
 	QVBoxLayout* naviLay = new QVBoxLayout(ui.navi_widget);;
 	ui.navi_widget->layout()->setContentsMargins(0, 0, 0, 0);
-	CircularAvatar* avatar = new CircularAvatar(QSize(42, 42), ":/Imgs/noLogin.svg", ":/Imgs/github.svg", ui.navi_widget);
+	CircularAvatar* avatar = new CircularAvatar(QSize(42, 42), IconRole::AvatarGuest, IconRole::BrandGithub, ui.navi_widget);
 	// 添加页面布局
 	QVBoxLayout* contentLay = new QVBoxLayout(ui.central);
 	contentLay->setContentsMargins(0, 0, 0, 0);
@@ -173,17 +177,17 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 	// 设置导航按钮样式
 	auto* ins = DesignSystem::instance();
 	buttonInfos = {
-	{btnHome,ins->btnHomeIconPath(), ins->btnHomeActiveIconPath(), homePage},
-	{btnFunc, ins->btnFuncIconPath(), ins->btnFuncActiveIconPath(), functionPage},
-	{btnSettings,ins->btnSettingsIconPath() ,ins->btnSettingsActiveIconPath() , settingsPage},
-	{btnAbout,ins->btnAboutIconPath() , ins->btnAboutActiveIconPath(), aboutPage}
+	{btnHome,ins->btnHomeIconRole(), ins->btnHomeActiveIconRole(), homePage},
+	{btnFunc, ins->btnFuncIconRole(), ins->btnFuncActiveIconRole(), functionPage},
+	{btnSettings,ins->btnSettingsIconRole() ,ins->btnSettingsActiveIconRole() , settingsPage},
+	{btnAbout,ins->btnAboutIconRole() , ins->btnAboutActiveIconRole(), aboutPage}
 	};
 	// 设置统一样式和连接信号
 	buttonInfos[stackedWidget->currentIndex()].button->setBtnChecked(true); // 设置当前页面按钮为选中状态
 	for (const ButtonInfo& info : buttonInfos)
 	{
 		CustomToolButton* btn = info.button;
-		btn->setSvgIcons(info.normalIcon, info.activeIcon);
+		btn->setIconRoles(info.normalIcon, info.activeIcon);
 		btn->setFixedSize(QSize(naviWidth - 4, naviWidth - 4));
 		// 连接信号，捕获图标路径
 		connect(btn, &QToolButton::clicked, [btn, btnHome, contentLay, this]()
@@ -330,15 +334,15 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 			btnMax->setIcon(DesignSystem::instance()->btnMaxIcon());
 			btnClose->setIcon(DesignSystem::instance()->btnCloseIcon());
 			buttonInfos = {
-				{btnHome,ins->btnHomeIconPath(), ins->btnHomeActiveIconPath(), homePage},
-				{btnFunc, ins->btnFuncIconPath(), ins->btnFuncActiveIconPath(), functionPage},
-				{btnSettings,ins->btnSettingsIconPath() ,ins->btnSettingsActiveIconPath() , settingsPage},
-				{btnAbout,ins->btnAboutIconPath() , ins->btnAboutActiveIconPath(), aboutPage}
+				{btnHome,ins->btnHomeIconRole(), ins->btnHomeActiveIconRole(), homePage},
+				{btnFunc, ins->btnFuncIconRole(), ins->btnFuncActiveIconRole(), functionPage},
+				{btnSettings,ins->btnSettingsIconRole() ,ins->btnSettingsActiveIconRole() , settingsPage},
+				{btnAbout,ins->btnAboutIconRole() , ins->btnAboutActiveIconRole(), aboutPage}
 			};
 			for (const ButtonInfo& info : buttonInfos)
 			{
 				CustomToolButton* btn = info.button;
-				btn->setSvgIcons(info.normalIcon, info.activeIcon);
+				btn->setIconRoles(info.normalIcon, info.activeIcon);
 			}
 		});
 }
@@ -357,7 +361,6 @@ void QtAntDesign::resizeEvent(QResizeEvent* event)
 	// 保存内容区域尺寸
 	DesignSystem::instance()->setContentSize(QSize(width() - m_naviWidth, height()));
 }
-
 bool QtAntDesign::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
 {
 #ifdef Q_OS_WIN
@@ -626,3 +629,5 @@ void QtAntDesign::updateCursor(const QPoint& pos)
 }
 
 #endif
+
+} // namespace ant
