@@ -15,3 +15,6 @@ win32-launcher/target/
 
 compile_commands.json
 .cache/
+*.png
+*.jpg
+*.mp4
