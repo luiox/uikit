@@ -49,8 +49,23 @@ void CircularAvatar::setImgs(QString prevImgPath, QString afterImgPath)
 
 	const QByteArray prevBytes = IconProvider::svgData(prevImgPath);
 	const QByteArray afterBytes = IconProvider::svgData(afterImgPath);
-	m_prevSvg = prevBytes.isEmpty() ? new QSvgRenderer(prevImgPath, this) : new QSvgRenderer(prevBytes, this);
-	m_afterSvg = afterBytes.isEmpty() ? new QSvgRenderer(afterImgPath, this) : new QSvgRenderer(afterBytes, this);
+	if (!prevBytes.isEmpty())
+	{
+		m_prevSvg = new QSvgRenderer(prevBytes, this);
+	}
+	else if (!prevImgPath.trimmed().isEmpty())
+	{
+		m_prevSvg = new QSvgRenderer(prevImgPath, this);
+	}
+
+	if (!afterBytes.isEmpty())
+	{
+		m_afterSvg = new QSvgRenderer(afterBytes, this);
+	}
+	else if (!afterImgPath.trimmed().isEmpty())
+	{
+		m_afterSvg = new QSvgRenderer(afterImgPath, this);
+	}
 	update();
 }
 

@@ -5,6 +5,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QDesktopServices>
 #include "TagWidget.h"
+#include "IconProvider.h"
 
 CarouselCard::CarouselCard(const QString& imagePath, QWidget* parent)
 	: QWidget(parent), m_imagePath(imagePath)
@@ -37,8 +38,7 @@ void CarouselCard::enableUrlBtn(QUrl url)
 {
 	QSize size(130, 22);
 	btn = new QToolButton(this);
-	QIcon icon(":/Imgs/rightArrowBtn.svg");
-	btn->setIcon(icon);
+	btn->setIcon(ant::IconProvider::icon(QStringLiteral(":/Imgs/rightArrowBtn.svg"), QSize(22, 22)));
 	btn->setIconSize(QSize(22, 22));
 	btn->setFixedSize(size);
 	btn->setText("  查看更多");		// 设置文字

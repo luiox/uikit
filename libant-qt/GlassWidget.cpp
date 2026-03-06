@@ -4,6 +4,8 @@
 #include <QPainterPath>
 #include <QDesktopServices>
 
+#include "IconProvider.h"
+
 GlassWidget::GlassWidget(float blurVlue, int passes, QWidget* parent)
 	: QWidget(parent), m_blur(blurVlue, passes)
 {
@@ -41,7 +43,7 @@ void GlassWidget::setUrl(QUrl url)
 	m_btn = new QPushButton(this);
 	m_btn->setStyleSheet("QPushButton { background-color: transparent; border: none; }");
 	m_btn->setCursor(Qt::PointingHandCursor);
-	m_btn->setIcon(QIcon(":/Imgs/goTo.svg"));
+	m_btn->setIcon(ant::IconProvider::icon(QStringLiteral(":/Imgs/goTo.svg"), QSize(18, 18)));
 	m_btn->setFixedSize(18, 18);
 	m_btn->setIconSize(m_btn->size());
 

@@ -30,6 +30,7 @@
 #include "StyleSheet.h"
 #include "PaginationWidget.h"
 #include "AntTreeView.h"
+#include "IconProvider.h"
 
 FunctionPage::FunctionPage(QWidget* parent)
 	: QWidget(parent)
@@ -52,12 +53,12 @@ FunctionPage::FunctionPage(QWidget* parent)
 	// 流式布局
 	QWidget* w3 = new QWidget(this);
 	FlowLayout* flowLay = new FlowLayout(w3, 10, 6);
-	QIcon svgIcon(":/Imgs/git.svg");
+	const QPixmap gitPixmap = ant::IconProvider::pixmap(QStringLiteral(":/Imgs/git.svg"), QSize(50, 50));
 	for (int i = 0; i < 50; ++i)
 	{
 		QLabel* label = new QLabel(w3);
 		label->setFixedSize(50, 50);
-		label->setPixmap(svgIcon.pixmap(50, 50));
+		label->setPixmap(gitPixmap);
 		flowLay->addWidget(label);
 	}
 
@@ -190,9 +191,9 @@ FunctionPage::FunctionPage(QWidget* parent)
 	row3Layout->setContentsMargins(0, 0, 0, 16);
 
 	QList<QIcon> icons = {
-		QIcon(":/Imgs/undraw_book-lover_f1dq.svg"),
-		QIcon(":/Imgs/undraw_developer-avatar_f6ac.svg"),
-		QIcon(":/Imgs/undraw_loving-it_hspq.svg")
+		ant::IconProvider::icon(QStringLiteral(":/Imgs/undraw_book-lover_f1dq.svg"), QSize(350, 250)),
+		ant::IconProvider::icon(QStringLiteral(":/Imgs/undraw_developer-avatar_f6ac.svg"), QSize(350, 250)),
+		ant::IconProvider::icon(QStringLiteral(":/Imgs/undraw_loving-it_hspq.svg"), QSize(350, 250))
 	};
 
 	QList<QLabel*> iconLabels;
