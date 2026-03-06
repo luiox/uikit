@@ -21,7 +21,9 @@ target("libant_qt")
         {public = true}
     )
     add_headerfiles("*.h")
+    add_files("*.h", {rules = "qt.moc"})
     add_files("*.cpp")
+    add_files("ThirdParty/QR-Code-generator-master/qrcodegen.cpp")
 
     if is_plat("windows") then
         add_syslinks("dwmapi")

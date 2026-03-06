@@ -22,6 +22,14 @@ target("libant_qt_demo")
     )
     add_headerfiles("*.h")
     add_files(
+        "LibAntQtDemoWindow.h",
+        "HomePage.h",
+        "FunctionPage.h",
+        "SettingsPage.h",
+        "AboutPage.h",
+        {rules = "qt.moc"}
+    )
+    add_files(
         "main.cpp",
         "LibAntQtDemoWindow.cpp",
         "HomePage.cpp",
