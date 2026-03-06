@@ -1,5 +1,5 @@
 ﻿#include <QApplication>
-#include "QtAntDesign.h"
+#include "LibAntQtDemoWindow.h"
 #include <QFontDatabase>
 #include <QDir>
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 		qWarning("字体加载失败！");
 	}
 
-	QtAntDesign w;
+	ant::LibAntQtDemoWindow w;
 	w.show();
 
 	return a.exec();

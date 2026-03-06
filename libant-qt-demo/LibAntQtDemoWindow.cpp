@@ -1,4 +1,4 @@
-﻿#include "QtAntDesign.h"
+﻿#include "LibAntQtDemoWindow.h"
 #include <qevent.h>
 #include <qlayout.h>
 #include <qpainter.h>
@@ -24,13 +24,13 @@
 
 namespace ant {
 
-QtAntDesign::QtAntDesign(QWidget* parent)
+LibAntQtDemoWindow::LibAntQtDemoWindow(QWidget* parent)
 	: QWidget(parent)
 {
 	ui.setupUi(this);
 	IconProvider::setDynamicRoot(QDir::currentPath());
 
-	setObjectName("QtAntDesign");
+	setObjectName("LibAntQtDemoWindow");
 #ifdef Q_OS_LINUX
 	setWindowFlags(Qt::FramelessWindowHint);
 	// 开启悬浮事件处理鼠标边界样式变化
@@ -237,7 +237,7 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 			// 获取按钮中心点的全局坐标
 			themeSwitcher->startSwitchTheme(this->grab(), themeBtn, themeBtn->mapToGlobal(themeBtn->rect().center()));
 		});
-	connect(this, &QtAntDesign::resized, themeSwitcher, &ThemeSwitcher::resizeByMainWindow);
+	connect(this, &LibAntQtDemoWindow::resized, themeSwitcher, &ThemeSwitcher::resizeByMainWindow);
 
 	//  导航栏布局
 	naviLay->addSpacing(28);
@@ -259,7 +259,7 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 	NotificationManager::instance()->getMainWindow(ui.main_widget);
 
 	// 调整消息框位置
-	connect(this, &QtAntDesign::resized, this, [=](int w, int h)
+	connect(this, &LibAntQtDemoWindow::resized, this, [=](int w, int h)
 		{
 			NotificationManager::instance()->relayoutNotifications(w, h);
 		});
@@ -314,15 +314,15 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 			emit showStandardDialog("TITLE", "是否关闭应用程序?");
 		});
 
-	connect(this, &QtAntDesign::showStandardDialog, mDialog, &DialogViewController::buildStandardDialog);
+	connect(this, &LibAntQtDemoWindow::showStandardDialog, mDialog, &DialogViewController::buildStandardDialog);
 
 	// 页面的信号连接
-	connect(this, &QtAntDesign::resized, functionPage, &FunctionPage::resized);
-	connect(this, &QtAntDesign::resized, this, [this](int w, int h)
+	connect(this, &LibAntQtDemoWindow::resized, functionPage, &FunctionPage::resized);
+	connect(this, &LibAntQtDemoWindow::resized, this, [this](int w, int h)
 		{
 			DesignSystem::instance()->getDarkMask()->resize(w, h);
 		});
-	connect(this, &QtAntDesign::windowMoved, functionPage, &FunctionPage::windowMoved);
+	connect(this, &LibAntQtDemoWindow::windowMoved, functionPage, &FunctionPage::windowMoved);
 
 	// 主题切换
 	connect(ins, &DesignSystem::themeChanged, this, [=]()
@@ -347,11 +347,11 @@ QtAntDesign::QtAntDesign(QWidget* parent)
 		});
 }
 
-QtAntDesign::~QtAntDesign()
+LibAntQtDemoWindow::~LibAntQtDemoWindow()
 {
 }
 
-void QtAntDesign::resizeEvent(QResizeEvent* event)
+void LibAntQtDemoWindow::resizeEvent(QResizeEvent* event)
 {
 	QWidget::resizeEvent(event);
 
@@ -361,7 +361,7 @@ void QtAntDesign::resizeEvent(QResizeEvent* event)
 	// 保存内容区域尺寸
 	DesignSystem::instance()->setContentSize(QSize(width() - m_naviWidth, height()));
 }
-bool QtAntDesign::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
+bool LibAntQtDemoWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
 {
 #ifdef Q_OS_WIN
 	MSG* msg = static_cast<MSG*>(message);
@@ -480,7 +480,7 @@ bool QtAntDesign::nativeEvent(const QByteArray& eventType, void* message, qintpt
 	return QWidget::nativeEvent(eventType, message, result);
 }
 
-void QtAntDesign::showEvent(QShowEvent* event)
+void LibAntQtDemoWindow::showEvent(QShowEvent* event)
 {
 	QWidget::showEvent(event);
 
@@ -499,14 +499,14 @@ void QtAntDesign::showEvent(QShowEvent* event)
 #endif // Q_OS_WIN
 }
 
-void QtAntDesign::moveEvent(QMoveEvent* event)
+void LibAntQtDemoWindow::moveEvent(QMoveEvent* event)
 {
 	QWidget::moveEvent(event);
 	// 发送窗口左上角全局坐标
 	emit windowMoved(this->mapToGlobal(QPoint(0, 0)));
 }
 
-void QtAntDesign::changeEvent(QEvent* event)
+void LibAntQtDemoWindow::changeEvent(QEvent* event)
 {
 	if (event->type() == QEvent::WindowStateChange)
 	{
@@ -529,7 +529,7 @@ void QtAntDesign::changeEvent(QEvent* event)
 
 #ifdef Q_OS_LINUX
 
-bool QtAntDesign::eventFilter(QObject* obj, QEvent* event)
+bool LibAntQtDemoWindow::eventFilter(QObject* obj, QEvent* event)
 {
 	if (event->type() == QEvent::HoverMove && !m_isLockCursor)
 	{
@@ -548,7 +548,7 @@ bool QtAntDesign::eventFilter(QObject* obj, QEvent* event)
 	return QObject::eventFilter(obj, event);
 }
 
-void QtAntDesign::mousePressEvent(QMouseEvent* event)
+void LibAntQtDemoWindow::mousePressEvent(QMouseEvent* event)
 {
 	if (event->button() != Qt::LeftButton) return;
 
@@ -568,7 +568,7 @@ void QtAntDesign::mousePressEvent(QMouseEvent* event)
 	}
 }
 
-void QtAntDesign::mouseDoubleClickEvent(QMouseEvent* event)
+void LibAntQtDemoWindow::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton && event->pos().y() > rect().top() && event->pos().y() < m_titleBarHeight)
 	{
@@ -577,7 +577,7 @@ void QtAntDesign::mouseDoubleClickEvent(QMouseEvent* event)
 	}
 }
 
-void QtAntDesign::updateCursor(const QPoint& pos)
+void LibAntQtDemoWindow::updateCursor(const QPoint& pos)
 {
 	QRectF r = rect();
 	Qt::Edges newEdge = Qt::Edges();

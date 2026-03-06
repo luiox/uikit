@@ -8,9 +8,9 @@ namespace {
 
 QIcon passwordIcon(bool visible)
 {
-	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
-	const QColor tint = DesignSystem::instance()->currentTheme().placeholderColor;
-	return IconProvider::icon(visible ? IconRole::Eye : IconRole::EyeSlash, isDark, QSize(18, 18), tint);
+	const bool isDark = ant::DesignSystem::instance()->themeMode() == ant::DesignSystem::Dark;
+	const QColor tint = ant::DesignSystem::instance()->currentTheme().placeholderColor;
+	return ant::IconProvider::icon(visible ? ant::IconRole::Eye : ant::IconRole::EyeSlash, isDark, QSize(18, 18), tint);
 }
 
 } // namespace

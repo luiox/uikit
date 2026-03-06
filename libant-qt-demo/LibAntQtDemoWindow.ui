@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>QtAntDesignClass</class>
- <widget class="QWidget" name="QtAntDesignClass">
+ <class>LibAntQtDemoWindowClass</class>
+ <widget class="QWidget" name="LibAntQtDemoWindowClass">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>QtAntDesign</string>
+    <string>libant-qt-demo</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="spacing">
@@ -93,7 +93,7 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="QtAntDesign.qrc"/>
+    <include location="../libant-qt/libant-qt.qrc"/>
  </resources>
  <connections/>
 </ui>

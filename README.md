@@ -24,6 +24,12 @@
 
 ```text
 03_nassistant/
+  libant-qt/
+    xmake.lua
+    README.md
+  libant-qt-demo/
+    xmake.lua
+    README.md
   cpp-duilib-launcher/
     src/
     tests/
@@ -74,3 +80,6 @@ xmake run backend_tests
 ## 说明
 
 - 原 Tauri + Vue 实现（`ui/`、`src-tauri/`）已按迁移计划移除。
+- 原 `QtAntDesign` 目录已拆分为：
+  - `libant-qt/`：组件库
+  - `libant-qt-demo/`：独立演示工程

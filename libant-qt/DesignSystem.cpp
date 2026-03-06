@@ -20,7 +20,7 @@ DesignSystem::DesignSystem()
 	QString fileName = "homeBg.mp4";
 
 	// 默认路径，优先检查 项目根目录下的文件
-	homeVideoPath = projectPath + "/QtAntDesign/Video/" + fileName;
+	homeVideoPath = projectPath + "/libant-qt-demo/Video/" + fileName;
 
 	// 检查文件是否存在
 	if (!QFile::exists(homeVideoPath))

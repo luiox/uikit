@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <QtWidgets/QWidget>
-#include "ui_QtAntDesign.h"
+#include "ui_LibAntQtDemoWindow.h"
 #include <QHoverEvent>
 #include "CircularAvatar.h"
 #include "CustomToolButton.h"
@@ -30,12 +30,12 @@ enum ResizeRegion {
 	TopLeft, TopRight, BottomLeft, BottomRight
 };
 
-class QtAntDesign : public QWidget
+class LibAntQtDemoWindow : public QWidget
 {
 	Q_OBJECT
 public:
-	QtAntDesign(QWidget* parent = nullptr);
-	~QtAntDesign();
+	LibAntQtDemoWindow(QWidget* parent = nullptr);
+	~LibAntQtDemoWindow();
 protected:
 	void resizeEvent(QResizeEvent* event) override;
 	bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
@@ -66,7 +66,7 @@ private:
 #endif
 
 private:
-	Ui::QtAntDesignClass ui;
+	Ui::LibAntQtDemoWindowClass ui;
 #ifdef Q_OS_WIN
 	HWND m_hwnd;
 #endif
@@ -124,4 +124,4 @@ private:
 
 } // namespace ant
 
-using ant::QtAntDesign;
+using ant::LibAntQtDemoWindow;

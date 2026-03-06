@@ -8,6 +8,8 @@ add_requires("nlohmann_json", "gtest")
 
 includes("libicon-core")
 includes("libicon-qt")
+includes("libant-qt")
+includes("libant-qt-demo")
 includes("cpp-duilib-launcher")
 includes("ant_demo")
 includes("qt6_widget_demo")

@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <QWidget>
-#include "FramelessVideoWindow.h"
 
 class HomePage : public QWidget
 {
@@ -12,7 +11,4 @@ public:
 	~HomePage();
 protected:
 	void showEvent(QShowEvent* event) override;
-
-private:
-	FramelessVideoWindow* videoWindow = nullptr;
 };
