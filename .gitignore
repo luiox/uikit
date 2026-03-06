@@ -18,3 +18,5 @@ compile_commands.json
 *.png
 *.jpg
 *.mp4
+build-qtant/
+build-qtant-vs/
