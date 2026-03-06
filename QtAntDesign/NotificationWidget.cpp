@@ -10,6 +10,8 @@
 #include "LoadingArc.h"
 #include "DesignSystem.h"
 
+namespace ant {
+
 int NotificationWidget::taskCount = 0;
 
 NotificationWidget::NotificationWidget(const QString& title, QSize size, QWidget* parentWindow)
@@ -43,7 +45,8 @@ NotificationWidget::NotificationWidget(const QString& title, QSize size, QWidget
 	// 标题
 	QHBoxLayout* titleLay = new QHBoxLayout();
 	closeBtn = new QToolButton(bg);
-	closeBtn->setIcon(QIcon(":/Imgs/Shut down-2.svg"));
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	closeBtn->setIcon(IconProvider::icon(IconRole::WindowClose, isDark, QSize(16, 16), DesignSystem::instance()->currentTheme().tabTextColor));
 	closeBtn->setStyleSheet(StyleSheet::toolBtnQss());
 	QLabel* titleLab = new QLabel(title, bg);
 	titleLab->setFont(font);
@@ -90,6 +93,8 @@ NotificationWidget::NotificationWidget(const QString& title, QSize size, QWidget
 	connect(DesignSystem::instance(), &DesignSystem::themeChanged, this, [this]()
 		{
 			bg->setStyleSheet(StyleSheet::notificationQss(DesignSystem::instance()->currentTheme().notifBgColor));
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+			closeBtn->setIcon(IconProvider::icon(IconRole::WindowClose, isDark, QSize(16, 16), DesignSystem::instance()->currentTheme().tabTextColor));
 			closeBtn->setStyleSheet(StyleSheet::toolBtnQss());
 		});
 }
@@ -132,3 +137,5 @@ void NotificationWidget::addTaskCount()
 	m_text = QString("当前有%1个任务正在后台执行中").arg(QString::number(taskCount));
 	m_descLab->setText(m_text);
 }
+
+} // namespace ant

@@ -395,7 +395,7 @@ FunctionPage::FunctionPage(QWidget* parent)
 
 	// 图标按钮
 	AntButton* antIconBtn = new  AntButton("", 12, w1);
-	antIconBtn->setSvgIcon(":/Imgs/back.svg");
+	antIconBtn->setIconRole(ant::IconRole::Back);
 	antIconBtn->setFixedSize(50, 50);
 
 	// 徽章

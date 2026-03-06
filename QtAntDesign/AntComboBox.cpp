@@ -5,6 +5,8 @@
 #include <QStringListModel>
 #include "DesignSystem.h"
 
+namespace ant {
+
 AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* parent, int popupHeight, bool enableMultiLevel,
 	QMap<QString, QStringList> subItemMap)
 	: QWidget(parent),
@@ -15,7 +17,9 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 	m_isChangeTextColor(false),
 	m_enableMultiLevel(enableMultiLevel)
 {
-	m_arrowRenderer = new QSvgRenderer(QStringLiteral(":/Imgs/downArrow.svg"), this);
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const QByteArray arrowBytes = IconProvider::svgData(IconRole::ArrowDown, isDark, DesignSystem::instance()->currentTheme().popupTextColor);
+	m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(QStringLiteral(":/Imgs/downArrow.svg"), this) : new QSvgRenderer(arrowBytes, this);
 
 	// 二级列表足够了
 	PopupViewController* popupView1 = new PopupViewController(popupHeight, enableMultiLevel, this);
@@ -75,7 +79,7 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 		});
 
 	// 添加数据模型
-	QIcon arrowIcon(":/Imgs/rightArrow.svg");
+	QIcon arrowIcon(IconProvider::icon(QStringLiteral(":/Imgs/rightArrow.svg"), QSize(14, 14), DesignSystem::instance()->currentTheme().popupTextColor));
 
 	QStandardItemModel* model1 = new QStandardItemModel(this);
 	for (const QString& text : itemTextList)
@@ -120,6 +124,10 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 		{
 			m_borderColor = DesignSystem::instance()->currentTheme().popupBorderColor;
 			m_shadowColor = DesignSystem::instance()->primaryColor();
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+			const QByteArray arrowBytes = IconProvider::svgData(IconRole::ArrowDown, isDark, DesignSystem::instance()->currentTheme().popupTextColor);
+			delete m_arrowRenderer;
+			m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(QStringLiteral(":/Imgs/downArrow.svg"), this) : new QSvgRenderer(arrowBytes, this);
 			update();
 		});
 }
@@ -240,6 +248,8 @@ void AntComboBox::mousePressEvent(QMouseEvent* event)
 		m_popup1->showAnimated(popupPos, width());
 	}
 }
+
+} // namespace ant
 
 void AntComboBox::resizeEvent(QResizeEvent* event)
 {

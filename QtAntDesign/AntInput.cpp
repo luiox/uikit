@@ -3,12 +3,15 @@
 #include <QResizeEvent>
 #include <QStandardItemModel>
 
+namespace ant {
+
 AntInput::AntInput(int popupHeight, QStringList itemTextList, QWidget* parent)
 	: AntBaseInput(parent)
 {
 	m_searchButton = new QToolButton(this);
 	m_searchButton->setCursor(Qt::PointingHandCursor);
-	m_searchButton->setIcon(QIcon(":/Imgs/search.svg")); // 替换成你的放大镜图标路径
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	m_searchButton->setIcon(IconProvider::icon(IconRole::Search, isDark, QSize(17, 17), DesignSystem::instance()->currentTheme().placeholderColor));
 	m_searchButton->setFixedSize(17, 17);
 	m_searchButton->setIconSize(QSize(17, 17)); // 设置图标大小
 	m_searchButton->setStyleSheet(R"(
@@ -52,6 +55,12 @@ AntInput::AntInput(int popupHeight, QStringList itemTextList, QWidget* parent)
 			DesignSystem::instance()->getTransparentMask()->hide();
 			clearFocus();
 		});
+
+	connect(DesignSystem::instance(), &DesignSystem::themeChanged, this, [this]()
+		{
+			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+			m_searchButton->setIcon(IconProvider::icon(IconRole::Search, isDark, QSize(17, 17), DesignSystem::instance()->currentTheme().placeholderColor));
+		});
 }
 
 void AntInput::resizeEvent(QResizeEvent* event)
@@ -93,3 +102,5 @@ void AntInput::setCurrentText(QString text)
 void AntInput::onSearchClicked()
 {
 }
+
+} // namespace ant

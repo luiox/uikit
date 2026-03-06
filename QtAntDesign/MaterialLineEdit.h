@@ -8,6 +8,8 @@
 #include "StyleSheet.h"
 #include "DesignSystem.h"
 
+namespace ant {
+
 class MaterialLineEdit : public QLineEdit
 {
 	Q_OBJECT
@@ -77,5 +79,9 @@ private:
 
 	QString m_errorText;            // 错误提示文本
 };
+
+} // namespace ant
+
+using ant::MaterialLineEdit;
 
 #endif // MATERIALLINEEDIT_H

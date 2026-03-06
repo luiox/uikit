@@ -4,6 +4,19 @@
 #include <QFontMetrics>
 #include <QToolButton>
 
+namespace {
+
+QIcon passwordIcon(bool visible)
+{
+	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
+	const QColor tint = DesignSystem::instance()->currentTheme().placeholderColor;
+	return IconProvider::icon(visible ? IconRole::Eye : IconRole::EyeSlash, isDark, QSize(18, 18), tint);
+}
+
+} // namespace
+
+namespace ant {
+
 MaterialLineEdit::MaterialLineEdit(QWidget* parent)
 	: QLineEdit(parent),
 	m_labelProgress(0.0),
@@ -30,6 +43,10 @@ MaterialLineEdit::MaterialLineEdit(QWidget* parent)
 	connect(DesignSystem::instance(), &DesignSystem::themeChanged, this, [this]()
 		{
 			m_borderColor = DesignSystem::instance()->currentTheme().borderColor;
+			if (m_togglePasswordButton)
+			{
+				m_togglePasswordButton->setIcon(passwordIcon(m_passwordVisible));
+			}
 			if (m_textBtn)
 				m_textBtn->setStyleSheet(StyleSheet::noBorderBtnQss(DesignSystem::instance()->primaryColor()));
 		});
@@ -71,17 +88,15 @@ void MaterialLineEdit::setPasswordToggleEnabled(bool enabled)
 		m_togglePasswordButton->setCheckable(true);
 		m_togglePasswordButton->setChecked(false);
 		m_togglePasswordButton->setCursor(Qt::PointingHandCursor);
-		m_togglePasswordButton->setIcon(QIcon(":/Imgs/eye-slash-filled.svg"));
-		m_togglePasswordButton->setIconSize(QSize(40, 40));
+		m_togglePasswordButton->setIcon(passwordIcon(false));
+		m_togglePasswordButton->setIconSize(QSize(18, 18));
 		m_togglePasswordButton->setStyleSheet("QToolButton { border: none; padding: 0px; }");
 
 		connect(m_togglePasswordButton, &QToolButton::toggled, this, [this](bool checked)
 			{
 				m_passwordVisible = checked;
 				setEchoMode(m_passwordVisible ? QLineEdit::Normal : QLineEdit::Password);
-				m_togglePasswordButton->setIcon(QIcon(m_passwordVisible
-					? ":/Imgs/eye-filled.svg"
-					: ":/Imgs/eye-slash-filled.svg"));
+				m_togglePasswordButton->setIcon(passwordIcon(m_passwordVisible));
 			});
 	}
 	else {
@@ -177,6 +192,8 @@ void MaterialLineEdit::animateUnderline(bool show)
 
 	m_underlineAnimation->start();
 }
+
+} // namespace ant
 
 void MaterialLineEdit::paintEvent(QPaintEvent* event)
 {

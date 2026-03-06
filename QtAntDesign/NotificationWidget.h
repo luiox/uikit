@@ -5,6 +5,8 @@
 #include <QLabel>
 #include <QToolButton>
 
+namespace ant {
+
 class NotificationWidget : public QWidget
 {
 	Q_OBJECT
@@ -28,3 +30,7 @@ private:
 	QWidget* bg;
 	QToolButton* closeBtn;
 };
+
+} // namespace ant
+
+using ant::NotificationWidget;

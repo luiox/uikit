@@ -5,6 +5,8 @@
 #include <QPropertyAnimation>
 #include "PopupViewController.h"
 
+namespace ant {
+
 class AntInput : public AntBaseInput
 {
 	Q_OBJECT
@@ -27,3 +29,7 @@ private:
 	void updateSearchButtonPosition();
 	void setCurrentText(QString text);
 };
+
+} // namespace ant
+
+using ant::AntInput;

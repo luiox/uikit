@@ -9,6 +9,8 @@
 #include "DesignSystem.h"
 #include "PopupViewController.h"
 
+namespace ant {
+
 class AntComboBox : public QWidget
 {
 	Q_OBJECT
@@ -50,3 +52,7 @@ private:
 	bool m_isChangeTextColor;
 	bool m_enableMultiLevel = false;
 };
+
+} // namespace ant
+
+using ant::AntComboBox;
