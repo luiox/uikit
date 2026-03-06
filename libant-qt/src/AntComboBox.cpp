@@ -19,7 +19,7 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 {
 	const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
 	const QByteArray arrowBytes = IconProvider::svgData(IconRole::ArrowDown, isDark, DesignSystem::instance()->currentTheme().popupTextColor);
-	m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(QStringLiteral(":/Imgs/downArrow.svg"), this) : new QSvgRenderer(arrowBytes, this);
+	m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(this) : new QSvgRenderer(arrowBytes, this);
 
 	// 二级列表足够了
 	PopupViewController* popupView1 = new PopupViewController(popupHeight, enableMultiLevel, this);
@@ -79,7 +79,7 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 		});
 
 	// 添加数据模型
-	QIcon arrowIcon(IconProvider::icon(QStringLiteral(":/Imgs/rightArrow.svg"), QSize(14, 14), DesignSystem::instance()->currentTheme().popupTextColor));
+	QIcon arrowIcon(IconProvider::icon(IconRole::ArrowRight, false, QSize(14, 14), DesignSystem::instance()->currentTheme().popupTextColor));
 
 	QStandardItemModel* model1 = new QStandardItemModel(this);
 	for (const QString& text : itemTextList)
@@ -127,7 +127,7 @@ AntComboBox::AntComboBox(QString showText, QStringList itemTextList, QWidget* pa
 			const bool isDark = DesignSystem::instance()->themeMode() == DesignSystem::Dark;
 			const QByteArray arrowBytes = IconProvider::svgData(IconRole::ArrowDown, isDark, DesignSystem::instance()->currentTheme().popupTextColor);
 			delete m_arrowRenderer;
-			m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(QStringLiteral(":/Imgs/downArrow.svg"), this) : new QSvgRenderer(arrowBytes, this);
+			m_arrowRenderer = arrowBytes.isEmpty() ? new QSvgRenderer(this) : new QSvgRenderer(arrowBytes, this);
 			update();
 		});
 }

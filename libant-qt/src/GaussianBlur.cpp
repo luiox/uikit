@@ -1,5 +1,5 @@
 ﻿#include "GaussianBlur.h"
-#include "ThirdParty/FastGaussianBlur-main/fast_gaussian_blur_template.h"
+#include "fast_gaussian_blur_template.h"
 #include <cstring>
 
 GaussianBlur::GaussianBlur(float sigma, int passes, BorderStrategy border)

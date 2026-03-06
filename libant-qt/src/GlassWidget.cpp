@@ -43,7 +43,7 @@ void GlassWidget::setUrl(QUrl url)
 	m_btn = new QPushButton(this);
 	m_btn->setStyleSheet("QPushButton { background-color: transparent; border: none; }");
 	m_btn->setCursor(Qt::PointingHandCursor);
-	m_btn->setIcon(ant::IconProvider::icon(QStringLiteral(":/Imgs/goTo.svg"), QSize(18, 18)));
+	m_btn->setIcon(ant::IconProvider::icon(ant::IconRole::GoTo, false, QSize(18, 18)));
 	m_btn->setFixedSize(18, 18);
 	m_btn->setIconSize(m_btn->size());
 

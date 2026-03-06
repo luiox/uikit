@@ -14,9 +14,7 @@ target("libant_qt_demo")
     add_defines("LIBICON_CORE_ENABLE_EMBED=1")
     add_includedirs(
         ".",
-        "../libant-qt",
-        "../libant-qt/ThirdParty/QR-Code-generator-master",
-        "../libant-qt/ThirdParty/FastGaussianBlur-main",
+        "../libant-qt/src",
         "../libicon-core/generated",
         "../libicon-qt/src"
     )
@@ -37,7 +35,7 @@ target("libant_qt_demo")
         "SettingsPage.cpp",
         "AboutPage.cpp",
         "LibAntQtDemoWindow.ui",
-        "../libant-qt/libant-qt.qrc"
+        "assets/libant-qt-demo.qrc"
     )
 
     if is_plat("windows") then

@@ -38,10 +38,10 @@ FramelessVideoWindow::FramelessVideoWindow(const QString& videoPath, QWidget* pa
 
 	// 模糊玻璃
 	glassWidget1 = new GlassWidget(0, 0, this);
-	glassWidget1->setPixmapAndText(":/Imgs/github.png", "QtAntDesign Github", "如果你觉得这个有用，欢迎在GitHub上点个Star支持一下~");
+	glassWidget1->setPixmapAndText(":/Imgs/github.png", "libant-qt GitHub", "如果这个项目对你有帮助，欢迎到 GitHub 点个 Star。");
 	glassWidget1->setUrl(QUrl("https://github.com/byralpha/AntDesign"));
 	glassWidget2 = new GlassWidget(10, 3, this);
-	glassWidget2->setPixmapAndText(":/Imgs/bee.png", "QtAntDesign Widget", "572205527@qq.com");
+	glassWidget2->setPixmapAndText(":/Imgs/bee.png", "libant-qt Demo", "572205527@qq.com");
 
 	// 防抖定时器
 	m_blurTimer = new QTimer(this);

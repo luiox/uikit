@@ -1,6 +1,6 @@
 # libant-qt-demo
 
-`libant-qt-demo` 是从原 `QtAntDesign` 应用壳中拆出来的独立演示工程。
+`libant-qt-demo` 是 `libant-qt` 的独立演示工程。
 
 ## 当前定位
 
@@ -21,7 +21,7 @@
 
 说明：
 
-- 当前 demo 仍直接复用 `../libant-qt/libant-qt.qrc`
+- demo 资源已迁到 `assets/`，并由独立的 `assets/libant-qt-demo.qrc` 管理
 - 首页已先改成轻量静态页，避免强依赖多媒体模块
 - 其余 demo 页面后续还会继续做进一步清理和独立化
 

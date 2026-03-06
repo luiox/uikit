@@ -2,14 +2,22 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = ROOT / "catalog" / "icons-100.json"
+CATALOG_FILES = [
+    ROOT / "catalog" / "icons-100.json",
+    ROOT / "catalog" / "ant-icons.json",
+]
 OUT_DIR = ROOT / "generated"
 OUT_H = OUT_DIR / "icons.h"
 OUT_CPP = OUT_DIR / "icons.cpp"
 
 
 def read_catalog():
-    return json.loads(CATALOG.read_text(encoding="utf-8"))
+    merged = []
+    for catalog_file in CATALOG_FILES:
+        if not catalog_file.exists():
+            continue
+        merged.extend(json.loads(catalog_file.read_text(encoding="utf-8")))
+    return merged
 
 
 def find_svg(icon_id: str):
@@ -23,6 +31,9 @@ def find_svg(icon_id: str):
 
 
 def to_pascal_case(name: str) -> str:
+    if name.startswith("ant_"):
+        return "ANT_" + to_pascal_case(name[4:])
+
     parts = [p for p in name.replace("-", "_").split("_") if p]
     if not parts:
         return "Unknown"

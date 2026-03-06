@@ -80,6 +80,6 @@ xmake run backend_tests
 ## 说明
 
 - 原 Tauri + Vue 实现（`ui/`、`src-tauri/`）已按迁移计划移除。
-- 原 `QtAntDesign` 目录已拆分为：
+- 原 Ant Design 风格 Qt Widgets 工程已拆分为：
   - `libant-qt/`：组件库
   - `libant-qt-demo/`：独立演示工程

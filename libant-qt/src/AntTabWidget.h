@@ -38,7 +38,7 @@ private:
 	QString m_icon;
 	QColor hoverBgColor;
 	QColor textColor;
-	QSvgRenderer* m_svgRenderer;
+	QSvgRenderer* m_svgRenderer = nullptr;
 	QPushButton* m_closeButton = nullptr;
 	int m_iconSize = 24;
 	int m_iconTopOffset = 5;	// 自己调整合适即可

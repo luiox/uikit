@@ -12,13 +12,14 @@
 ## 目录结构
 - `icons/`：最终使用的 SVG 目录，文件名为 `<icon_id>.svg`。
 - `catalog/icons-100.json`：标准 icon 清单。
+- `catalog/ant-icons.json`：`libant-qt` 迁入的通用图标清单。
 - `generated/icons.h`：生成的枚举与 API 声明。
 - `generated/icons.cpp`：动态/嵌入访问实现。
 - `xmake.lua`：独立构建入口。
 
 ## 常用脚本
 - `python scripts/generate_cpp_assets.py`
-   - 根据 `icons/` + `catalog/icons-100.json` 生成 `generated/icons.h/.cpp`。
+   - 根据 `icons/` + catalog 清单生成 `generated/icons.h/.cpp`。
 - `python scripts/check_coverage.py`
    - 检查当前 `icons/` 覆盖率并生成缺口清单。
 - `python scripts/build_minimal_feather_pack.py`
@@ -44,6 +45,8 @@
 - `icon::GetDynamicPath(icon::Icon::Search)`
 - `icon::GetEmbeddedSvg(icon::Icon::Search)`
 - `icon::FindIcon("search")`
+
+对于 `libant-qt` 迁入的图标，文件名统一采用 `ant_*.svg`，生成后的枚举名统一采用 `Icon::ANT_*`。
 
 ## Bootstrap（可选）
 如果你要从完整 Feather zip 重新提取，可手动执行：

@@ -11,6 +11,7 @@
 #include <QModelIndex>
 #include <QStandardItemModel>
 #include "DesignSystem.h"
+#include "IconProvider.h"
 
 class AntTreeItemDelegate : public QStyledItemDelegate
 {
@@ -22,7 +23,8 @@ public:
 	{
 		m_hoverColor = DesignSystem::instance()->widgetHoverBgColor();
 		m_hoverColor.setAlpha(80);
-		svgRenderer = new QSvgRenderer(QStringLiteral(":/Imgs/smallRightArrow.svg"), this);
+		const QByteArray bytes = ant::IconProvider::svgData(ant::IconRole::ArrowRightSmall, false, DesignSystem::instance()->currentTheme().popupTextColor);
+		svgRenderer = bytes.isEmpty() ? new QSvgRenderer(this) : new QSvgRenderer(bytes, this);
 	}
 
 	void setRotationMap(const QMap<QModelIndex, int>& rotations)

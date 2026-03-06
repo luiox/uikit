@@ -11,7 +11,14 @@ AntTabWidget::AntTabWidget(const QString& title, const QString& icon, int tabwid
 {
 	resize(m_tabWidth, m_tabHeight);
 	const QByteArray svgBytes = IconProvider::svgData(m_icon);
-	m_svgRenderer = svgBytes.isEmpty() ? new QSvgRenderer(m_icon, this) : new QSvgRenderer(svgBytes, this);
+	if (!svgBytes.isEmpty())
+	{
+		m_svgRenderer = new QSvgRenderer(svgBytes, this);
+	}
+	else if (!m_icon.trimmed().isEmpty())
+	{
+		m_svgRenderer = new QSvgRenderer(m_icon, this);
+	}
 
 	hoverBgColor = DesignSystem::instance()->currentTheme().tabHoverColor;
 	textColor = DesignSystem::instance()->currentTheme().tabTextColor;

@@ -42,11 +42,13 @@ enum class IconRole {
 	NextDisabled,
 	ArrowUp,
 	ArrowDown,
+	ArrowRight,
 	ArrowRightSmall,
 	NoData,
 	GoTo,
 	Eye,
-	EyeSlash
+	EyeSlash,
+	CarouselArrow
 };
 
 class IconProvider final

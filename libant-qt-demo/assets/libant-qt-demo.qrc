@@ -1,0 +1,27 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="fonts/NotoSansSC-Bold.ttf">fonts/NotoSansSC-Bold.ttf</file>
+        <file alias="fonts/NotoSansSC-Medium.ttf">fonts/NotoSansSC-Medium.ttf</file>
+        <file alias="fonts/NotoSansSC-Regular.ttf">fonts/NotoSansSC-Regular.ttf</file>
+        <file alias="Imgs/amd.jpg">images/amd.jpg</file>
+        <file alias="Imgs/apple.jpg">images/apple.jpg</file>
+        <file alias="Imgs/bee.png">images/bee.png</file>
+        <file alias="Imgs/bilibili.svg">images/bilibili.svg</file>
+        <file alias="Imgs/git.svg">images/git.svg</file>
+        <file alias="Imgs/github.png">images/github.png</file>
+        <file alias="Imgs/google.jpg">images/google.jpg</file>
+        <file alias="Imgs/gpt.jpg">images/gpt.jpg</file>
+        <file alias="Imgs/grok.jpg">images/grok.jpg</file>
+        <file alias="Imgs/huawei.jpg">images/huawei.jpg</file>
+        <file alias="Imgs/nvidia.jpg">images/nvidia.jpg</file>
+        <file alias="Imgs/openai.jpg">images/openai.jpg</file>
+        <file alias="Imgs/taobao.svg">images/taobao.svg</file>
+        <file alias="Imgs/undraw_book-lover_f1dq.svg">images/undraw_book-lover_f1dq.svg</file>
+        <file alias="Imgs/undraw_developer-avatar_f6ac.svg">images/undraw_developer-avatar_f6ac.svg</file>
+        <file alias="Imgs/undraw_loving-it_hspq.svg">images/undraw_loving-it_hspq.svg</file>
+        <file alias="Imgs/varda.jpg">images/varda.jpg</file>
+        <file alias="Imgs/wechat.jpg">images/wechat.jpg</file>
+        <file alias="Imgs/WeChat.svg">images/WeChat.svg</file>
+        <file alias="Imgs/x.svg">images/x.svg</file>
+    </qresource>
+</RCC>

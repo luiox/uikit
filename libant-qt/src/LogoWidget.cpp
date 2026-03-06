@@ -1,11 +1,12 @@
 ﻿#include "LogoWidget.h"
 #include <QPainter>
 
+#include "IconProvider.h"
+
 LogoWidget::LogoWidget(QWidget* parent)
     : QWidget(parent)
 {
-    // 加载图片资源
-    m_logoPixmap.load(":/Imgs/github.png");
+    m_logoPixmap = ant::IconProvider::pixmap(ant::IconRole::BrandGithub, false, QSize(96, 96));
 }
 
 LogoWidget::~LogoWidget()

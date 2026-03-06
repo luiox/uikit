@@ -287,57 +287,25 @@ IconRole DesignSystem::btnAboutActiveIconRole() const
 
 QString& DesignSystem::prevBtnIcon()
 {
-	if (m_mode == Light)
-	{
-		prevBtn = ":/Imgs/PreviousBtn.svg";
-	}
-	else
-	{
-		prevBtn = ":/Imgs/PreviousBtnDark.svg";
-	}
-
+	prevBtn.clear();
 	return prevBtn;
 }
 
 QString& DesignSystem::nextBtnIcon()
 {
-	if (m_mode == Light)
-	{
-		nextBtn = ":/Imgs/nextBtn.svg";
-	}
-	else
-	{
-		nextBtn = ":/Imgs/nextBtnDark.svg";
-	}
-
+	nextBtn.clear();
 	return nextBtn;
 }
 
 QString& DesignSystem::prevBtnDisableIcon()
 {
-	if (m_mode == Light)
-	{
-		prevDisBtn = ":/Imgs/previousBtnDisable.svg";
-	}
-	else
-	{
-		prevDisBtn = ":/Imgs/previousBtnDisableDark.svg";
-	}
-
+	prevDisBtn.clear();
 	return prevDisBtn;
 }
 
 QString& DesignSystem::nextBtnDisableIcon()
 {
-	if (m_mode == Light)
-	{
-		nextDisBtn = ":/Imgs/nextBtnDisable.svg";
-	}
-	else
-	{
-		nextDisBtn = ":/Imgs/nextBtnDisableDark.svg";
-	}
-
+	nextDisBtn.clear();
 	return nextDisBtn;
 }
 

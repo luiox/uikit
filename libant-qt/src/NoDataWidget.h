@@ -22,7 +22,7 @@ private:
     void updateRenderer();
 
     QSvgRenderer m_svgRenderer;
-    QString m_svgPath = QStringLiteral(":/Imgs/noData.svg");
+    QString m_svgPath;
     IconRole m_iconRole = IconRole::NoData;
     QString m_text = QStringLiteral("暂无数据");
     QColor m_bgColor;

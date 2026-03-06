@@ -38,7 +38,7 @@ void CarouselCard::enableUrlBtn(QUrl url)
 {
 	QSize size(130, 22);
 	btn = new QToolButton(this);
-	btn->setIcon(ant::IconProvider::icon(QStringLiteral(":/Imgs/rightArrowBtn.svg"), QSize(22, 22)));
+	btn->setIcon(ant::IconProvider::icon(ant::IconRole::CarouselArrow, false, QSize(22, 22)));
 	btn->setIconSize(QSize(22, 22));
 	btn->setFixedSize(size);
 	btn->setText("  查看更多");		// 设置文字
