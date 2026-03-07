@@ -26,3 +26,7 @@ private:
 	int m_passes;
 	BorderStrategy m_border;
 };
+
+namespace ant {
+using ::GaussianBlur;
+} // namespace ant

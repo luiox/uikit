@@ -19,3 +19,7 @@ protected:
 private:
 	QPropertyAnimation* animation = nullptr;
 };
+
+namespace ant {
+using ::DrawerWidget;
+} // namespace ant

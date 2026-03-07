@@ -33,3 +33,7 @@ private:
 	// ant按钮
 	AntButton* m_antBtn = nullptr;
 };
+
+namespace ant {
+using ::UserInfoBubble;
+} // namespace ant

@@ -32,3 +32,7 @@ private:
 	int animDuration = 350;				// 动画组的持续时间
 	bool m_isBatchAnimating = false;	// 批量上移是否进行中
 };
+
+namespace ant {
+using ::AntMessageManager;
+} // namespace ant

@@ -55,4 +55,8 @@ private:
 	QParallelAnimationGroup* groupAnim;
 };
 
+namespace ant {
+using ::AntToggleButton;
+} // namespace ant
+
 #endif // ANTTOGGLEBUTTON_H

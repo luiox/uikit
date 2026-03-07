@@ -27,3 +27,7 @@ private:
 	QStackedWidget* m_contentWidget;   // 用于存放内容区域的 QStackedWidget
 	QVector<QWidget*> m_tabsContent;   // 存放内容部件的 QVector
 };
+
+namespace ant {
+using ::AntTabWidgetContainer;
+} // namespace ant

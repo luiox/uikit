@@ -29,3 +29,7 @@ private:
 	QPropertyAnimation* anim = nullptr;
 	QPoint circleCenter = QPoint(width() / 2, height() / 2); // 默认值为窗口中心
 };
+
+namespace ant {
+using ::ThemeSwitcher;
+} // namespace ant

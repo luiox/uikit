@@ -66,3 +66,8 @@ private:
 
 	int m_currentIndex = 0;
 };
+
+namespace ant {
+using ::MaterialTabBar;
+using ::MaterialTabWidget;
+} // namespace ant

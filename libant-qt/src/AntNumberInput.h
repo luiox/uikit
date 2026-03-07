@@ -18,3 +18,7 @@ private:
 	AntBaseSpinBox* m_input;
 	QColor m_shadowColor;
 };
+
+namespace ant {
+using ::AntNumberInput;
+} // namespace ant

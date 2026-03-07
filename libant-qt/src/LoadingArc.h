@@ -24,4 +24,8 @@ private:
 	QColor arcColor;
 };
 
+namespace ant {
+using ::LoadingArc;
+} // namespace ant
+
 #endif // LOADINGARC_H

@@ -36,4 +36,8 @@ private:
 	int m_spacing;
 };
 
+namespace ant {
+using ::FlowLayout;
+} // namespace ant
+
 #endif // FLOWLAYOUT_H

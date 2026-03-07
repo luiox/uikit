@@ -40,3 +40,7 @@ private:
 
 	ArrowDir m_arrowDirection = ArrowDir::None;
 };
+
+namespace ant {
+using ::AntTooltip;
+} // namespace ant

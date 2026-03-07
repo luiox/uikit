@@ -33,3 +33,7 @@ private:
 	qreal m_fontSize;
 	bool m_hasIcon;
 };
+
+namespace ant {
+using ::TagWidget;
+} // namespace ant

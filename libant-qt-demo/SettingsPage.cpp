@@ -7,7 +7,7 @@ SettingsPage::SettingsPage(QWidget* parent)
 {
 	setObjectName("SettingsPage");
     
-    QLabel* label = new QLabel("SETTINGS", this);
+	QLabel* label = new QLabel(QStringLiteral("设置"), this);
     QFont font = label->font();
     font.setPointSize(52);
     font.setBold(true);
@@ -23,4 +23,3 @@ SettingsPage::SettingsPage(QWidget* parent)
 
 SettingsPage::~SettingsPage()
 {}
-

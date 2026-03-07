@@ -139,3 +139,9 @@ protected:
 	AntBaseListViewStyle* m_style;
 	AntBaseListItemDelegate* m_itemDele;
 };
+
+namespace ant {
+using ::AntBaseListItemDelegate;
+using ::AntBaseListViewStyle;
+using ::AntBaseListView;
+} // namespace ant

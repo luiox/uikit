@@ -68,3 +68,8 @@ private:
 		return { m_margin, ty, width() - 2 * m_margin, th };
 	}
 };
+
+namespace ant {
+using ::DownArrowTooltip;
+using ::AntSlider;
+} // namespace ant

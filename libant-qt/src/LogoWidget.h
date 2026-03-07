@@ -17,3 +17,7 @@ protected:
 private:
     QPixmap m_logoPixmap;
 };
+
+namespace ant {
+using ::LogoWidget;
+} // namespace ant

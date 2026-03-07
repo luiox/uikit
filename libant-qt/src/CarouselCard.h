@@ -30,3 +30,7 @@ private:
 	QLabel* textLabel = nullptr;
 	QPropertyAnimation* fontAnim = nullptr;
 };
+
+namespace ant {
+using ::CarouselCard;
+} // namespace ant

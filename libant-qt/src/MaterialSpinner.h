@@ -35,3 +35,7 @@ private:
 	int m_length;		// 矩形边长
 	QColor m_lineColor;
 };
+
+namespace ant {
+using ::MaterialSpinner;
+} // namespace ant

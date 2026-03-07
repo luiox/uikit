@@ -32,3 +32,7 @@ private:
 	QString m_text;
 	QPushButton* m_btn = nullptr;
 };
+
+namespace ant {
+using ::GlassWidget;
+} // namespace ant

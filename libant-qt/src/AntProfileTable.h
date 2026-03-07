@@ -146,3 +146,9 @@ private:
 	double addrRatio = 0.35;
 	double tagRatio = 0.30;
 };
+
+namespace ant {
+using ::AntBaseHeaderView;
+using ::AntProfileTableStyle;
+using ::AntProfileTable;
+} // namespace ant

@@ -123,4 +123,9 @@ private:
 	QColor m_focusBorderColor;		// 聚焦时边框颜色
 };
 
+namespace ant {
+using ::AntBaseInputStyle;
+using ::AntBaseInput;
+} // namespace ant
+
 #endif // ANTBASEINPUT_H

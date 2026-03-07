@@ -44,3 +44,7 @@ private:
 	qreal m_fillOpacity = 1.0;
 	QPropertyAnimation* m_opacityAnimation = nullptr;
 };
+
+namespace ant {
+using ::AntRadioButton;
+} // namespace ant

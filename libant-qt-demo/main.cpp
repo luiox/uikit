@@ -1,7 +1,8 @@
-﻿#include <QApplication>
-#include <QFontDatabase>
-#include <QFileInfo>
+#include <QApplication>
 #include <QDir>
+#include <QFileInfo>
+#include <QFontDatabase>
+#include <QStringList>
 
 #include "LibAntQtDemoWindow.h"
 
@@ -28,25 +29,9 @@ QString findProjectRoot(const QString& startPath)
 	return startPath;
 }
 
-QString loadUiFontFamily()
+QStringList buildUiFontFamilies()
 {
-	#ifdef Q_OS_WIN
-	QFontDatabase fontDb;
-	const QStringList installedFamilies = fontDb.families();
-	const QStringList preferredSystemFamilies = {
-		QStringLiteral("Microsoft YaHei UI"),
-		QStringLiteral("Microsoft YaHei"),
-		QStringLiteral("Segoe UI")
-	};
-
-	for (const QString& family : preferredSystemFamilies)
-	{
-		if (installedFamilies.contains(family))
-		{
-			return family;
-		}
-	}
-	#endif
+	QStringList families;
 
 	const QStringList fontResources = {
 		QStringLiteral(":/fonts/NotoSansSC-Regular.ttf"),
@@ -54,7 +39,6 @@ QString loadUiFontFamily()
 		QStringLiteral(":/fonts/NotoSansSC-Bold.ttf")
 	};
 
-	QString primaryFamily;
 	for (const QString& fontResource : fontResources)
 	{
 		const int fontId = QFontDatabase::addApplicationFont(fontResource);
@@ -64,34 +48,59 @@ QString loadUiFontFamily()
 			continue;
 		}
 
-		const QStringList families = QFontDatabase::applicationFontFamilies(fontId);
-		if (primaryFamily.isEmpty() && !families.isEmpty())
+		const QStringList resourceFamilies = QFontDatabase::applicationFontFamilies(fontId);
+		for (const QString& family : resourceFamilies)
 		{
-			primaryFamily = families.front();
+			if (!family.isEmpty() && !families.contains(family))
+			{
+				families.push_back(family);
+			}
 		}
 	}
 
-	return primaryFamily;
+	QFontDatabase fontDb;
+	const QStringList installedFamilies = fontDb.families();
+	const QStringList preferredSystemFamilies = {
+		QStringLiteral("Microsoft YaHei UI"),
+		QStringLiteral("Microsoft YaHei"),
+		QStringLiteral("Segoe UI"),
+		QStringLiteral("Arial")
+	};
+
+	for (const QString& family : preferredSystemFamilies)
+	{
+		if (installedFamilies.contains(family) && !families.contains(family))
+		{
+			families.push_back(family);
+		}
+	}
+
+	return families;
 }
 
 QFont buildApplicationFont()
 {
-	const QString family = loadUiFontFamily();
-	QFont font;
+	const QStringList families = buildUiFontFamilies();
+	QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
 
-	if (!family.isEmpty())
+	if (!families.isEmpty())
 	{
-		font.setFamily(family);
-	}
-	else
-	{
-		font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+		font.setFamilies(families);
+		font.setFamily(families.front());
 	}
 
 	font.setPointSizeF(10.5);
 	font.setStyleHint(QFont::SansSerif);
 	font.setHintingPreference(QFont::PreferDefaultHinting);
 	font.setStyleStrategy(QFont::PreferAntialias);
+
+	#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+	if (!families.isEmpty())
+	{
+		QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Han, families);
+	}
+	#endif
+
 	return font;
 }
 

@@ -53,4 +53,8 @@ private:
 	int currentValue = 0;
 };
 
+namespace ant {
+using ::MaterialProgressBar;
+} // namespace ant
+
 #endif // MATERIALPROGRESSBAR_H

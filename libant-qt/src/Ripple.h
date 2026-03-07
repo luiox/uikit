@@ -48,3 +48,7 @@ private:
 	qreal m_offset;         // 当前动画扩散程度（0.0~1.0）
 	qreal m_opacity;        // 当前透明度（1.0~0.0）
 };
+
+namespace ant {
+using ::Ripple;
+} // namespace ant

@@ -34,3 +34,7 @@ private:
 
 	bool isAnimating = false;
 };
+
+namespace ant {
+using ::SlideStackedWidget;
+} // namespace ant

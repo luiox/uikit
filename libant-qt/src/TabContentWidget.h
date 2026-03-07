@@ -10,3 +10,7 @@ public:
 	TabContentWidget(const QString& text, QWidget* parent);
 	~TabContentWidget();
 };
+
+namespace ant {
+using ::TabContentWidget;
+} // namespace ant

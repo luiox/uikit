@@ -7,7 +7,7 @@ AboutPage::AboutPage(QWidget* parent)
 {
 	setObjectName("AboutPage");
 
-    QLabel* label = new QLabel("ABOUT", this);
+	QLabel* label = new QLabel(QStringLiteral("关于"), this);
     QFont font = label->font();
     font.setPointSize(52);
     font.setBold(true);
@@ -21,4 +21,3 @@ AboutPage::AboutPage(QWidget* parent)
 }
 AboutPage::~AboutPage()
 {}
-

@@ -36,3 +36,7 @@ private:
 	int margin = 10;
 	int spacing = 2;	// 高度间距
 };
+
+namespace ant {
+using ::NotificationManager;
+} // namespace ant

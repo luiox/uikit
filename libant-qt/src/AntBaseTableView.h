@@ -15,3 +15,7 @@ protected:
 	void initStyle();  // 初始化样式
 private:
 };
+
+namespace ant {
+using ::AntBaseTableView;
+} // namespace ant

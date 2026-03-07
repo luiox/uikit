@@ -15,3 +15,7 @@ protected:
 	void mousePressEvent(QMouseEvent* event) override;
 	void paintEvent(QPaintEvent* event);
 };
+
+namespace ant {
+using ::TransparentMask;
+} // namespace ant

@@ -47,3 +47,7 @@ private:
 	void raiseTab(AntTabWidget* tab);
 	void updateAddButtonPositionAnimated();
 };
+
+namespace ant {
+using ::AntTabBarWidget;
+} // namespace ant

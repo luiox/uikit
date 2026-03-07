@@ -31,3 +31,7 @@ private:
 	BadgeStatus m_status;	// 当前状态
 	QColor m_badgeColor;
 };
+
+namespace ant {
+using ::BadgeWidget;
+} // namespace ant

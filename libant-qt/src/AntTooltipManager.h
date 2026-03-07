@@ -39,3 +39,7 @@ private:
 	static AntTooltipManager* m_instance;
 
 };
+
+namespace ant {
+using ::AntTooltipManager;
+} // namespace ant

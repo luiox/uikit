@@ -30,3 +30,7 @@ private:
 	int m_border = 4;
 	QImage m_qrImage;
 };
+
+namespace ant {
+using ::QrCodeWidget;
+} // namespace ant

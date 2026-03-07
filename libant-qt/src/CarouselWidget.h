@@ -41,3 +41,7 @@ private:
 	int currentStartIndex = 0;
 	bool animRunning = false;
 };
+
+namespace ant {
+using ::CarouselWidget;
+} // namespace ant

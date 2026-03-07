@@ -16,3 +16,7 @@ private:
 	int w = 600;
 	int h = 400;
 };
+
+namespace ant {
+using ::ProfilePage;
+} // namespace ant

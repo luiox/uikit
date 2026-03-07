@@ -24,3 +24,7 @@ private:
 	QWidget* titleWidget;
 	QPushButton* subBtn2;
 };
+
+namespace ant {
+using ::LoginPageWidget;
+} // namespace ant

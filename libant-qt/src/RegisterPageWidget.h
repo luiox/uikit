@@ -23,3 +23,7 @@ private:
 	int h;
 	QWidget* titleWidget;
 };
+
+namespace ant {
+using ::RegisterPageWidget;
+} // namespace ant

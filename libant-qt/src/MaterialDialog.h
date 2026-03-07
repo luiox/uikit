@@ -43,3 +43,7 @@ private:
 	SlideStackedWidget* stackedWidget;
 	std::function<void(MaterialDialog::PageIndex)> m_callback;
 };
+
+namespace ant {
+using ::MaterialDialog;
+} // namespace ant

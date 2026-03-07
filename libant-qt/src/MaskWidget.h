@@ -51,3 +51,7 @@ private:
 	qreal m_alpha = 0.0;
 	QPropertyAnimation* alphaAnim = nullptr;
 };
+
+namespace ant {
+using ::MaskWidget;
+} // namespace ant

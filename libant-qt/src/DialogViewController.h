@@ -47,3 +47,7 @@ public:
 		this->setTransform(t);
 	}
 };
+
+namespace ant {
+using ::DialogViewController;
+} // namespace ant

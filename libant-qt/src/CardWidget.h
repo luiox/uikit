@@ -24,3 +24,7 @@ private:
 	QString m_lastLogin;
 	QString m_totalTime;
 };
+
+namespace ant {
+using ::CardWidget;
+}

@@ -28,4 +28,8 @@ private:
 	QPropertyAnimation* m_animation = nullptr;
 };
 
+namespace ant {
+using ::SkeletonWidget;
+} // namespace ant
+
 #endif // SKELETONWIDGET_H

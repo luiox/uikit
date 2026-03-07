@@ -36,3 +36,7 @@ private:
 	QPropertyAnimation* m_opacityAnimation = nullptr;
 	QWidget* m_targetWidget = nullptr;  // 锚点控件（例如 MaterialLineEdit）
 };
+
+namespace ant {
+using ::ErrorTipLabel;
+} // namespace ant

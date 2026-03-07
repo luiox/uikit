@@ -190,3 +190,8 @@ private:
 	QMap<QModelIndex, int> m_arrowRotations;
 	QModelIndex m_currentAnimationIndex; // 正在动画的节点索引
 };
+
+namespace ant {
+using ::AntTreeItemDelegate;
+using ::AntTreeView;
+} // namespace ant

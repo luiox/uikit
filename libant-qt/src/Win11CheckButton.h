@@ -38,3 +38,7 @@ private:
 	int boxSpacing = 6;
 	int boxMargin = 4;
 };
+
+namespace ant {
+using ::Win11CheckButton;
+} // namespace ant

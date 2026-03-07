@@ -48,3 +48,8 @@ private:
 	QColor m_bgColor;
 	QColor m_primaryColor;
 };
+
+namespace ant {
+using ::TableColumnLayout;
+using ::AntProfileItemDelegate;
+} // namespace ant

@@ -30,3 +30,7 @@ private:
 	UserInfoBubble* bubble = nullptr;
 	QSize m_bubbleSize;
 };
+
+namespace ant {
+using ::BubbleViewController;
+} // namespace ant

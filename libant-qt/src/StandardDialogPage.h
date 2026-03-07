@@ -26,3 +26,7 @@ private:
 	QPushButton* cancelBtn;
 	QPushButton* confirmBtn;
 };
+
+namespace ant {
+using ::StandardDialogPage;
+} // namespace ant

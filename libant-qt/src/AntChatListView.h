@@ -144,3 +144,8 @@ public:
 private:
 	AntChatListItemDelegate* itemDele;
 };
+
+namespace ant {
+using ::AntChatListItemDelegate;
+using ::AntChatListView;
+} // namespace ant

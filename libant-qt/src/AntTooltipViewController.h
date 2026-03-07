@@ -29,3 +29,7 @@ private:
 	QParallelAnimationGroup* groupAnim = nullptr;
 	bool isHide = false;
 };
+
+namespace ant {
+using ::AntTooltipViewController;
+} // namespace ant

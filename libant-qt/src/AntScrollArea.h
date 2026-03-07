@@ -22,3 +22,7 @@ public:
 	void setScrollPolicy(int direction);
 	void ensureWidgetVisibleInScrollArea(QWidget* targetWidget, int xMargin = 50, int yMargin = 50);
 };
+
+namespace ant {
+using ::AntScrollArea;
+} // namespace ant

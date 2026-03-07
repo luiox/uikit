@@ -26,3 +26,7 @@ private:
 	int m_fontSize = 15;     //字体大小
 	int m_textWidth = 150;
 };
+
+namespace ant {
+using ::AnimatedNumber;
+} // namespace ant

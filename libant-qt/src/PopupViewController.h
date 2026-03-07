@@ -43,3 +43,7 @@ private:
 	QParallelAnimationGroup* groupAnim = nullptr;
 	QGraphicsScale* scaleTransform = nullptr;
 };
+
+namespace ant {
+using ::PopupViewController;
+} // namespace ant

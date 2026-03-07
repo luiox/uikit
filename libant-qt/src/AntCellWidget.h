@@ -21,3 +21,7 @@ signals:
 private:
 	QPushButton* button;
 };
+
+namespace ant {
+using ::AntCellWidget;
+} // namespace ant
