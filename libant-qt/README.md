@@ -8,6 +8,7 @@
 - 通过 `ant::IconProvider` 对接 `libicon-core` / `libicon-qt`
 - 通用 SVG 图标统一收敛到 `libicon-core`
 - 为独立 demo 工程 `libant-qt-demo` 提供组件支持
+- 为分类化示例工程 `libant-qt-demos` 提供控件与 core 能力支持
 
 ## 当前结构
 
@@ -21,6 +22,7 @@
 - 图标语义入口：`src/core/IconProvider.*`
 - 主题系统：`src/core/DesignSystem.*`
 - 第三方源码 target：`third_party/`
+- 分类化示例工程：`../libant-qt-demos/`
 
 ## 已完成的重构方向
 
@@ -31,6 +33,7 @@
 5. 把 demo 主窗口与页面开始迁移到独立的 `libant-qt-demo`
 6. 将 `src/` 内组件按职责分目录整理
 7. 将登录弹窗、头像气泡、通知、抽屉等 demo 强耦合组件迁出到 `libant-qt-demo`
+8. 新增 `libant-qt-demos` 作为控件分类示例与 core 能力演示工程
 
 ## 图标架构
 

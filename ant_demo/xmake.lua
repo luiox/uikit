@@ -52,6 +52,8 @@ target("ant_demo")
     add_syslinks("user32", "gdi32", "comctl32", "comdlg32", "ole32", "oleaut32", "imm32", "winmm", "version", "uxtheme", "shell32")
 
     after_build(function (target)
-        -- copy skin folder to output so resources are found when running
-        os.cp(path.join(os.scriptdir(), "skin"), path.join(target:targetdir(), "skin"))
+        local skin_dir = path.join(os.scriptdir(), "skin")
+        if os.isdir(skin_dir) then
+            os.cp(skin_dir, path.join(target:targetdir(), "skin"))
+        end
     end)

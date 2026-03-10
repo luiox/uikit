@@ -1,20 +1,21 @@
 # ant_demo
 
-这是一个演示如何用 DuiLib 实现 Ant Design 蓝白皮的最简项目。
+这是一个最小可运行的 DuiLib 演示工程，用来保留仓库里的原生 DuiLib 皮肤加载链路。
 
 ## 目录结构
 
 ```
 ant_demo/
   xmake.lua        -- 构建脚本
+   skin/
+      ant_skin.xml   -- 最小可运行皮肤
   src/
     main.cpp       -- 演示窗口
-  skin/
-    ant_skin.xml   -- 皮肤定义（颜色、样式、按钮等）
-    assets/        -- PNG 图集和其他资源
   scripts/
     svg2png.py     -- 将 SVG 批量生成 PNG 的工具
 ```
+
+当前 `skin/assets/` 目录保留为空目录位，用于后续继续扩展 PNG 图集资源。
 
 ## 构建与运行
 
@@ -24,7 +25,7 @@ ant_demo/
    git submodule update --init --recursive
    ```
 
-2. 使用 **uv** 初始化并管理依赖：
+2. 如果需要继续生成 PNG 资源，可使用 **uv** 初始化并管理依赖：
 
    在目录下执行：
    ```bash
@@ -37,47 +38,38 @@ ant_demo/
    uv sync          # 安装/更新依赖
    ```
 
-   然后在运行应用之前，通过脚本把 SVG 转成 PNG：
+   然后通过脚本把 SVG 转成 PNG：
    ```bash
    uv run scripts/svg2png.py path/to/svg-icons skin/assets
    ```
 
    该流程无需手动编辑 toml，全部由 uv 命令处理。
 
-
-2. 添加或替换 `skin/assets` 中的 PNG 图集（可以用 `scripts/svg2png.py`
-   从 SVG 自动生成）：
+3. 如果后续添加图集资源，可将生成结果放进 `skin/assets/`：
 
    ```bash
    python scripts/svg2png.py path/to/svg-icons skin/assets
    ```
 
-3. 切换到项目目录并编译：
+4. 切换到项目目录并编译：
 
    ```bash
    cd ant_demo
-   # 生成 PNG 资源（如果还没做）
-   uv run scripts/svg2png.py svg-dir skin/assets
-
    xmake f -p windows -a x64 -m debug --toolchain=msvc
    xmake
-   # 如果直接使用 `xmake run` 会先构建整个工作区，建议手动
-   # 启动生成的可执行文件：
-   cd build/windows/x64/debug
-   ./ant_demo.exe
+   xmake run ant_demo
    ```
 
-   程序会在与可执行文件同级的 `skin` 文件夹中查找 `ant_skin.xml`
-   以及 `assets`，因此我们在构建步骤中自动将源码目录的 `skin`
-   复制到输出。
+   程序会在与可执行文件同级的 `skin` 文件夹中查找 `ant_skin.xml`。
+   构建脚本现在会自动复制源码目录下的 `skin/`，因此不会再因为
+   缺失目录导致 `xmake run ant_demo` 失败。
 
-   正常启动时应弹出含有按钮/单选/复选框的示例窗口。
+   正常启动时应弹出包含按钮、单选与复选示例的最小窗口。
 
 ## 按钮示例
 
 - 普通按钮使用 `CButtonUI`，样式由 `style_ant_button` 定义。
-- 图标按钮通过 `resourceid` 指向图集中的某个图块，并继承自
-  普通样式。
+- 当前强调按钮直接复用主按钮样式变体，不再依赖必须存在的图集资源。
 - 单选/复选按钮由 `COptionUI` 实现，XML 中用 `group` 属性区分。
 
 ## 新皮肤生成流程
@@ -90,5 +82,5 @@ ant_demo/
 
 ---
 
-以后若需要更多控件示例，可在 `skin/ant_skin.xml` 中增加，或在
-`src/main.cpp` 中动态创建；本 demo 仅展示按钮相关用法。
+以后若需要更多控件示例，可继续扩充 `skin/ant_skin.xml` 或改为在
+`src/main.cpp` 中动态创建；当前版本的目标是保证 DuiLib 皮肤运行链路稳定可回归。

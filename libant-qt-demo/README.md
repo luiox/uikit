@@ -1,12 +1,15 @@
 # libant-qt-demo
 
-`libant-qt-demo` 是 `libant-qt` 的独立演示工程。
+`libant-qt-demo` 是 `libant-qt` 的场景型演示工程。
 
 ## 当前定位
 
 - 演示 `libant-qt` 组件的组合效果
 - 承载页面级示例：`HomePage`、`FunctionPage`、`SettingsPage`、`AboutPage`
 - 作为资源回退和交互验证入口
+- 保留登录弹窗、头像气泡、通知、抽屉等 showcase 联动场景
+
+如果需要按控件类型查看示例，请使用同级工程 `libant-qt-demos/`。
 
 ## 当前拆分状态
 

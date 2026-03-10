@@ -30,6 +30,9 @@
   libant-qt-demo/
     xmake.lua
     README.md
+  libant-qt-demos/
+    xmake.lua
+    README.md
   cpp-duilib-launcher/
     src/
     tests/
@@ -82,4 +85,5 @@ xmake run backend_tests
 - 原 Tauri + Vue 实现（`ui/`、`src-tauri/`）已按迁移计划移除。
 - 原 Ant Design 风格 Qt Widgets 工程已拆分为：
   - `libant-qt/`：组件库
-  - `libant-qt-demo/`：独立演示工程
+  - `libant-qt-demo/`：场景型 showcase 演示
+  - `libant-qt-demos/`：分类化控件与 core 能力示例集
