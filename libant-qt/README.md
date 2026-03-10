@@ -59,6 +59,10 @@ xmake f -c --qt="D:/Qt/6.8.3/msvc2022_64" --vs=2022 -p windows -a x64
 xmake build --shallow libant_qt
 ```
 
+## 规划文档
+
+- 组件库优化与发展路线：`优化与发展规划.md`
+
 ## 命名约束
 
 - 库内公开类型统一定义在 `ant` 命名空间中

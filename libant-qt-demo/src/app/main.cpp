@@ -2,6 +2,8 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QLoggingCategory>
+#include <QSet>
 #include <QStringList>
 
 #include "LibAntQtDemoWindow.h"
@@ -78,14 +80,47 @@ QStringList buildUiFontFamilies()
 	return families;
 }
 
+QStringList buildHanFallbackFamilies(const QStringList& uiFamilies)
+{
+	QStringList hanFamilies;
+	const QSet<QString> preferredHanFamilies = {
+		QStringLiteral("Noto Sans SC"),
+		QStringLiteral("Microsoft YaHei UI"),
+		QStringLiteral("Microsoft YaHei")
+	};
+
+	for (const QString& family : uiFamilies)
+	{
+		if (preferredHanFamilies.contains(family) && !hanFamilies.contains(family))
+		{
+			 hanFamilies.push_back(family);
+		}
+	}
+
+	if (hanFamilies.isEmpty())
+	{
+		QFontDatabase fontDb;
+		const QStringList installedFamilies = fontDb.families();
+		for (const QString& family : preferredHanFamilies)
+		{
+			if (installedFamilies.contains(family) && !hanFamilies.contains(family))
+			{
+				hanFamilies.push_back(family);
+			}
+		}
+	}
+
+	return hanFamilies;
+}
+
 QFont buildApplicationFont()
 {
 	const QStringList families = buildUiFontFamilies();
+	const QStringList hanFamilies = buildHanFallbackFamilies(families);
 	QFont font = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
 
 	if (!families.isEmpty())
 	{
-		font.setFamilies(families);
 		font.setFamily(families.front());
 	}
 
@@ -95,9 +130,9 @@ QFont buildApplicationFont()
 	font.setStyleStrategy(QFont::PreferAntialias);
 
 	#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-	if (!families.isEmpty())
+	if (!hanFamilies.isEmpty())
 	{
-		QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Han, families);
+		QFontDatabase::setApplicationFallbackFontFamilies(QChar::Script_Han, hanFamilies);
 	}
 	#endif
 
@@ -111,6 +146,8 @@ int main(int argc, char* argv[])
 #ifdef Q_OS_LINUX
 	qputenv("QT_QPA_PLATFORM", "xcb"); // 避免 Wayland
 #endif
+	qputenv("QT_LOGGING_RULES", QByteArrayLiteral("qt.text.font.db=false\nqt.text.font.db.warning=false"));
+	QLoggingCategory::setFilterRules(QStringLiteral("qt.text.font.db=false\nqt.text.font.db.warning=false"));
 	QApplication a(argc, argv);
 
 	const QString projectRoot = findProjectRoot(QCoreApplication::applicationDirPath());
