@@ -17,13 +17,21 @@ target("libant_qt")
     add_defines("LIBICON_CORE_ENABLE_EMBED=1", {public = true})
     add_includedirs(
         "src",
+        "src/core",
+        "src/display",
+        "src/feedback",
+        "src/input",
+        "src/layout",
+        "src/navigation",
+        "src/overlay",
+        "src/view",
         "../libicon-core/generated",
         "../libicon-qt/src",
         {public = true}
     )
-    add_headerfiles("src/*.h")
-    add_files("src/*.h", {rules = "qt.moc"})
-    add_files("src/*.cpp")
+    add_headerfiles("src/**.h")
+    add_files("src/**.h", {rules = "qt.moc"})
+    add_files("src/**.cpp")
 
     if is_plat("windows") then
         add_syslinks("dwmapi")

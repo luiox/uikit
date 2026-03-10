@@ -14,26 +14,25 @@ target("libant_qt_demo")
     add_defines("LIBICON_CORE_ENABLE_EMBED=1")
     add_includedirs(
         ".",
+        "src/app",
+        "src/pages",
+        "src/showcase",
         "../libant-qt/src",
+        "../libant-qt/src/core",
+        "../libant-qt/src/display",
+        "../libant-qt/src/feedback",
+        "../libant-qt/src/input",
+        "../libant-qt/src/layout",
+        "../libant-qt/src/navigation",
+        "../libant-qt/src/overlay",
+        "../libant-qt/src/view",
         "../libicon-core/generated",
         "../libicon-qt/src"
     )
-    add_headerfiles("*.h")
+    add_headerfiles("src/**.h")
+    add_files("src/**.h", {rules = "qt.moc"})
     add_files(
-        "LibAntQtDemoWindow.h",
-        "HomePage.h",
-        "FunctionPage.h",
-        "SettingsPage.h",
-        "AboutPage.h",
-        {rules = "qt.moc"}
-    )
-    add_files(
-        "main.cpp",
-        "LibAntQtDemoWindow.cpp",
-        "HomePage.cpp",
-        "FunctionPage.cpp",
-        "SettingsPage.cpp",
-        "AboutPage.cpp",
+        "src/**.cpp",
         "LibAntQtDemoWindow.ui",
         "assets/libant-qt-demo.qrc"
     )

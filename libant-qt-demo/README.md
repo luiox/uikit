@@ -12,18 +12,31 @@
 
 已迁出：
 
-- `main.cpp`
-- `LibAntQtDemoWindow.*`
-- `HomePage.*`
-- `FunctionPage.*`
-- `SettingsPage.*`
-- `AboutPage.*`
+- `src/app/main.cpp`
+- `src/app/LibAntQtDemoWindow.*`
+- `src/pages/HomePage.*`
+- `src/pages/FunctionPage.*`
+- `src/pages/SettingsPage.*`
+- `src/pages/AboutPage.*`
+- `src/showcase/CircularAvatar.*`
+- `src/showcase/MaterialDialog.*`
+- `src/showcase/DialogViewController.*`
+- `src/showcase/LoginPageWidget.*`
+- `src/showcase/RegisterPageWidget.*`
+- `src/showcase/ProfilePage.*`
+- `src/showcase/StandardDialogPage.*`
+- `src/showcase/BubbleViewController.*`
+- `src/showcase/UserInfoBubble.*`
+- `src/showcase/DrawerWidget.*`
+- `src/showcase/NotificationWidget.*`
+- `src/showcase/NotificationManager.*`
 
 说明：
 
 - demo 资源已迁到 `assets/`，并由独立的 `assets/libant-qt-demo.qrc` 管理
+- 页面级代码和展示型场景组件已按 `app / pages / showcase` 分类
 - 首页已先改成轻量静态页，避免强依赖多媒体模块
-- 其余 demo 页面后续还会继续做进一步清理和独立化
+- `assets/images/` 中当前包含可替换的本地占位图，用于保证 demo 构建和交互展示闭环
 
 ## 构建
 
