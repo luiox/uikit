@@ -4,6 +4,19 @@
 
 namespace launcher::constants {
 
+namespace search_cmd {
+constexpr int kNone = -1;
+constexpr int kCmd = 0;
+constexpr int kSettings = 1;
+constexpr int kShutdown = 2;
+constexpr int kReboot = 3;
+constexpr int kLogoff = 4;
+constexpr int kScreenoff = 5;
+constexpr int kBaidu = 6;
+} // namespace search_cmd
+
+constexpr char kSearchCmdPrefix[] = "__cmd__";
+
 namespace command {
 constexpr UINT kGroupAdd = 1001;
 constexpr UINT kGroupRename = 1002;
