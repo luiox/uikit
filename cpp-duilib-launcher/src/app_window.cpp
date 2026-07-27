@@ -326,6 +326,11 @@ void AppWindow::LaunchSelectedItem() {
         return;
     }
 
+    if (selected_item_id_.rfind(launcher::constants::kSearchCmdPrefix, 0) == 0) {
+        ExecuteSearchCommand(selected_item_id_);
+        return;
+    }
+
     const std::string group_id = !selected_item_group_id_.empty() ? selected_item_group_id_ : active_group_id_;
     if (group_id.empty()) {
         status_.Warn("no group selected");
@@ -936,6 +941,75 @@ bool AppWindow::MoveSelectedItemToGroup(const std::string& target_group_id) {
     RenderItems();
     status_.Info("item moved");
     return true;
+}
+
+void AppWindow::ExecuteSearchCommand(const std::string& item_id) {
+    const std::string prefix = launcher::constants::kSearchCmdPrefix;
+    if (item_id.rfind(prefix, 0) != 0) {
+        return;
+    }
+
+    const int cmd_id = std::stoi(item_id.substr(prefix.size()));
+    switch (cmd_id) {
+    case launcher::constants::search_cmd::kCmd: {
+        ShellExecuteW(nullptr, L"open", L"cmd.exe", nullptr, nullptr, SW_SHOWNORMAL);
+        status_.Info("opened command prompt");
+        break;
+    }
+    case launcher::constants::search_cmd::kSettings: {
+        ShellExecuteW(nullptr, L"open", L"ms-settings:", nullptr, nullptr, SW_SHOWNORMAL);
+        status_.Info("opened system settings");
+        break;
+    }
+    case launcher::constants::search_cmd::kShutdown: {
+        const int confirmed = MessageBoxW(m_hWnd, L"Are you sure you want to shut down?", L"Shut Down", MB_ICONQUESTION | MB_YESNO);
+        if (confirmed == IDYES) {
+            system("shutdown /s /t 0");
+            status_.Info("shutting down...");
+        } else {
+            status_.Info("shutdown canceled");
+        }
+        break;
+    }
+    case launcher::constants::search_cmd::kReboot: {
+        const int confirmed = MessageBoxW(m_hWnd, L"Are you sure you want to restart?", L"Restart", MB_ICONQUESTION | MB_YESNO);
+        if (confirmed == IDYES) {
+            system("shutdown /r /t 0");
+            status_.Info("restarting...");
+        } else {
+            status_.Info("restart canceled");
+        }
+        break;
+    }
+    case launcher::constants::search_cmd::kLogoff: {
+        const int confirmed = MessageBoxW(m_hWnd, L"Are you sure you want to log off?", L"Log Off", MB_ICONQUESTION | MB_YESNO);
+        if (confirmed == IDYES) {
+            system("shutdown /l /t 0");
+            status_.Info("logging off...");
+        } else {
+            status_.Info("logoff canceled");
+        }
+        break;
+    }
+    case launcher::constants::search_cmd::kScreenoff: {
+        SendMessage(m_hWnd, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+        status_.Info("display turned off");
+        break;
+    }
+    case launcher::constants::search_cmd::kBaidu: {
+        const std::wstring keyword = launcher::util::Utf8ToWide(search_controller_.GetBaiduKeyword());
+        if (keyword.empty()) {
+            ShellExecuteW(nullptr, L"open", L"https://www.baidu.com", nullptr, nullptr, SW_SHOWNORMAL);
+        } else {
+            std::wstring url = L"https://www.baidu.com/s?wd=" + keyword;
+            ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        }
+        status_.Info("searching baidu");
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 std::string AppWindow::GenerateNewGroupName() const {
