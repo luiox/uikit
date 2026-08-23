@@ -54,7 +54,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     ::ShowWindow(hwnd, frame->ShouldStartMaximized() ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);
     ::UpdateWindow(hwnd);
 
-    CPaintManagerUI::MessageLoop();
+    DuiLibPaintManagerUI::MessageLoop();
     CoUninitialize();
     return 0;
 }

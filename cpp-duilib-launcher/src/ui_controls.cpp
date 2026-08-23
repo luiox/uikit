@@ -12,14 +12,15 @@ const Theme& GetTheme() {
 IconButtonUI::IconButtonUI() {
     const Theme& theme = GetTheme();
     SetText(_T(""));
-    SetFixedWidth(26);
-    SetFixedHeight(26);
+    // 三个顶栏按钮统一等大正方形，常态透明，悬停才显示灰底。
+    SetFixedWidth(30);
+    SetFixedHeight(30);
     SetTextColor(theme.text);
     SetAttribute(_T("normalbkcolor"), theme.icon_btn_normal);
     SetAttribute(_T("hotbkcolor"), theme.icon_btn_hot);
     SetAttribute(_T("pushedbkcolor"), theme.icon_btn_pushed);
     SetAttribute(_T("bordercolor"), theme.border_color);
-    SetAttribute(_T("bordersize"), theme.border_one);
+    SetAttribute(_T("bordersize"), theme.border_zero);
 }
 
 void IconButtonUI::SetSvgImage(const CDuiString& image_attr) {
@@ -30,7 +31,8 @@ void IconButtonUI::SetSvgImage(const CDuiString& image_attr) {
 
 GroupListUI::GroupListUI() {
     const Theme& theme = GetTheme();
-    SetBkColor(theme.panel);
+    // 对齐 Poner：分组区白底。
+    SetBkColor(theme.white);
     SetAttribute(_T("bordercolor"), theme.list_border_color);
     SetAttribute(_T("bordersize"), theme.border_zero);
     SetAttribute(_T("inset"), theme.inset_zero);
@@ -71,7 +73,8 @@ TitleBarUI::TitleBarUI() {
     SetName(_T("top_bar"));
     SetFixedHeight(35);
     SetBkColor(theme.panel);
-    SetAttribute(_T("childvalign"), _T("top"));
+    // 按钮在顶栏内垂直居中，标题拉伸占满整行。
+    SetAttribute(_T("childvalign"), _T("center"));
     SetAttribute(_T("childpadding"), _T("0"));
     SetAttribute(_T("inset"), theme.title_inset);
     SetAttribute(_T("bordercolor"), theme.border_color);

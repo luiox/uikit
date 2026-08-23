@@ -20,23 +20,42 @@ void ListController::RenderGroups() {
     owner_.group_ids_.clear();
 
     std::vector<const backend::Group*> groups;
+    const backend::Group* recycle_bin = nullptr;
     groups.reserve(owner_.backend_.Data().groups.size());
     for (const auto& group : owner_.backend_.Data().groups) {
+        if (group.hidden) {
+            if (backend::LauncherBackend::IsRecycleBinId(group.id)) {
+                recycle_bin = &group;
+            }
+            continue;
+        }
         groups.push_back(&group);
     }
     std::sort(groups.begin(), groups.end(), [](const backend::Group* lhs, const backend::Group* rhs) {
         return lhs->order < rhs->order;
     });
+    if (recycle_bin != nullptr) {
+        groups.push_back(recycle_bin);
+    }
 
     for (const auto* group : groups) {
         auto* row = new CListContainerElementUI();
         row->SetFixedHeight(34);
+        // 对齐 Poner：选中浅灰高亮条，悬停更浅的灰。
+        row->SetAttribute(_T("selectedbkcolor"), _T("0xFFD2D2D2"));
+        row->SetAttribute(_T("hotbkcolor"), _T("0xFFF0F0F0"));
+
+        std::wstring display_name = launcher::util::Utf8ToWide(group->name);
+        if (group->hidden) {
+            display_name += L" (" + std::to_wstring(group->items.size()) + L")";
+        }
 
         auto* name = new CLabelUI();
-        name->SetText(launcher::util::Utf8ToWide(group->name).c_str());
-        name->SetAttribute(_T("padding"), _T("8,0,0,0"));
-        name->SetTextColor(0xFF5A5A5A);
-        name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        name->SetText(display_name.c_str());
+        // 对齐 Poner：分组名右对齐，靠近分隔线。
+        name->SetAttribute(_T("padding"), _T("0,0,10,0"));
+        name->SetTextColor(0xFF1A1A1A);
+        name->SetTextStyle(DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
 
         owner_.groups_list_->Add(row);
@@ -129,6 +148,9 @@ void ListController::RenderItems() {
         }
 
         for (const auto& group : owner_.backend_.Data().groups) {
+            if (group.hidden) {
+                continue;
+            }
             for (const auto& item : group.items) {
                 if (item.item_type == "separator") {
                     continue;
@@ -152,7 +174,7 @@ void ListController::RenderItems() {
 
                 auto* name = new CLabelUI();
                 name->SetText(launcher::util::Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
-                name->SetTextColor(0xFF5A5A5A);
+                name->SetTextColor(0xFF1A1A1A);
                 name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
                 row->Add(name);
 
@@ -202,7 +224,7 @@ void ListController::RenderItems() {
 
         auto* name = new CLabelUI();
         name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
-        name->SetTextColor(0xFF5A5A5A);
+        name->SetTextColor(0xFF1A1A1A);
         name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
 

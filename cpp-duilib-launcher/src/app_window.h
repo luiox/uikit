@@ -73,6 +73,11 @@ private:
     void CloseGroupDialog();
     void ConfirmGroupDialog();
 
+    void UndoLastDelete();
+    void ShowBackupRecoveryMenu();
+    void ExecuteBackupCommand(UINT command_id);
+    bool IsActiveGroupRecycleBin() const;
+
     bool AddItemFromFile();
     bool EditSelectedItem();
     bool DeleteActiveGroup();

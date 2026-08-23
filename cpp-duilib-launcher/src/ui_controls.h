@@ -5,16 +5,18 @@
 namespace appui {
 
 struct Theme {
-    DWORD text = 0xFF5A5A5A;
+    // VB6 原版使用窗口文字色（近黑），浅灰会显得笔画细。
+    DWORD text = 0xFF1A1A1A;
     DWORD panel = 0xFFE6E6E6;
     DWORD white = 0xFFFFFFFF;
     DWORD border = 0xFFD2D2D2;
     DWORD list_border = 0xFFCFD7E0;
     LPCTSTR border_color = _T("0xFFD2D2D2");
     LPCTSTR list_border_color = _T("0xFFCFD7E0");
-    LPCTSTR icon_btn_normal = _T("0xFFF2F2F2");
-    LPCTSTR icon_btn_hot = _T("0xFFE4E4E4");
-    LPCTSTR icon_btn_pushed = _T("0xFFD7D7D7");
+    // 顶栏图标按钮：常态透明，悬停/按下才出现灰底（对齐 Poner 行为）。
+    LPCTSTR icon_btn_normal = _T("0x00000000");
+    LPCTSTR icon_btn_hot = _T("0xFFD0D0D0");
+    LPCTSTR icon_btn_pushed = _T("0xFFC4C4C4");
     LPCTSTR border_zero = _T("0");
     LPCTSTR border_one = _T("1");
     LPCTSTR inset_zero = _T("0,0,0,0");

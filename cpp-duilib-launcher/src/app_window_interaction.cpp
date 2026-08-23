@@ -80,6 +80,12 @@ bool AppWindow::CommitListDragReorder() {
         }
 
         const std::string dragged_group_id = group_ids_[list_drag_from_index_];
+        const std::string hover_group_id = group_ids_[list_drag_hover_index_];
+        if (backend_.IsRecycleBinId(dragged_group_id) || backend_.IsRecycleBinId(hover_group_id)) {
+            status_.Warn("recycle bin position is fixed");
+            return false;
+        }
+
         DebugLog("reorder groups request id=" + dragged_group_id + " from=" + std::to_string(list_drag_from_index_) + " to=" + std::to_string(list_drag_hover_index_));
         if (!backend_.ReorderGroup(dragged_group_id, list_drag_hover_index_, &error)) {
             status_.Error("reorder group failed: " + error);
@@ -147,6 +153,11 @@ void AppWindow::HandleFileDrop(HDROP drop_handle) {
 
     if (active_group_id_.empty() && !group_ids_.empty()) {
         active_group_id_ = group_ids_.front();
+    }
+
+    if (backend_.IsRecycleBinId(active_group_id_)) {
+        status_.Warn("cannot drop into recycle bin");
+        return;
     }
 
     std::string error;
@@ -287,7 +298,7 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
         int next_width = splitter_start_width_ + (x - splitter_drag_start_x_);
 
         RECT client{};
-        GetClientRect(m_hWnd, &client);
+        ::GetClientRect(m_hWnd, &client);
         const int total_width = client.right - client.left;
         const int min_group = 80;
         const int min_items = 220;
@@ -383,6 +394,12 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
     if (uMsg == WM_MOVE) {
         m_pm.NeedUpdate();
         MarkUiStateDirty();
+    }
+
+    if (uMsg == WM_TIMER && wParam == launcher::constants::timer::kStatusToast) {
+        status_.Hide();
+        bHandled = TRUE;
+        return 0;
     }
 
     if (uMsg == WM_TIMER && wParam == launcher::constants::timer::kUiStateSave) {
@@ -498,6 +515,11 @@ LRESULT AppWindow::HandleCustomMessage(UINT uMsg, WPARAM wParam, LPARAM lParam, 
             bHandled = TRUE;
             return 0;
         }
+        if (wParam == 'Z' && (::GetKeyState(VK_CONTROL) & 0x8000) != 0) {
+            UndoLastDelete();
+            bHandled = TRUE;
+            return 0;
+        }
         if (wParam == VK_DELETE) {
             DeleteSelectedItem();
             bHandled = TRUE;
@@ -534,6 +556,7 @@ LRESULT AppWindow::OnClose(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandl
         ::KillTimer(m_hWnd, launcher::constants::timer::kUiStateSave);
         ui_state_timer_active_ = false;
     }
+    ::KillTimer(m_hWnd, launcher::constants::timer::kStatusToast);
     SaveUiState();
     PostQuitMessage(0);
     bHandled = FALSE;

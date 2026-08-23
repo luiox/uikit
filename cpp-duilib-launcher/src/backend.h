@@ -8,6 +8,11 @@
 
 namespace backend {
 
+/** @brief Fixed id of the built-in recycle bin group (hidden from normal flow). */
+constexpr char kRecycleBinGroupId[] = "recycle_bin";
+/** @brief Display name of the built-in recycle bin group. */
+constexpr char kRecycleBinGroupName[] = "Recycle Bin";
+
 /** @brief Single launchable entry in a group. */
 struct LaunchItem {
     std::string id;
@@ -25,6 +30,7 @@ struct Group {
     std::string id;
     std::string name;
     int order = 0;
+    bool hidden = false;
     std::vector<LaunchItem> items;
 };
 
@@ -55,11 +61,20 @@ struct ItemInput {
     std::optional<bool> enabled;
 };
 
-/** @brief Result returned by Launch operation. */
-struct LaunchResult {
-    bool ok = false;
-    std::string message;
-};
+    /** @brief Result returned by Launch operation. */
+    struct LaunchResult {
+        bool ok = false;
+        std::string message;
+    };
+
+    /** @brief A backup file discovered under backups/. */
+    struct BackupEntry {
+        std::filesystem::path path;
+        std::string name;
+        std::string kind; // "rolling" or "daily"
+        std::int64_t modified_time = 0;
+        std::uintmax_t size = 0;
+    };
 
 /**
  * @brief Launcher data service handling persistence and core CRUD behaviors.
@@ -92,6 +107,21 @@ public:
     LaunchResult Launch(const std::string& group_id, const std::string& item_id, std::string* error = nullptr);
     std::size_t CreateItemsFromDroppedPaths(const std::string& group_id, const std::vector<std::string>& paths, std::string* error = nullptr);
 
+    /** @brief Undo the most recent soft delete; returns the item to its original group and index. */
+    bool UndoLastDelete(std::string* error = nullptr);
+    /** @brief List backup files under backups/, newest first. */
+    std::vector<BackupEntry> ListBackups() const;
+    /** @brief Validate a backup file and restore it as the current dataset. */
+    bool RestoreFromBackup(const std::filesystem::path& backup_path, std::string* error = nullptr);
+    /** @brief MD5 hex of the current data file content (used by destructive-operation confirm). */
+    std::string ComputeDataMd5Hex(std::string* error = nullptr) const;
+    /** @brief Returns true once if the last Load detected corruption/version mismatch. */
+    bool ConsumeLastLoadCorrupted();
+    /** @brief True when group_id is the built-in recycle bin id. */
+    static bool IsRecycleBinId(const std::string& group_id);
+    /** @brief True when the given group is marked hidden. */
+    bool IsGroupHidden(const std::string& group_id) const;
+
     const LauncherData& Data() const { return data_; }
     const Settings& CurrentSettings() const { return settings_; }
     const std::filesystem::path& DataPath() const { return data_path_; }
@@ -112,6 +142,16 @@ private:
     bool EnsureLoaded(std::string* error) const;
     Group* FindGroup(const std::string& group_id);
     const Group* FindGroup(const std::string& group_id) const;
+    Group* EnsureRecycleBin();
+    void RotateBackupsBeforeSave() const;
+    void AppendJournal(const std::string& action, const std::string& detail) const;
+
+    struct DeletedItemSnapshot {
+        LaunchItem item;
+        std::string from_group_id;
+        std::string from_group_name;
+        std::size_t index = 0;
+    };
 
     std::filesystem::path base_dir_;
     std::filesystem::path legacy_root_;
@@ -121,6 +161,9 @@ private:
     LauncherData data_;
     Settings settings_;
     bool loaded_ = false;
+    bool last_load_corrupted_ = false;
+    bool has_last_deleted_ = false;
+    DeletedItemSnapshot last_deleted_;
 
     std::uint64_t id_counter_ = 1;
 };

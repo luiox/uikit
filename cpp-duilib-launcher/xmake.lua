@@ -29,6 +29,10 @@ target("nassistant-duilib")
     set_kind("binary")
     set_languages("cxx17")
 
+    -- 源码为 UTF-8（无 BOM），必须显式告知 MSVC，否则中文字符串字面量
+    -- （如字体名“微软雅黑”）会按 GBK 误解为乱码，导致字体加载失败。
+    add_cxxflags("/utf-8")
+
     if is_mode("debug") then
         set_symbols("debug")
         set_optimize("none")
@@ -49,7 +53,7 @@ target("nassistant-duilib")
 
     add_deps("DuiLibLite")
 
-    add_syslinks("user32", "gdi32", "comctl32", "comdlg32", "ole32", "oleaut32", "imm32", "winmm", "version", "uxtheme", "shell32")
+    add_syslinks("user32", "gdi32", "comctl32", "comdlg32", "ole32", "oleaut32", "imm32", "winmm", "version", "uxtheme", "shell32", "advapi32")
 
     after_build(function (target)
         if is_mode("debug") then
@@ -60,6 +64,7 @@ target("nassistant-duilib")
 target("backend_tests")
     set_kind("binary")
     set_languages("cxx17")
+    add_cxxflags("/utf-8")
 
     if is_mode("debug") then
         set_symbols("debug")
@@ -72,4 +77,4 @@ target("backend_tests")
     add_includedirs("src", duilib_dir)
     add_files("src/backend.cpp", "src/logger.cpp", "src/utils/*.cpp", "tests/backend_tests.cpp")
     add_packages("nlohmann_json", "gtest")
-    add_syslinks("user32", "shell32", "ole32", "oleaut32")
+    add_syslinks("user32", "shell32", "ole32", "oleaut32", "advapi32")

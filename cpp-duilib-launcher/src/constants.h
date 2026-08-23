@@ -38,11 +38,16 @@ constexpr UINT kMainExportData = 3004;
 constexpr UINT kMainSettings = 3005;
 constexpr UINT kMainWebSite = 3006;
 constexpr UINT kMainExit = 3007;
+
+constexpr UINT kBackupRestoreBase = 4000;
+constexpr UINT kBackupRestoreMax = 9;
+constexpr UINT kBackupStartFresh = 4900;
 } // namespace command
 
 namespace timer {
 constexpr UINT_PTR kUiStateSave = 0x4E53;
 constexpr UINT_PTR kListDragPoll = 0x4E54;
+constexpr UINT_PTR kStatusToast = 0x4E55;
 } // namespace timer
 
 namespace layout {
@@ -54,11 +59,13 @@ constexpr int kMinItemsPanelWidth = 220;
 } // namespace layout
 
 namespace color {
-constexpr unsigned long kStatusInfo = 0xFF445A72;
-constexpr unsigned long kStatusWarn = 0xFF9A6700;
-constexpr unsigned long kStatusError = 0xFFB00020;
+// Toast 深色底上的前景色（状态栏已移除，反馈走浮动 Toast）。
+constexpr unsigned long kStatusInfo = 0xFFFFFFFF;
+constexpr unsigned long kStatusWarn = 0xFFFFC24B;
+constexpr unsigned long kStatusError = 0xFFFF7A7A;
 } // namespace color
 
 constexpr UINT kUiStateSaveDelayMs = 800;
+constexpr UINT kStatusToastHideMs = 2200;
 
 } // namespace launcher::constants

@@ -21,7 +21,7 @@ CControlUI* UiBuilder::BuildRootUi() const {
 
     auto* title = new CLabelUI();
     title->SetText(_T("Poner"));
-    title->SetTextColor(0xFF5A5A5A);
+    title->SetTextColor(0xFF1A1A1A);
     title->SetFont(0);
     title->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     topBar->Add(title);
@@ -75,7 +75,7 @@ CControlUI* UiBuilder::BuildRootUi() const {
     auto* groupPanel = new CVerticalLayoutUI();
     groupPanel->SetName(_T("group_panel"));
     groupPanel->SetFixedWidth(220);
-    groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFE6E6E6"));
+    groupPanel->SetAttribute(_T("bkcolor"), _T("0xFFFFFFFF"));
     groupPanel->SetAttribute(_T("bordercolor"), _T("0xFFD2D2D2"));
     groupPanel->SetAttribute(_T("bordersize"), _T("0"));
     groupPanel->SetAttribute(_T("inset"), _T("0,0,0,0"));
@@ -108,15 +108,19 @@ CControlUI* UiBuilder::BuildRootUi() const {
     body->Add(itemPanel);
     root->Add(body);
 
+    // 状态反馈不再占用常驻状态栏（启动器空间宝贵），改为浮动 Toast：
+    // 平时隐藏，有消息时显示，由 StatusPresenter 通过定时器自动隐藏。
     auto* status = new CLabelUI();
     status->SetName(_T("status_line"));
-    status->SetText(_T("Ready"));
-    status->SetFixedHeight(26);
-    status->SetAttribute(_T("padding"), _T("10,6,0,0"));
-    status->SetAttribute(_T("bkcolor"), _T("0xFFF8F8F8"));
-    status->SetAttribute(_T("bordercolor"), _T("0xFFDCDCDC"));
-    status->SetAttribute(_T("bordersize"), _T("1,1,1,0"));
-    status->SetTextColor(0xFF5A5A5A);
+    status->SetVisible(false);
+    status->SetFloat(true);
+    status->SetFloatAlign(DT_CENTER | DT_BOTTOM);
+    status->SetFixedWidth(460);
+    status->SetFixedHeight(30);
+    status->SetAttribute(_T("bkcolor"), _T("0xFF333333"));
+    status->SetTextColor(0xFFFFFFFF);
+    status->SetAttribute(_T("inset"), _T("10,4,10,4"));
+    status->SetTextStyle(DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
     root->Add(status);
 
     auto* groupDialog = new CVerticalLayoutUI();
@@ -136,7 +140,7 @@ CControlUI* UiBuilder::BuildRootUi() const {
     groupDialogTitle->SetName(_T("group_dialog_title"));
     groupDialogTitle->SetText(_T("Add Group"));
     groupDialogTitle->SetFixedHeight(24);
-    groupDialogTitle->SetTextColor(0xFF5A5A5A);
+    groupDialogTitle->SetTextColor(0xFF1A1A1A);
     groupDialogTitle->SetFont(0);
     groupDialog->Add(groupDialogTitle);
 
@@ -160,7 +164,7 @@ CControlUI* UiBuilder::BuildRootUi() const {
     okButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
     okButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
     okButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
-    okButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
+    okButton->SetAttribute(_T("textcolor"), _T("0xFF1A1A1A"));
     okButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     actions->Add(okButton);
 
@@ -172,7 +176,7 @@ CControlUI* UiBuilder::BuildRootUi() const {
     cancelButton->SetAttribute(_T("normalbkcolor"), _T("0xFFE6E6E6"));
     cancelButton->SetAttribute(_T("hotbkcolor"), _T("0xFFD5D5D5"));
     cancelButton->SetAttribute(_T("pushedbkcolor"), _T("0xFFD5D5D5"));
-    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF5A5A5A"));
+    cancelButton->SetAttribute(_T("textcolor"), _T("0xFF1A1A1A"));
     cancelButton->SetAttribute(_T("bordercolor"), _T("0x00000000"));
     actions->Add(cancelButton);
 
