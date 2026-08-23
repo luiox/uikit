@@ -68,9 +68,15 @@ private:
     void ExecuteMainCommand(UINT command_id);
     void ExecuteGroupCommand(UINT command_id);
     void ExecuteItemCommand(UINT command_id);
+    void ExecuteSearchCommand(const std::string& item_id);
     void OpenGroupDialog(bool rename_mode, const std::string& group_id);
     void CloseGroupDialog();
     void ConfirmGroupDialog();
+
+    void UndoLastDelete();
+    void ShowBackupRecoveryMenu();
+    void ExecuteBackupCommand(UINT command_id);
+    bool IsActiveGroupRecycleBin() const;
 
     bool AddItemFromFile();
     bool EditSelectedItem();

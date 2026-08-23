@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <set>
 
 #include <gtest/gtest.h>
 
@@ -23,6 +24,44 @@ std::filesystem::path MakeTempDir(const char* name) {
 void WriteText(const std::filesystem::path& path, const std::string& text) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     out << text;
+}
+
+const backend::Group* FindGroupById(const backend::LauncherBackend& b, const std::string& id) {
+    for (const auto& g : b.Data().groups) {
+        if (g.id == id) {
+            return &g;
+        }
+    }
+    return nullptr;
+}
+
+backend::ItemInput MakeItemInput(const std::string& name, const std::string& path) {
+    backend::ItemInput input;
+    input.name = name;
+    input.target_path = path;
+    input.icon_location = path;
+    input.arguments = "";
+    return input;
+}
+
+std::size_t CountBackups(const std::filesystem::path& base, const std::string& kind) {
+    std::size_t count = 0;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(base / "backups", ec)) {
+        const auto name = entry.path().filename().string();
+        if (name.compare(0, 12, "launcher.v2.") != 0) {
+            continue;
+        }
+        if (name.size() != 12 + 5 + 15 && name.size() != 12 + 5 + 8) {
+            continue;
+        }
+        const auto stamp = name.substr(12, name.size() - 17);
+        const bool rolling = stamp.size() == 15 && stamp[8] == '-';
+        const bool daily = stamp.size() == 8;
+        if (kind == "rolling" && rolling) ++count;
+        if (kind == "daily" && daily) ++count;
+    }
+    return count;
 }
 
 TEST(BackendTest, ImportsLegacyDataJson) {
@@ -185,6 +224,262 @@ TEST(BackendTest, RecoversFromCorruptedJson) {
         }
     }
     EXPECT_TRUE(has_backup);
+}
+
+TEST(BackendTest, BackupRotationKeepsRecentFiveAndDailySnapshot) {
+    const auto legacy = MakeTempDir("legacy_backup_rotation");
+    const auto base = MakeTempDir("base_backup_rotation");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    for (int i = 0; i < 8; ++i) {
+        ASSERT_TRUE(b.SaveData(&error)) << error;
+    }
+
+    EXPECT_GT(CountBackups(base, "rolling"), std::size_t{0});
+    EXPECT_LE(CountBackups(base, "rolling"), std::size_t{5});
+    EXPECT_EQ(CountBackups(base, "daily"), std::size_t{1});
+}
+
+TEST(BackendTest, SoftDeleteMovesItemIntoHiddenRecycleBin) {
+    const auto legacy = MakeTempDir("legacy_soft_delete");
+    const auto base = MakeTempDir("base_soft_delete");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_FALSE(gid.empty()) << error;
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Procmon", "C:\\Tools\\Procmon.exe"), &error)) << error;
+
+    std::string item_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && !g.items.empty()) {
+            item_id = g.items[0].id;
+        }
+    }
+    ASSERT_FALSE(item_id.empty());
+
+    ASSERT_TRUE(b.DeleteItem(gid, item_id, &error)) << error;
+
+    const auto* source = FindGroupById(b, gid);
+    ASSERT_NE(source, nullptr);
+    EXPECT_TRUE(source->items.empty());
+
+    const auto* bin = FindGroupById(b, backend::kRecycleBinGroupId);
+    ASSERT_NE(bin, nullptr);
+    EXPECT_TRUE(bin->hidden);
+    ASSERT_EQ(bin->items.size(), 1u);
+    EXPECT_EQ(bin->items[0].id, item_id);
+}
+
+TEST(BackendTest, UndoRestoresDeletedItemToOriginalPlace) {
+    const auto legacy = MakeTempDir("legacy_undo");
+    const auto base = MakeTempDir("base_undo");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("First", "C:\\Tools\\1.exe"), &error));
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Second", "C:\\Tools\\2.exe"), &error));
+
+    std::string first_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && g.items.size() == 2) {
+            first_id = g.items[0].id;
+        }
+    }
+    ASSERT_FALSE(first_id.empty());
+
+    ASSERT_TRUE(b.DeleteItem(gid, first_id, &error)) << error;
+    ASSERT_TRUE(b.UndoLastDelete(&error)) << error;
+
+    const auto* group = FindGroupById(b, gid);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->items.size(), 2u);
+    EXPECT_EQ(group->items[0].id, first_id);
+
+    const auto* bin = FindGroupById(b, backend::kRecycleBinGroupId);
+    ASSERT_NE(bin, nullptr);
+    EXPECT_TRUE(bin->items.empty());
+}
+
+TEST(BackendTest, DeleteInsideRecycleBinPurgesPermanently) {
+    const auto legacy = MakeTempDir("legacy_purge");
+    const auto base = MakeTempDir("base_purge");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Procmon", "C:\\Tools\\Procmon.exe"), &error));
+
+    std::string item_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && !g.items.empty()) {
+            item_id = g.items[0].id;
+        }
+    }
+    ASSERT_TRUE(b.DeleteItem(gid, item_id, &error)) << error;
+    ASSERT_TRUE(b.DeleteItem(backend::kRecycleBinGroupId, item_id, &error)) << error;
+
+    const auto* bin = FindGroupById(b, backend::kRecycleBinGroupId);
+    ASSERT_NE(bin, nullptr);
+    EXPECT_TRUE(bin->items.empty());
+
+    std::string undo_error;
+    EXPECT_FALSE(b.UndoLastDelete(&undo_error));
+}
+
+TEST(BackendTest, RecycleBinIsProtectedFromDirectModification) {
+    const auto legacy = MakeTempDir("legacy_bin_guard");
+    const auto base = MakeTempDir("base_bin_guard");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Procmon", "C:\\Tools\\Procmon.exe"), &error));
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Notepad", "C:\\Tools\\Notepad.exe"), &error));
+
+    std::string item_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && g.items.size() == 2) {
+            item_id = g.items[0].id;
+        }
+    }
+    ASSERT_TRUE(b.DeleteItem(gid, item_id, &error)) << error;
+
+    std::string remaining_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && g.items.size() == 1) {
+            remaining_id = g.items[0].id;
+        }
+    }
+    ASSERT_FALSE(remaining_id.empty());
+
+    std::string guard_error;
+    EXPECT_FALSE(b.DeleteGroup(backend::kRecycleBinGroupId, gid, &guard_error));
+    EXPECT_FALSE(b.MoveItem(gid, remaining_id, backend::kRecycleBinGroupId, &guard_error));
+    EXPECT_FALSE(b.RenameGroup(backend::kRecycleBinGroupId, "NotBin", &guard_error));
+    EXPECT_FALSE(b.UpsertItem(backend::kRecycleBinGroupId, MakeItemInput("X", "C:\\x.exe"), &guard_error));
+    EXPECT_FALSE(b.ReorderGroup(backend::kRecycleBinGroupId, 0, &guard_error));
+}
+
+TEST(BackendTest, RestoreFromBackupRecoversDataset) {
+    const auto legacy = MakeTempDir("legacy_restore");
+    const auto base = MakeTempDir("base_restore");
+
+    backend::LauncherBackend b1(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b1.Load(&error)) << error;
+
+    const auto gid = b1.AddGroup("Tools", &error);
+    ASSERT_FALSE(gid.empty()) << error;
+    ASSERT_TRUE(b1.RenameGroup(gid, "MyTools", &error)) << error;
+    // Rotation snapshots the pre-save state, so persist once more to make the
+    // renamed state available in backups.
+    ASSERT_TRUE(b1.SaveData(&error)) << error;
+
+    WriteText(base / "launcher.v2.json", "{ corrupted now");
+
+    backend::LauncherBackend b2(base, legacy);
+    ASSERT_TRUE(b2.Load(&error)) << error;
+    EXPECT_TRUE(b2.ConsumeLastLoadCorrupted());
+    EXPECT_FALSE(b2.ConsumeLastLoadCorrupted());
+
+    const auto backups = b2.ListBackups();
+    ASSERT_FALSE(backups.empty());
+
+    ASSERT_TRUE(b2.RestoreFromBackup(backups.front().path, &error)) << error;
+    const auto* group = FindGroupById(b2, gid);
+    ASSERT_NE(group, nullptr);
+    EXPECT_EQ(group->name, "MyTools");
+}
+
+TEST(BackendTest, ComputeDataMd5HexReturnsStableHash) {
+    const auto legacy = MakeTempDir("legacy_md5");
+    const auto base = MakeTempDir("base_md5");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto hash1 = b.ComputeDataMd5Hex(&error);
+    ASSERT_EQ(hash1.size(), 32u) << error;
+    const auto hash2 = b.ComputeDataMd5Hex(&error);
+    EXPECT_EQ(hash1, hash2);
+
+    for (char ch : hash1) {
+        const bool hex = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+        ASSERT_TRUE(hex) << "non-hex char: " << ch;
+    }
+
+    const auto gid = b.AddGroup("Another", &error);
+    ASSERT_FALSE(gid.empty());
+    const auto hash3 = b.ComputeDataMd5Hex(&error);
+    EXPECT_NE(hash1, hash3);
+}
+
+TEST(BackendTest, JournalRecordsMutatingOperations) {
+    const auto legacy = MakeTempDir("legacy_journal");
+    const auto base = MakeTempDir("base_journal");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_FALSE(gid.empty()) << error;
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Procmon", "C:\\Tools\\Procmon.exe"), &error)) << error;
+
+    std::string item_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && !g.items.empty()) {
+            item_id = g.items[0].id;
+        }
+    }
+    ASSERT_TRUE(b.DeleteItem(gid, item_id, &error)) << error;
+
+    std::ifstream in(base / "operations.log");
+    ASSERT_TRUE(in.good());
+    std::stringstream ss;
+    ss << in.rdbuf();
+    const auto content = ss.str();
+    EXPECT_NE(content.find("add_group"), std::string::npos);
+    EXPECT_NE(content.find("add_item"), std::string::npos);
+    EXPECT_NE(content.find("delete_item"), std::string::npos);
+}
+
+TEST(BackendTest, HiddenGroupsExcludedFromNameConflicts) {
+    const auto legacy = MakeTempDir("legacy_hidden_conflict");
+    const auto base = MakeTempDir("base_hidden_conflict");
+
+    backend::LauncherBackend b(base, legacy);
+    std::string error;
+    ASSERT_TRUE(b.Load(&error)) << error;
+
+    const auto gid = b.AddGroup("Tools", &error);
+    ASSERT_TRUE(b.UpsertItem(gid, MakeItemInput("Procmon", "C:\\Tools\\Procmon.exe"), &error));
+    std::string item_id;
+    for (const auto& g : b.Data().groups) {
+        if (g.id == gid && !g.items.empty()) {
+            item_id = g.items[0].id;
+        }
+    }
+    ASSERT_TRUE(b.DeleteItem(gid, item_id, &error)) << error;
+
+    // The hidden recycle bin is named "Recycle Bin"; creating a visible group
+    // with the same name must still succeed.
+    const auto dup = b.AddGroup(backend::kRecycleBinGroupName, &error);
+    EXPECT_FALSE(dup.empty()) << error;
 }
 
 } // namespace

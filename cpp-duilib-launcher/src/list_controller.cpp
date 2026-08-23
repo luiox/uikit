@@ -4,6 +4,7 @@
 
 #include "app_window.h"
 #include "file_icon_control.h"
+#include "search_controller.h"
 #include "utils/string_util.h"
 
 using namespace DuiLib;
@@ -19,23 +20,42 @@ void ListController::RenderGroups() {
     owner_.group_ids_.clear();
 
     std::vector<const backend::Group*> groups;
+    const backend::Group* recycle_bin = nullptr;
     groups.reserve(owner_.backend_.Data().groups.size());
     for (const auto& group : owner_.backend_.Data().groups) {
+        if (group.hidden) {
+            if (backend::LauncherBackend::IsRecycleBinId(group.id)) {
+                recycle_bin = &group;
+            }
+            continue;
+        }
         groups.push_back(&group);
     }
     std::sort(groups.begin(), groups.end(), [](const backend::Group* lhs, const backend::Group* rhs) {
         return lhs->order < rhs->order;
     });
+    if (recycle_bin != nullptr) {
+        groups.push_back(recycle_bin);
+    }
 
     for (const auto* group : groups) {
         auto* row = new CListContainerElementUI();
         row->SetFixedHeight(34);
+        // 对齐 Poner：选中浅灰高亮条，悬停更浅的灰。
+        row->SetAttribute(_T("selectedbkcolor"), _T("0xFFD2D2D2"));
+        row->SetAttribute(_T("hotbkcolor"), _T("0xFFF0F0F0"));
+
+        std::wstring display_name = launcher::util::Utf8ToWide(group->name);
+        if (group->hidden) {
+            display_name += L" (" + std::to_wstring(group->items.size()) + L")";
+        }
 
         auto* name = new CLabelUI();
-        name->SetText(launcher::util::Utf8ToWide(group->name).c_str());
-        name->SetAttribute(_T("padding"), _T("8,0,0,0"));
-        name->SetTextColor(0xFF5A5A5A);
-        name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        name->SetText(display_name.c_str());
+        // 对齐 Poner：分组名右对齐，靠近分隔线。
+        name->SetAttribute(_T("padding"), _T("0,0,10,0"));
+        name->SetTextColor(0xFF1A1A1A);
+        name->SetTextStyle(DT_RIGHT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
 
         owner_.groups_list_->Add(row);
@@ -60,7 +80,77 @@ void ListController::RenderItems() {
             keyword = launcher::util::WideToUtf8(owner_.search_input_->GetText().GetData());
         }
 
+        const int active_cmd = owner_.search_controller_.GetActiveCommand();
+
+        if (active_cmd != launcher::constants::search_cmd::kNone) {
+            auto add_command_row = [&](const std::wstring& label, const std::wstring& desc, int cmd_id) {
+                auto* row = new CListContainerElementUI();
+                row->SetFixedHeight(34);
+                row->SetAttribute(_T("inset"), _T("4,0,4,0"));
+                row->SetAttribute(_T("childpadding"), _T("6"));
+                row->SetAttribute(_T("childvalign"), _T("vcenter"));
+
+                auto* icon = new FileIconControl();
+                icon->SetFixedWidth(26);
+                icon->SetFixedHeight(26);
+                icon->SetBkColor(0xFFE8F0FE);
+                row->Add(icon);
+
+                auto* text_layout = new CVerticalLayoutUI();
+                text_layout->SetAttribute(_T("childpadding"), _T("0"));
+
+                auto* name = new CLabelUI();
+                name->SetText(label.c_str());
+                name->SetTextColor(0xFF1A73E8);
+                name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                text_layout->Add(name);
+
+                if (!desc.empty()) {
+                    auto* desc_label = new CLabelUI();
+                    desc_label->SetText(desc.c_str());
+                    desc_label->SetTextColor(0xFF808689);
+                    desc_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                    desc_label->SetAttribute(_T("font"), _T("1"));
+                    text_layout->Add(desc_label);
+                }
+
+                row->Add(text_layout);
+
+                owner_.items_list_->Add(row);
+                owner_.item_ids_.push_back(SearchController::CommandIdToItemId(cmd_id));
+                owner_.item_group_ids_.push_back("");
+            };
+
+            switch (active_cmd) {
+            case launcher::constants::search_cmd::kCmd:
+                add_command_row(L"Open Command Prompt", L"cmd", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kSettings:
+                add_command_row(L"Open System Settings", L"setting", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kShutdown:
+                add_command_row(L"Shut Down Computer", L"shutdown", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kReboot:
+                add_command_row(L"Restart Computer", L"reboot", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kLogoff:
+                add_command_row(L"Log Off Current User", L"logoff", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kScreenoff:
+                add_command_row(L"Turn Off Display", L"screenoff", active_cmd);
+                break;
+            case launcher::constants::search_cmd::kBaidu:
+                add_command_row(L"Search Baidu", launcher::util::Utf8ToWide(owner_.search_controller_.GetBaiduKeyword()), active_cmd);
+                break;
+            }
+            return;
+        }
+
         for (const auto& group : owner_.backend_.Data().groups) {
+            if (group.hidden) {
+                continue;
+            }
             for (const auto& item : group.items) {
                 if (item.item_type == "separator") {
                     continue;
@@ -84,7 +174,7 @@ void ListController::RenderItems() {
 
                 auto* name = new CLabelUI();
                 name->SetText(launcher::util::Utf8ToWide(item.name + "  [" + group.name + "]").c_str());
-                name->SetTextColor(0xFF5A5A5A);
+                name->SetTextColor(0xFF1A1A1A);
                 name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
                 row->Add(name);
 
@@ -134,7 +224,7 @@ void ListController::RenderItems() {
 
         auto* name = new CLabelUI();
         name->SetText(launcher::util::Utf8ToWide(item.name).c_str());
-        name->SetTextColor(0xFF5A5A5A);
+        name->SetTextColor(0xFF1A1A1A);
         name->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         row->Add(name);
 

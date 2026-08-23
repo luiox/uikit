@@ -12,10 +12,18 @@
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <sstream>
+#include <vector>
+
+#include <wincrypt.h>
 
 #include <nlohmann/json.hpp>
 
@@ -103,6 +111,155 @@ bool BackupCorruptedJson(const std::filesystem::path& path) {
 
     launcher::log::Warn("backup corrupted json: " + path.string() + " -> " + backup_path);
     return true;
+}
+
+std::tm ToLocalTime(std::chrono::system_clock::time_point tp) {
+    const auto time_t_value = std::chrono::system_clock::to_time_t(tp);
+    std::tm local{};
+    localtime_s(&local, &time_t_value);
+    return local;
+}
+
+std::string FormatJournalTimestamp(std::chrono::system_clock::time_point tp) {
+    const auto local = ToLocalTime(tp);
+    char buffer[32]{};
+    std::snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d",
+        local.tm_year + 1900, local.tm_mon + 1, local.tm_mday,
+        local.tm_hour, local.tm_min, local.tm_sec);
+    return buffer;
+}
+
+std::string FormatFileStamp(std::chrono::system_clock::time_point tp) {
+    const auto local = ToLocalTime(tp);
+    char buffer[32]{};
+    std::snprintf(buffer, sizeof(buffer), "%04d%02d%02d-%02d%02d%02d",
+        local.tm_year + 1900, local.tm_mon + 1, local.tm_mday,
+        local.tm_hour, local.tm_min, local.tm_sec);
+    return buffer;
+}
+
+std::string FormatDateStamp(std::chrono::system_clock::time_point tp) {
+    const auto local = ToLocalTime(tp);
+    char buffer[16]{};
+    std::snprintf(buffer, sizeof(buffer), "%04d%02d%02d",
+        local.tm_year + 1900, local.tm_mon + 1, local.tm_mday);
+    return buffer;
+}
+
+constexpr std::size_t kRollingStampLength = 15; // YYYYMMDD-HHMMSS
+constexpr std::size_t kDailyStampLength = 8;    // YYYYMMDD
+
+// Returns "rolling", "daily" or "" for non-backup files.
+std::string ClassifyBackupName(const std::string& file_name) {
+    constexpr const char* kPrefix = "launcher.v2.";
+    constexpr const char* kSuffix = ".json";
+    const auto prefix_length = std::strlen(kPrefix);
+    const auto suffix_length = std::strlen(kSuffix);
+    if (file_name.size() <= prefix_length + suffix_length) {
+        return {};
+    }
+    if (file_name.compare(0, prefix_length, kPrefix) != 0) {
+        return {};
+    }
+    if (file_name.compare(file_name.size() - suffix_length, suffix_length, kSuffix) != 0) {
+        return {};
+    }
+    const auto stamp = file_name.substr(prefix_length, file_name.size() - prefix_length - suffix_length);
+    if (stamp.size() == kRollingStampLength && stamp[8] == '-') {
+        return "rolling";
+    }
+    if (stamp.size() == kDailyStampLength) {
+        return "daily";
+    }
+    return {};
+}
+
+void PruneBackups(const std::filesystem::path& backup_dir) {
+    constexpr std::size_t kKeepRolling = 5;
+    constexpr std::size_t kKeepDaily = 30;
+
+    std::vector<std::string> rolling;
+    std::vector<std::string> daily;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(backup_dir, ec)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        const auto name = entry.path().filename().string();
+        const auto kind = ClassifyBackupName(name);
+        if (kind == "rolling") {
+            rolling.push_back(name);
+        } else if (kind == "daily") {
+            daily.push_back(name);
+        }
+    }
+
+    // Stamp names sort lexicographically == chronologically; newest first.
+    std::sort(rolling.begin(), rolling.end(), std::greater<std::string>());
+    std::sort(daily.begin(), daily.end(), std::greater<std::string>());
+
+    for (std::size_t i = kKeepRolling; i < rolling.size(); ++i) {
+        std::filesystem::remove(backup_dir / rolling[i], ec);
+    }
+    for (std::size_t i = kKeepDaily; i < daily.size(); ++i) {
+        std::filesystem::remove(backup_dir / daily[i], ec);
+    }
+}
+
+std::string ToHexLower(const unsigned char* data, std::size_t size) {
+    static constexpr char kDigits[] = "0123456789abcdef";
+    std::string out;
+    out.reserve(size * 2);
+    for (std::size_t i = 0; i < size; ++i) {
+        out.push_back(kDigits[data[i] >> 4]);
+        out.push_back(kDigits[data[i] & 0x0F]);
+    }
+    return out;
+}
+
+std::string ComputeMd5Hex(const std::string& content, std::string* error) {
+    HCRYPTPROV provider = 0;
+    HCRYPTHASH hash = 0;
+    std::string failure;
+
+    if (!CryptAcquireContextW(&provider, nullptr, nullptr, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
+        failure = "CryptAcquireContext failed";
+    } else if (!CryptCreateHash(provider, CALG_MD5, 0, 0, &hash)) {
+        failure = "CryptCreateHash failed";
+    } else {
+        const auto* bytes = reinterpret_cast<const BYTE*>(content.data());
+        if (!CryptHashData(hash, bytes, static_cast<DWORD>(content.size()), 0)) {
+            failure = "CryptHashData failed";
+        }
+    }
+
+    std::string hex;
+    if (failure.empty()) {
+        DWORD hash_size = 0;
+        DWORD value_size = sizeof(hash_size);
+        unsigned char digest[16]{};
+        DWORD digest_size = sizeof(digest);
+        if (CryptGetHashParam(hash, HP_HASHSIZE, reinterpret_cast<BYTE*>(&hash_size), &value_size, 0) &&
+            hash_size == sizeof(digest) &&
+            CryptGetHashParam(hash, HP_HASHVAL, digest, &digest_size, 0)) {
+            hex = ToHexLower(digest, sizeof(digest));
+        } else {
+            failure = "CryptGetHashParam failed";
+        }
+    }
+
+    if (hash != 0) {
+        CryptDestroyHash(hash);
+    }
+    if (provider != 0) {
+        CryptReleaseContext(provider, 0);
+    }
+
+    if (!failure.empty()) {
+        SetError(error, failure);
+        return {};
+    }
+    return hex;
 }
 
 } // namespace
@@ -227,6 +384,10 @@ bool LauncherBackend::Load(std::string* error) {
                 if (data_.version != kSupportedDataVersion) {
                     launcher::log::Warn("incompatible launcher.v2.json version=" + std::to_string(data_.version));
                     BackupCorruptedJson(data_path_);
+                    // Remove the unusable file so the upcoming default-save does not
+                    // rotate corrupted content into the backup directory.
+                    std::filesystem::remove(data_path_, ec);
+                    last_load_corrupted_ = true;
                     data_ = DefaultLauncherData();
                     data_.version = kSupportedDataVersion;
                     if (!SaveData(error)) {
@@ -244,6 +405,7 @@ bool LauncherBackend::Load(std::string* error) {
                         g.id = jg.value("id", GenerateId("group"));
                         g.name = jg.value("name", std::string("Common"));
                         g.order = jg.value("order", 0);
+                        g.hidden = jg.value("hidden", false);
                         if (jg.contains("items") && jg["items"].is_array()) {
                             for (const auto& ji : jg["items"]) {
                                 LaunchItem item;
@@ -271,6 +433,10 @@ bool LauncherBackend::Load(std::string* error) {
         } catch (const std::exception& ex) {
             launcher::log::Error(std::string("parse launcher.v2.json failed: ") + ex.what());
             BackupCorruptedJson(data_path_);
+            // Remove the unusable file so the upcoming default-save does not
+            // rotate corrupted content into the backup directory.
+            std::filesystem::remove(data_path_, ec);
+            last_load_corrupted_ = true;
             data_ = DefaultLauncherData();
             data_.version = kSupportedDataVersion;
             if (!SaveData(error)) {
@@ -361,6 +527,8 @@ bool LauncherBackend::Load(std::string* error) {
 }
 
 bool LauncherBackend::SaveData(std::string* error) const {
+    RotateBackupsBeforeSave();
+
     json j;
     j["version"] = data_.version;
     j["groups"] = json::array();
@@ -369,6 +537,7 @@ bool LauncherBackend::SaveData(std::string* error) const {
         jg["id"] = g.id;
         jg["name"] = g.name;
         jg["order"] = g.order;
+        jg["hidden"] = g.hidden;
         jg["items"] = json::array();
         for (const auto& i : g.items) {
             json ji;
@@ -417,6 +586,200 @@ const Group* LauncherBackend::FindGroup(const std::string& group_id) const {
     return it == data_.groups.end() ? nullptr : &(*it);
 }
 
+bool LauncherBackend::IsRecycleBinId(const std::string& group_id) {
+    return group_id == kRecycleBinGroupId;
+}
+
+bool LauncherBackend::IsGroupHidden(const std::string& group_id) const {
+    const Group* group = FindGroup(group_id);
+    return group != nullptr && group->hidden;
+}
+
+Group* LauncherBackend::EnsureRecycleBin() {
+    if (auto* existing = FindGroup(kRecycleBinGroupId)) {
+        return existing;
+    }
+
+    int max_order = -1;
+    for (const auto& g : data_.groups) {
+        if (!g.hidden) {
+            max_order = std::max(max_order, g.order);
+        }
+    }
+
+    Group bin;
+    bin.id = kRecycleBinGroupId;
+    bin.name = kRecycleBinGroupName;
+    bin.order = max_order + 1;
+    bin.hidden = true;
+    data_.groups.push_back(std::move(bin));
+    launcher::log::Info("recycle bin group created");
+    return &data_.groups.back();
+}
+
+void LauncherBackend::RotateBackupsBeforeSave() const {
+    std::error_code ec;
+    if (!std::filesystem::exists(data_path_, ec)) {
+        return;
+    }
+
+    const auto backup_dir = base_dir_ / "backups";
+    std::filesystem::create_directories(backup_dir, ec);
+
+    const auto now = std::chrono::system_clock::now();
+
+    auto copy_backup = [&](const std::string& file_name) {
+        std::error_code copy_ec;
+        std::filesystem::copy_file(data_path_, backup_dir / file_name,
+            std::filesystem::copy_options::overwrite_existing, copy_ec);
+        if (copy_ec) {
+            launcher::log::Warn("backup copy failed: " + file_name + " error=" + copy_ec.message());
+        }
+    };
+
+    copy_backup("launcher.v2." + FormatFileStamp(now) + ".json");
+    copy_backup("launcher.v2." + FormatDateStamp(now) + ".json");
+
+    PruneBackups(backup_dir);
+}
+
+void LauncherBackend::AppendJournal(const std::string& action, const std::string& detail) const {
+    std::error_code ec;
+    std::filesystem::create_directories(base_dir_, ec);
+
+    std::ofstream out(base_dir_ / "operations.log", std::ios::app | std::ios::binary);
+    if (!out) {
+        launcher::log::Warn("open operations.log failed");
+        return;
+    }
+    out << FormatJournalTimestamp(std::chrono::system_clock::now()) << " | " << action << " | " << detail << "\n";
+    if (!out.good()) {
+        launcher::log::Warn("write operations.log failed");
+    }
+}
+
+bool LauncherBackend::UndoLastDelete(std::string* error) {
+    if (!EnsureLoaded(error)) {
+        return false;
+    }
+    if (!has_last_deleted_) {
+        SetError(error, "no deletion to undo");
+        return false;
+    }
+
+    auto* bin = FindGroup(kRecycleBinGroupId);
+    if (bin == nullptr) {
+        has_last_deleted_ = false;
+        SetError(error, "recycle bin not found");
+        return false;
+    }
+
+    auto it = std::find_if(bin->items.begin(), bin->items.end(),
+        [&](const LaunchItem& item) { return item.id == last_deleted_.item.id; });
+    if (it == bin->items.end()) {
+        has_last_deleted_ = false;
+        SetError(error, "deleted item is no longer in recycle bin");
+        return false;
+    }
+
+    auto* target = FindGroup(last_deleted_.from_group_id);
+    if (target == nullptr) {
+        SetError(error, "original group no longer exists");
+        return false;
+    }
+
+    auto restored = *it;
+    bin->items.erase(it);
+
+    const auto index = std::min(last_deleted_.index, target->items.size());
+    target->items.insert(target->items.begin() + static_cast<std::ptrdiff_t>(index), std::move(restored));
+
+    AppendJournal("undo_delete", "name=" + last_deleted_.item.name + " group=" + last_deleted_.from_group_name);
+    has_last_deleted_ = false;
+    return SaveData(error);
+}
+
+std::vector<BackupEntry> LauncherBackend::ListBackups() const {    std::vector<BackupEntry> out;
+    const auto backup_dir = base_dir_ / "backups";
+    std::error_code ec;
+    if (!std::filesystem::exists(backup_dir, ec)) {
+        return out;
+    }
+
+    for (const auto& entry : std::filesystem::directory_iterator(backup_dir, ec)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        const auto name = entry.path().filename().string();
+        const auto kind = ClassifyBackupName(name);
+        if (kind.empty()) {
+            continue;
+        }
+        BackupEntry item;
+        item.path = entry.path();
+        item.name = name;
+        item.kind = kind;
+        const auto mtime = std::filesystem::last_write_time(entry.path(), ec);
+        if (!ec) {
+            item.modified_time = std::chrono::duration_cast<std::chrono::seconds>(
+                mtime.time_since_epoch()).count();
+        }
+        item.size = entry.file_size(ec);
+        out.push_back(std::move(item));
+    }
+
+    std::sort(out.begin(), out.end(), [](const BackupEntry& lhs, const BackupEntry& rhs) {
+        return lhs.name > rhs.name;
+    });
+    return out;
+}
+
+bool LauncherBackend::RestoreFromBackup(const std::filesystem::path& backup_path, std::string* error) {
+    if (!EnsureLoaded(error)) {
+        return false;
+    }
+
+    std::error_code ec;
+    if (!std::filesystem::exists(backup_path, ec)) {
+        SetError(error, "backup file not found");
+        return false;
+    }
+
+    const auto content = ReadTextFile(backup_path);
+    bool valid = false;
+    try {
+        auto j = json::parse(content);
+        valid = j.value("version", 0) == 2 && j.contains("groups") && j["groups"].is_array();
+    } catch (const std::exception&) {
+        valid = false;
+    }
+    if (!valid) {
+        SetError(error, "backup file is not a valid v2 dataset");
+        return false;
+    }
+
+    if (!WriteTextAtomic(data_path_, content, error)) {
+        return false;
+    }
+
+    AppendJournal("restore_backup", "from=" + backup_path.filename().string());
+    last_load_corrupted_ = false;
+    return Load(error);
+}
+
+std::string LauncherBackend::ComputeDataMd5Hex(std::string* error) const {
+    if (!std::filesystem::exists(data_path_)) {
+        SetError(error, "data file not found");
+        return {};
+    }
+    const auto content = ReadTextFile(data_path_);
+    return ComputeMd5Hex(content, error);
+}
+
+bool LauncherBackend::ConsumeLastLoadCorrupted() {
+    return std::exchange(last_load_corrupted_, false);
+}
+
 std::string LauncherBackend::AddGroup(const std::string& name, std::string* error) {
     if (!EnsureLoaded(error)) {
         return {};
@@ -427,7 +790,7 @@ std::string LauncherBackend::AddGroup(const std::string& name, std::string* erro
         return {};
     }
     const auto found = std::find_if(data_.groups.begin(), data_.groups.end(), [&](const Group& g) {
-        return ToLowerAscii(g.name) == ToLowerAscii(group_name);
+        return !g.hidden && ToLowerAscii(g.name) == ToLowerAscii(group_name);
     });
     if (found != data_.groups.end()) {
         SetError(error, "group already exists");
@@ -436,7 +799,9 @@ std::string LauncherBackend::AddGroup(const std::string& name, std::string* erro
 
     int max_order = -1;
     for (const auto& g : data_.groups) {
-        max_order = std::max(max_order, g.order);
+        if (!g.hidden) {
+            max_order = std::max(max_order, g.order);
+        }
     }
 
     Group g;
@@ -445,6 +810,7 @@ std::string LauncherBackend::AddGroup(const std::string& name, std::string* erro
     g.order = max_order + 1;
     data_.groups.push_back(g);
 
+    AppendJournal("add_group", "id=" + g.id + " name=" + g.name);
     if (!SaveData(error)) {
         return {};
     }
@@ -462,7 +828,7 @@ bool LauncherBackend::RenameGroup(const std::string& group_id, const std::string
     }
 
     const auto conflict = std::find_if(data_.groups.begin(), data_.groups.end(), [&](const Group& g) {
-        return g.id != group_id && ToLowerAscii(g.name) == ToLowerAscii(next_name);
+        return !g.hidden && g.id != group_id && ToLowerAscii(g.name) == ToLowerAscii(next_name);
     });
     if (conflict != data_.groups.end()) {
         SetError(error, "group already exists");
@@ -474,8 +840,14 @@ bool LauncherBackend::RenameGroup(const std::string& group_id, const std::string
         SetError(error, "group not found");
         return false;
     }
+    if (group->hidden) {
+        SetError(error, "cannot rename recycle bin");
+        return false;
+    }
 
+    const auto old_name = group->name;
     group->name = next_name;
+    AppendJournal("rename_group", "id=" + group_id + " from=" + old_name + " to=" + next_name);
     return SaveData(error);
 }
 
@@ -486,6 +858,15 @@ bool LauncherBackend::DeleteGroup(const std::string& group_id, const std::string
 
     if (data_.groups.size() <= 1) {
         SetError(error, "cannot delete the last group");
+        return false;
+    }
+
+    if (IsRecycleBinId(group_id)) {
+        SetError(error, "cannot delete recycle bin");
+        return false;
+    }
+    if (IsRecycleBinId(target_group_id)) {
+        SetError(error, "cannot merge into recycle bin");
         return false;
     }
 
@@ -527,6 +908,7 @@ bool LauncherBackend::DeleteGroup(const std::string& group_id, const std::string
         settings_.current_group = target_group_id;
     }
 
+    AppendJournal("delete_group", "id=" + group_id + " name=" + delete_it->name + " merged_into=" + target_group_id);
     return SaveData(error);
 }
 
@@ -537,6 +919,10 @@ bool LauncherBackend::UpsertItem(const std::string& group_id, const ItemInput& i
     auto* group = FindGroup(group_id);
     if (!group) {
         SetError(error, "group not found");
+        return false;
+    }
+    if (group->hidden) {
+        SetError(error, "cannot modify recycle bin directly");
         return false;
     }
 
@@ -557,6 +943,7 @@ bool LauncherBackend::UpsertItem(const std::string& group_id, const ItemInput& i
             it->icon_location = icon;
             it->arguments = args;
             it->enabled = enabled;
+            AppendJournal("update_item", "id=" + it->id + " name=" + name + " group=" + group->name);
         } else {
             LaunchItem item;
             item.id = *input.id;
@@ -566,6 +953,7 @@ bool LauncherBackend::UpsertItem(const std::string& group_id, const ItemInput& i
             item.icon_location = icon;
             item.arguments = args;
             item.enabled = enabled;
+            AppendJournal("add_item", "id=" + item.id + " name=" + name + " group=" + group->name);
             group->items.push_back(std::move(item));
         }
     } else {
@@ -577,6 +965,7 @@ bool LauncherBackend::UpsertItem(const std::string& group_id, const ItemInput& i
         item.icon_location = icon;
         item.arguments = args;
         item.enabled = enabled;
+        AppendJournal("add_item", "id=" + item.id + " name=" + name + " group=" + group->name);
         group->items.push_back(std::move(item));
     }
 
@@ -588,22 +977,62 @@ bool LauncherBackend::DeleteItem(const std::string& group_id, const std::string&
         return false;
     }
 
+    // Deleting inside the recycle bin is the real, permanent delete.
+    if (IsRecycleBinId(group_id)) {
+        auto* bin = FindGroup(group_id);
+        if (!bin) {
+            SetError(error, "group not found");
+            return false;
+        }
+        auto item_it = std::find_if(bin->items.begin(), bin->items.end(),
+            [&](const LaunchItem& item) { return item.id == item_id; });
+        if (item_it == bin->items.end()) {
+            SetError(error, "item not found");
+            return false;
+        }
+        const auto purged_name = item_it->name;
+        bin->items.erase(item_it);
+        if (has_last_deleted_ && last_deleted_.item.id == item_id) {
+            has_last_deleted_ = false;
+        }
+        AppendJournal("purge_item", "id=" + item_id + " name=" + purged_name);
+        return SaveData(error);
+    }
+
+    // Soft delete: move into the built-in recycle bin group.
+    // EnsureRecycleBin may grow data_.groups, so (re)acquire the source group after it.
+    auto* bin = EnsureRecycleBin();
     auto* group = FindGroup(group_id);
     if (!group) {
         SetError(error, "group not found");
         return false;
     }
+    if (group->hidden) {
+        SetError(error, "cannot modify hidden groups directly");
+        return false;
+    }
 
-    const auto before = group->items.size();
-    group->items.erase(
-        std::remove_if(group->items.begin(), group->items.end(), [&](const LaunchItem& item) { return item.id == item_id; }),
-        group->items.end());
-
-    if (group->items.size() == before) {
+    auto item_it = std::find_if(group->items.begin(), group->items.end(),
+        [&](const LaunchItem& item) { return item.id == item_id; });
+    if (item_it == group->items.end()) {
         SetError(error, "item not found");
         return false;
     }
 
+    DeletedItemSnapshot snapshot;
+    snapshot.item = *item_it;
+    snapshot.from_group_id = group->id;
+    snapshot.from_group_name = group->name;
+    snapshot.index = static_cast<std::size_t>(std::distance(group->items.begin(), item_it));
+
+    group->items.erase(item_it);
+    bin->items.push_back(snapshot.item);
+
+    last_deleted_ = std::move(snapshot);
+    has_last_deleted_ = true;
+
+    AppendJournal("delete_item", "id=" + last_deleted_.item.id + " name=" + last_deleted_.item.name +
+        " from=" + last_deleted_.from_group_name + " to=recycle_bin");
     return SaveData(error);
 }
 
@@ -613,6 +1042,14 @@ bool LauncherBackend::MoveItem(const std::string& group_id, const std::string& i
     }
     if (group_id == target_group_id) {
         SetError(error, "source and target group are the same");
+        return false;
+    }
+    if (IsRecycleBinId(group_id)) {
+        SetError(error, "cannot move out of recycle bin; use undo");
+        return false;
+    }
+    if (IsRecycleBinId(target_group_id)) {
+        SetError(error, "cannot move into recycle bin; use delete");
         return false;
     }
 
@@ -637,11 +1074,16 @@ bool LauncherBackend::MoveItem(const std::string& group_id, const std::string& i
     from->items.erase(it);
     to->items.push_back(std::move(moved));
 
+    AppendJournal("move_item", "id=" + item_id + " from=" + from->name + " to=" + to->name);
     return SaveData(error);
 }
 
 bool LauncherBackend::ReorderGroup(const std::string& group_id, int target_index, std::string* error) {
     if (!EnsureLoaded(error)) {
+        return false;
+    }
+    if (IsRecycleBinId(group_id)) {
+        SetError(error, "cannot reorder recycle bin");
         return false;
     }
     if (data_.groups.empty()) {
@@ -652,7 +1094,9 @@ bool LauncherBackend::ReorderGroup(const std::string& group_id, int target_index
     std::vector<Group*> ordered;
     ordered.reserve(data_.groups.size());
     for (auto& group : data_.groups) {
-        ordered.push_back(&group);
+        if (!group.hidden) {
+            ordered.push_back(&group);
+        }
     }
     std::sort(ordered.begin(), ordered.end(), [](const Group* lhs, const Group* rhs) {
         return lhs->order < rhs->order;
@@ -687,6 +1131,7 @@ bool LauncherBackend::ReorderGroup(const std::string& group_id, int target_index
         ordered[i]->order = i;
     }
 
+    AppendJournal("reorder_group", "id=" + group_id + " to_index=" + std::to_string(target_index));
     return SaveData(error);
 }
 
@@ -730,6 +1175,7 @@ bool LauncherBackend::ReorderItemInGroup(const std::string& group_id, const std:
         std::rotate(group->items.begin() + target_index, group->items.begin() + from_index, group->items.begin() + from_index + 1);
     }
 
+    AppendJournal("reorder_item", "id=" + item_id + " group=" + group->name + " to_index=" + std::to_string(target_index));
     return SaveData(error);
 }
 
@@ -744,6 +1190,11 @@ LaunchResult LauncherBackend::Launch(const std::string& group_id, const std::str
     if (!group) {
         SetError(error, "group not found");
         result.message = "group not found";
+        return result;
+    }
+    if (IsRecycleBinId(group_id)) {
+        SetError(error, "item is in recycle bin");
+        result.message = "item is in recycle bin";
         return result;
     }
 
@@ -789,6 +1240,8 @@ LaunchResult LauncherBackend::Launch(const std::string& group_id, const std::str
 
     it->launch_count++;
     SaveData(nullptr);
+
+    AppendJournal("launch", "id=" + it->id + " name=" + it->name + " count=" + std::to_string(it->launch_count));
 
     result.ok = true;
     result.message = "launched: " + it->name;
@@ -883,6 +1336,10 @@ std::size_t LauncherBackend::CreateItemsFromDroppedPaths(const std::string& grou
         SetError(error, "group not found");
         return 0;
     }
+    if (IsRecycleBinId(group_id)) {
+        SetError(error, "cannot drop into recycle bin");
+        return 0;
+    }
 
     std::size_t created = 0;
     for (const auto& raw : paths) {
@@ -926,6 +1383,7 @@ std::size_t LauncherBackend::CreateItemsFromDroppedPaths(const std::string& grou
     }
 
     if (created > 0) {
+        AppendJournal("import_drop", "count=" + std::to_string(created) + " group=" + group->name);
         SaveData(nullptr);
     }
     return created;
