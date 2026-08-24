@@ -1,6 +1,9 @@
 # nassistant DuiLib Launcher (xmake)
 
-这个目录是新的迁移起点：`C++ + DuiLib + xmake`。
+> **⚠️ 已迁移**：本目录已停止开发，启动器已迁移至独立仓库 `D:\WorkSpace\mlaunch`（GitHub: luiox/mlaunch）。
+> 迁移时完成了 core/ui 拆分与 libca_json 切换，后续功能请到 mlaunch 开发。本目录仅作历史归档。
+
+这个目录是旧的迁移起点：`C++ + DuiLib + xmake`。
 
 ## 目标
 
