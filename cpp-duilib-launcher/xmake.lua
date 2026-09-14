@@ -48,8 +48,6 @@ target("nassistant-duilib")
     add_files("src/*.cpp", "src/utils/*.cpp")
     add_headerfiles("src/*.h")
     add_packages("nlohmann_json")
-    add_deps("libca_json")
-    add_includedirs("../third_party/libca/libca/src", {public = true})
 
     add_deps("DuiLibLite")
 
