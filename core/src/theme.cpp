@@ -1,6 +1,5 @@
 #include "uikit/theme/theme.h"
 
-#include "uikit/embedded_themes.h"
 
 namespace uikit {
 

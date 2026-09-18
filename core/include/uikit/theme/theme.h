@@ -4,6 +4,10 @@
 #include <vector>
 
 #include "uikit/theme/tokens.h"
+// 内嵌数据直接随头给出（inline 定义进每个使用 TU）：GCC 对「先非 inline 声明、
+// 后 inline 定义」的分头写法不做跨 TU 符号发射，链接期 undefined reference
+//（CI linux 门禁实测），MSVC 则宽容。单头可见是跨编译器唯一稳态。
+#include "uikit/embedded_themes.h"
 
 namespace uikit {
 
@@ -28,13 +32,9 @@ struct ResolvedTheme {
 // 令牌 → 已解析主题。tokens.parse 已保证结构合法，这里只做派生，恒成功。
 ResolvedTheme resolve(const ThemeTokens& tokens);
 
-// 编译期内嵌的默认主题数据（构建时从 design/*.json 生成，勿手改）。
-// 运行期不依赖任何包安装路径；外部 json 只作为换肤/覆盖入口。
-namespace embed {
-const char* light_json();
-const char* dark_json();
-const char* icons_json();
-}  // namespace embed
+// 编译期内嵌的默认主题数据（light/dark/icons_json，定义见 embedded_themes.h，
+// 由 tools/gen_embed.sh 生成；运行期不依赖任何包安装路径，外部 json 只作为
+// 换肤/覆盖入口）。声明随上面的 include 自带，勿在此重复。
 
 // 内嵌默认主题（首次访问解析一次；内嵌数据受单测保护，恒可解析）。
 const ResolvedTheme& LightTheme();
