@@ -11,6 +11,9 @@ target("uikit_core")
         add_cxxflags("/utf-8")
     end
     add_includedirs("include", {public = true})
+    -- 公开头随 xmake install 进 installdir/include（包定义零手动拷贝）；
+    -- 括号语法以 uikit/ 为安装根，保持 "uikit/theme/..." 引用结构。
+    add_headerfiles("include/(uikit/**)")
     add_files("src/*.cpp")
 target_end()
 

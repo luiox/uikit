@@ -9,4 +9,6 @@ target("uikit_duilib")
     add_deps("uikit_core")                  -- 头里引用 theme 类型，公开传导
     add_packages("duilib", {public = true}) -- 定义/包含/链接由包口径统一给出
     add_includedirs("include", {public = true})
+    -- 同 core：头随 xmake install 进包 installdir（含 compat.h/controls.h 等）
+    add_headerfiles("include/(uikit/**)")
     add_files("src/*.cpp")
