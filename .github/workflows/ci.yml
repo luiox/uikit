@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  core-linux:
+    # L2 引擎框架无关性门禁：不拉 duilib，在 linux 上构建并跑测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@3a1a5dddfc7fa625d9a698738334bf55655a861a
+        with:
+          xmake-version: latest
+      - name: 内嵌主题头与 design/ 同步校验
+        run: |
+          ./tools/gen_embed.sh
+          git diff --exit-code -- core/include/uikit/embedded_themes.h
+      - name: 配置（core_only）
+        run: xmake f -y --core_only=y --tests=y -m release
+      - name: 构建
+        run: xmake -y uikit_core_tests
+      - name: 测试
+        run: xmake run -y uikit_core_tests
+
+  windows-full:
+    # 全量形态：core + duilib 控件层 + demo 构建，引擎测试照跑
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@3a1a5dddfc7fa625d9a698738334bf55655a861a
+        with:
+          xmake-version: latest
+      - name: 配置
+        shell: bash
+        run: xmake f -y -p windows -a x64 --tests=y --demo=y -m release
+      - name: 构建
+        run: xmake -y
+      - name: 测试
+        run: xmake run -y uikit_core_tests
