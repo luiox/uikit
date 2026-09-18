@@ -1,0 +1,44 @@
+{
+  "schema": "uikit.tokens/1",
+  "meta": {
+    "name": "light",
+    "appearance": "light",
+    "description": "浅色主题。全部色值反向提炼自 mlaunch src/ui（VB6 原版逐项采样的已验证配置），未发明新值。"
+  },
+  "color": {
+    "text": "#FF1A1A1A",
+    "surface": "#FFFFFFFF",
+    "surface_hover": "#FFF5F5F5",
+    "surface_selected": "#FFE0E0E0",
+    "panel": "#FFE6E6E6",
+    "panel_hover": "#FFDCDCDC",
+    "panel_selected": "#FFD2D2D2",
+    "button_hover": "#FFD5D5D5",
+    "icon_hot": "#FFD0D0D0",
+    "icon_pressed": "#FFC4C4C4",
+    "border": "#FFD2D2D2",
+    "border_strong": "#FFB8B8B8",
+    "border_focus": "#FF8A8A8A",
+    "divider": "#FFCFD7E0",
+    "row_selected_border": "#FFCDCDCD",
+    "accent": "#FF1A73E8",
+    "on_accent": "#FFFFFFFF"
+  },
+  "font": [
+    { "role": "default", "family": "Microsoft YaHei UI", "size_px": 12, "weight": 400 },
+    { "role": "title", "family": "Microsoft YaHei UI", "size_px": 12, "weight": 600 }
+  ],
+  "metrics": {
+    "control_height": 28,
+    "titlebar_height": 35,
+    "search_height": 30,
+    "icon_button_size": 30,
+    "checkbox_box": 14,
+    "check_stroke": 2,
+    "control_hpad": 8,
+    "window_inset": 12,
+    "scrollbar_width": 12,
+    "radius_control": 4,
+    "radius_checkbox": 3
+  }
+}

@@ -1,46 +1,93 @@
 # uikit
 
-duilib 控件库（孵化期，**准入制**）。
+duilib 的**视觉预制层**：主题（深/浅）、统一风格常用控件、无边框窗口预制件。
+解决的是界面库（[DuiLib_DuiEditor fork](https://github.com/luiox/DuiLib_DuiEditor)）
+不解决的三件事，整体作为 [luiox-repo](https://github.com/luiox/luiox-repo) 的
+`uikit` 包对外，供 mlaunch 等项目消费。
 
-本仓库正在转型：从 nassistant monorepo 收缩为单一的 duilib 控件层，
-目标是让 duilib 用起来不费劲——但**不做预先设计**，控件只有被证明可复用后才能进入。
+## 三层结构
 
-## 准入法则：三拷贝
+| 层 | 内容 | 落点 | 依赖 |
+|---|---|---|---|
+| L1 令牌数据 | 色板/字体/间距/圆角 + 图标语义映射 | `design/*.json` | 无 |
+| L2 主题引擎 | 令牌解析校验、状态色派生、明暗方向、内嵌默认主题 | `core/`（纯 C++17） | nlohmann_json |
+| L3 应用与控件 | 主题应用器、统一控件、无边框窗口预制件 | `duilib/` | duilib 包 |
 
-1. **第一份拷贝：住在 app 里**（如 mlaunch 的 `src/ui/ui_controls.*`）。
-   它只是该项目的实现细节，不抽象、不提前入库。
-2. **第二份拷贝：在 lab 里以 demo 形式复制并抽象**
-   （[lab-duilib](https://github.com/luiox/lab-duilib)），剥离业务依赖，
-   验证"去掉业务之后它还成立吗"。大多数控件死在这一步——死掉是正常的。
-3. **提炼进本仓库**：lab 验证通过 + 通过下方准入清单，才允许落库；
-   之后 mlaunch / lab 改为 submodule 引用本仓库。
+设计纪律：**L1 令牌里禁止出现 duilib 属性语法**；`core/` 不 include 任何
+`duilib/` 头（框架无关性由构建边界钉死，CI 在 linux 上以 `--core_only=y`
+构建并跑测作为门禁）。
 
-## 准入清单
+## 使用
 
-- [ ] **第二消费者**：一个 lab demo + 一个真实 app 场景同时在用；只有一个场景不得入库。
-- [ ] **fork 缺口说明**：补的是什么缺口（状态色/皮肤资源/DPI/SVG…）；
-      duilib 原生或 fork 已解决的，直接用原生，不包装。
-- [ ] **不重包原则**：薄层实现，不隐藏 duilib 原生 API，
-      不出现"必须经过 uikit 才能用 duilib"的设计。
-- [ ] **复合优先**：能靠 XML 属性/控件组合解决的，不写 C++ 子类。
-- [ ] **文档**：用法、XML 属性示例、已知坑，一篇 md 跟代码走。
+```lua
+-- xmake.lua
+add_repositories("luiox-repo https://github.com/luiox/luiox-repo.git")
+add_requires("uikit 0.1.0")
 
-## 当前状态
+target("app")
+    add_packages("uikit")   -- 纯引擎消费加 {configs = {core_only = true}}
+```
 
-- **已入库控件：无。** 等待 lab-duilib 孵化出第一批候选
-  （预期来源：mlaunch 已验证的 ButtonUI/CheckBoxUI/IconButtonUI/Theme、
-  dpi_helper、file_icon_control 等，逐个按清单审查，不整体迁移）。
-- 计划中的控件方向参考《未来可能要做的控件列表.md》。
-  注意：其中 Window/Panel/Button/Edit/ListBox 等 duilib 原生已有，
-  不要照单重造；真正的缺口是 fork 补丁与复合控件。
+```cpp
+#include "uikit/duilib/frameless.h"
+using namespace uikit::duilib;
 
-## 历史遗留（渐进式拆走，冻结不动）
+class MyWindow : public FramelessWindow {
+    LPCTSTR GetWindowClassName() const override { return _T("MyWindow"); }
+    DuiLib::CControlUI* BuildRootUi() override {
+        auto* root = new PanelUI();               // 主题化根容器
+        auto* bar = new TitleBarUI();             // 无边框标题栏
+        auto* check = new CheckBoxUI();           // 现代复选框
+        check->SetText(_T("hello"));
+        bar->Add(check);
+        root->Add(bar);
+        return root;
+    }
+    void Notify(DuiLib::TNotifyUI& msg) override {
+        if (msg.sType == _T("click") && msg.pSender->GetName() == _T("toggle_theme")) {
+            SetActiveTheme(ActiveTheme().appearance == color::Appearance::Light
+                               ? DarkTheme() : LightTheme());
+            ApplyThemeToTree(paint_manager().GetRoot());   // 整树实时换肤
+        }
+    }
+};
 
-本仓库原为 nassistant monorepo，以下目录冻结保留、逐步拆走：
+// main: CoInitialize 后
+MyWindow window; window.Run(_T("app"), 560, 440);
+```
 
-| 目录 | 去向 |
-|---|---|
-| `cpp-duilib-launcher/` | 已迁移至独立仓库 [mlaunch](https://github.com/luiox/mlaunch)（提交 ca18895 标记） |
-| `libicon-core/`、`libicon-qt/` | 已提炼为独立仓库 [micon](https://github.com/luiox/micon) |
-| `libant-qt/`、`libant-qt-demo/`、`libant-qt-demos/` | Qt 遗产，与 duilib 控件库无关，待决定去留 |
-| `ant_demo/`、`qt6_widget_demo/`、`libicon-qt` 相关 demo | 同上，Qt 遗产 |
+深浅两套默认主题**编译期内嵌**（`design/*.json` → `tools/gen_embed.sh` →
+`core/include/uikit/embedded_themes.h`，改令牌后重新生成本文件，CI 校验同步），
+运行期不依赖包安装路径；外部 json 可作换肤覆盖入口：
+`ThemeTokens::parse(json, tokens, err)` + `resolve(tokens)` + `SetActiveTheme(...)`。
+
+## 控件清单（当前）
+
+- `ButtonUI`（状态色自绘；`StylePrimary/StyleSecondary` 跟随主题）、`IconButtonUI`、`MakeTextButton`
+- `CheckBoxUI` / `RadioButtonUI`（自绘：accent 勾选盒/外环圆点，DPI 缩放，圆角）
+- `LabelUI`（正文/弱化双角色，实时取主题色）、`PanelUI`（主题化面板容器）
+- `SearchBoxUI`、`TitleBarUI`、`GroupListUI` / `ItemListUI` / `GroupRowUI`、`ApplyFlatScrollbar`
+- `FramelessWindow`（无边框窗口基类：剥 caption + 吞 NC 区 + sizebox 缩放 + caption 拖拽/控件放行）
+
+fork 缺口说明：此 fork 的 CButtonUI 状态色只能走图片、CCheckBoxUI 勾选态依赖
+图片资源，故按钮族/勾选族在 `PaintStatusImage` 按主题色自绘；其余能力
+（无边框消息语义、DPI）仍归 fork，uikit 不重包。
+
+## 准入法则：三拷贝（对控件新增仍然有效）
+
+1. 第一份拷贝住在 app 里（如 mlaunch `src/ui/`），不抽象不入库；
+2. 第二份在 lab/demo 里剥离业务验证；
+3. 通过准入清单（第二消费者、fork 缺口说明、不重包、复合优先、文档）才落库。
+
+## 开发
+
+```bash
+xmake f -p windows -a x64 --tests=y --demo=y   # 全量（core + duilib + 测试 + demo）
+xmake -y && xmake run uikit_core_tests
+./build/windows/x64/release/uikit_demo.exe     # 目检窗口：右上角切换深浅主题
+
+xmake f -p linux --core_only=y --tests=y       # 引擎跨平台门禁
+./tools/gen_embed.sh                            # 改 design/ 后重新生成内嵌头
+```
+
+详细文档见 [docs/](docs/)，重构决策见 [PLAN.md](PLAN.md)。
