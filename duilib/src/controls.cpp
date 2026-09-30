@@ -285,6 +285,46 @@ void RadioButtonUI::PaintStatusImage(UIRender* pRender) {
     }
 }
 
+// —— ProgressBarUI ———————————————————————————————————————————
+
+ProgressBarUI::ProgressBarUI() {
+    SetMinValue(0);
+    SetMaxValue(100);
+    SetValue(0);
+    SetFixedHeight(6);
+}
+
+void ProgressBarUI::PaintForeColor(UIRender* pRender) {
+    const ResolvedTheme& t = ActiveTheme();
+    const int h = m_rcItem.bottom - m_rcItem.top;
+    if (h <= 0) {
+        return;
+    }
+    // 轨道：surface 胶囊（深浅主题下都与 panel/surface 底形成对比）。
+    const CDuiSize round(h / 2, h / 2);
+    pRender->DrawColor(m_rcItem, round, t.color.surface);
+
+    int span = GetMaxValue() - GetMinValue();
+    if (span <= 0) {
+        span = 1;
+    }
+    int value = GetValue();
+    if (value < GetMinValue()) {
+        value = GetMinValue();
+    }
+    if (value > GetMaxValue()) {
+        value = GetMaxValue();
+    }
+    const int width = (m_rcItem.right - m_rcItem.left) * (value - GetMinValue()) / span;
+    if (width <= 0) {
+        return;
+    }
+    // 填充：accent 胶囊；半程时圆角按宽度收窄，避免 GDI 圆角大于半宽。
+    const int fr = (width < h) ? width / 2 : h / 2;
+    const CDuiRect fill{m_rcItem.left, m_rcItem.top, m_rcItem.left + width, m_rcItem.bottom};
+    pRender->DrawColor(fill, CDuiSize(fr, fr), t.color.accent);
+}
+
 // —— 列表族 ————————————————————————————————————————————————
 
 GroupListUI::GroupListUI() {
@@ -376,6 +416,47 @@ void SearchBoxUI::OnThemeChanged() {
     // 输入区自身 surface 底、无边框；native 刷子不动（会令原生 EDIT 底发黑）。
     SetBkColor(t.color.surface);
     SetAttribute(_T("bordercolor"), attr(t.color.surface));
+}
+
+EditUI::EditUI() {
+    const ResolvedTheme& t = ActiveTheme();
+    SetFixedHeight(t.metrics.control_height);
+    DuiLib::CDuiString padding;
+    padding.Format(_T("%d,4,%d,4"), t.metrics.control_hpad, t.metrics.control_hpad);
+    SetAttribute(_T("textpadding"), padding.GetData());
+    SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    OnThemeChanged();
+}
+
+void EditUI::OnThemeChanged() {
+    const ResolvedTheme& t = ActiveTheme();
+    SetTextColor(t.color.text);
+    SetBkColor(t.color.surface);
+    // 占位文本（fork 的 tip 机制）实时取弱化色。
+    SetTipValueColor(DuiLib::CDuiColor(t.text_secondary));
+    // native 刷子不动（SearchBoxUI 同款约束）。
+}
+
+void EditUI::PaintBkColor(UIRender* pRender) {
+    // 底改圆角绘制（base 的 bkcolor 方块填充不用；bkcolor 值仍留给 native 链路）。
+    const ResolvedTheme& t = ActiveTheme();
+    const int r = scale(m_pManager, t.metrics.radius_control);
+    pRender->DrawColor(m_rcItem, DuiLib::CDuiSize(r, r), t.color.surface);
+}
+
+void EditUI::PaintBorder(UIRender* pRender) {
+    const ResolvedTheme& t = ActiveTheme();
+    const int r = scale(m_pManager, t.metrics.radius_control);
+    const DuiLib::CDuiSize round(r, r);
+    Color outline = t.color.border;
+    if (!IsEnabled()) {
+        outline = t.control_disabled;
+    } else if (IsFocused()) {
+        outline = t.color.accent;
+    } else if (IsHotState()) {
+        outline = t.color.border_focus;
+    }
+    pRender->DrawRoundRect(m_rcItem, scale(m_pManager, 1), round, outline);
 }
 
 TitleBarUI::TitleBarUI() {

@@ -3,15 +3,21 @@
 
 #include <UIlib.h>
 
+#include <tchar.h>
+
 #include "uikit/duilib/applier.h"
 #include "uikit/duilib/controls.h"
 #include "uikit/duilib/frameless.h"
+#include "uikit/duilib/messagebox.h"
 
 using namespace DuiLib;
 using namespace uikit;
 using namespace uikit::duilib;
 
 namespace {
+
+// 演示用 /msgbox 自动开框定时器基址（250ms 一次性触发，见 OnCreate/HandleMessage）
+constexpr UINT_PTR kMsgboxTimerId = 100;
 
 DuiLib::CControlUI* MakeFixedSpacer(int height) {
     auto* spacer = new DuiLib::CControlUI();
@@ -102,6 +108,49 @@ public:
         search->SetText(_T("搜索…"));
         panel->Add(search);
 
+        panel->Add(MakeFixedSpacer(6));
+
+        auto* input_label = new LabelUI();
+        input_label->SetText(_T("输入"));
+        input_label->SetRole(LabelUI::Role::Secondary);
+        input_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        panel->Add(input_label);
+
+        auto* edit = new EditUI();
+        edit->SetName(_T("edit"));
+        edit->SetTipValue(_T("输入内容，回车确认…"));
+        panel->Add(edit);
+
+        auto* edit_pwd = new EditUI();
+        edit_pwd->SetName(_T("edit_pwd"));
+        edit_pwd->SetPasswordMode(true);
+        edit_pwd->SetTipValue(_T("密码"));
+        panel->Add(edit_pwd);
+
+        panel->Add(MakeFixedSpacer(6));
+
+        auto* progress_label = new LabelUI();
+        progress_label->SetText(_T("进度"));
+        progress_label->SetRole(LabelUI::Role::Secondary);
+        progress_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        panel->Add(progress_label);
+
+        auto* progress = new ProgressBarUI();
+        progress->SetName(_T("progress"));
+        progress->SetValue(35);
+        panel->Add(progress);
+
+        panel->Add(MakeFixedSpacer(4));
+
+        auto* progress_ops = new DuiLib::CHorizontalLayoutUI();
+        progress_ops->SetFixedHeight(t.metrics.control_height);
+        progress_ops->SetAttribute(_T("childpadding"), _T("8"));
+        progress_ops->Add(MakeTextButton(_T("progress_dec"), _T("-10"), 48));
+        progress_ops->Add(MakeTextButton(_T("progress_inc"), _T("+10"), 48));
+        progress_ops->Add(new DuiLib::CControlUI());
+        progress_ops->Add(MakeTextButton(_T("msgbox_info"), _T("消息框…"), 84));
+        panel->Add(progress_ops);
+
         panel->Add(MakeFixedSpacer(10));
 
         auto* actions = new DuiLib::CHorizontalLayoutUI();
@@ -165,6 +214,32 @@ public:
 
         root->Add(body);
 
+        // —— 消息框：模态/非模态 × 归属/独立 HWND 两正交维演示 ——
+        auto* msg_box_section = new DuiLib::CVerticalLayoutUI();
+        msg_box_section->SetAttribute(_T("childpadding"), _T("6"));
+        auto* msg_label = new LabelUI();
+        msg_label->SetText(_T("消息框（模态 × 独立 HWND）"));
+        msg_label->SetRole(LabelUI::Role::Secondary);
+        msg_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        msg_box_section->Add(msg_label);
+
+        auto* msg_row1 = new DuiLib::CHorizontalLayoutUI();
+        msg_row1->SetFixedHeight(t.metrics.control_height);
+        msg_row1->SetAttribute(_T("childpadding"), _T("8"));
+        msg_row1->Add(MakeTextButton(_T("mb_modal_owned"), _T("模态·归属"), 88));
+        msg_row1->Add(MakeTextButton(_T("mb_modal_free"), _T("模态·独立"), 88));
+        msg_row1->Add(new DuiLib::CControlUI());
+        msg_box_section->Add(msg_row1);
+
+        auto* msg_row2 = new DuiLib::CHorizontalLayoutUI();
+        msg_row2->SetFixedHeight(t.metrics.control_height);
+        msg_row2->SetAttribute(_T("childpadding"), _T("8"));
+        msg_row2->Add(MakeTextButton(_T("mb_modeless_owned"), _T("非模态·归属"), 88));
+        msg_row2->Add(MakeTextButton(_T("mb_modeless_free"), _T("非模态·独立"), 88));
+        msg_row2->Add(new DuiLib::CControlUI());
+        msg_box_section->Add(msg_row2);
+        lists->Add(msg_box_section);
+
         // 极简滚动条（轨道色随主题语境：分组区 panel、条目区 surface）。
         groups_ = groups;
         items_ = items;
@@ -200,6 +275,97 @@ public:
             // 滚动条轨道色是存储值，切主题后重套。
             ApplyFlatScrollbar(groups_, ActiveTheme().color.panel);
             ApplyFlatScrollbar(items_, ActiveTheme().color.surface);
+            return;
+        }
+        if (name == _T("progress_dec") || name == _T("progress_inc")) {
+            auto* bar = paint_manager().FindControl(_T("progress"));
+            if (bar != nullptr) {
+                int value = static_cast<DuiLib::CProgressUI*>(bar)->GetValue();
+                value += (name == _T("progress_inc")) ? 10 : -10;
+                if (value < 0) value = 0;
+                if (value > 100) value = 100;
+                static_cast<DuiLib::CProgressUI*>(bar)->SetValue(value);
+            }
+            return;
+        }
+        // 消息框：四按钮对应两正交维的四种组合。
+        if (name == _T("msgbox_info") || name == _T("mb_modal_owned")) {
+            ShowSampleMessageBox(MessageLevel::Info, MessageButtons::OkCancel, true, true);
+            return;
+        }
+        if (name == _T("mb_modal_free")) {
+            ShowSampleMessageBox(MessageLevel::Warning, MessageButtons::YesNo, true, false);
+            return;
+        }
+        if (name == _T("mb_modeless_owned")) {
+            ShowSampleMessageBox(MessageLevel::Info, MessageButtons::Ok, false, true);
+            return;
+        }
+        if (name == _T("mb_modeless_free")) {
+            ShowSampleMessageBox(MessageLevel::Success, MessageButtons::Ok, false, false);
+            return;
+        }
+    }
+
+    // /msgbox 验证开关：窗口建好后自动弹出示例消息框（截图验收用）。
+    // 附加语义：/msgbox_free=模态·独立HWND，/msgbox_modeless=非模态·归属，
+    // /msgbox_modeless_free=非模态·独立HWND。
+    LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) override {
+        const LRESULT ret = FramelessWindow::OnCreate(uMsg, wParam, lParam, bHandled);
+        if (__argc > 1 && __targv != nullptr && _tcsstr(__targv[1], _T("/msgbox")) != nullptr) {
+            // 一次性定时器触发（WM_TIMER 合并语义，杜绝排队重复）；variant 经
+            // 定时器 id 传递：0=模态·归属 1=模态·独立 2=非模态·归属 3=非模态·独立。
+            int variant = 0;
+            if (_tcsstr(__targv[1], _T("free")) != nullptr) {
+                variant = _tcsstr(__targv[1], _T("modeless")) != nullptr ? 3 : 1;
+            } else if (_tcsstr(__targv[1], _T("modeless")) != nullptr) {
+                variant = 2;
+            }
+            ::SetTimer(m_hWnd, kMsgboxTimerId + variant, 250, nullptr);
+        }
+        return ret;
+    }
+
+    LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override {
+        if (uMsg == WM_TIMER && wParam >= kMsgboxTimerId && wParam < kMsgboxTimerId + 4) {
+            ::KillTimer(m_hWnd, (UINT_PTR)wParam);
+            switch (wParam - kMsgboxTimerId) {
+                case 1:
+                    ShowSampleMessageBox(MessageLevel::Warning, MessageButtons::YesNo, true, false);
+                    break;
+                case 2:
+                    ShowSampleMessageBox(MessageLevel::Info, MessageButtons::Ok, false, true);
+                    break;
+                case 3:
+                    ShowSampleMessageBox(MessageLevel::Success, MessageButtons::Ok, false, false);
+                    break;
+                default:
+                    ShowSampleMessageBox(MessageLevel::Info, MessageButtons::OkCancel, true, true);
+                    break;
+            }
+            return 0;
+        }
+        return FramelessWindow::HandleMessage(uMsg, wParam, lParam);
+    }
+
+    void ShowSampleMessageBox(MessageLevel level, MessageButtons buttons, bool modal, bool owned) {
+        MessageBoxSpec spec;
+        spec.title = _T("uikit 消息框");
+        spec.text = (level == MessageLevel::Warning)
+                        ? _T("配置文件无法解析，是否重建？未保存的修改将丢失。")
+                        : _T("这是一条示例消息。模态/非模态 × 归属/独立 HWND 两维正交，可任意组合。");
+        spec.level = level;
+        spec.buttons = buttons;
+        spec.modal = modal;
+        spec.owned = owned;
+        const MessageResult result = MessageBoxUI::Show(m_hWnd, spec);
+        if (modal) {
+            auto* edit = paint_manager().FindControl(_T("edit"));
+            if (edit != nullptr) {
+                DuiLib::CDuiString text;
+                text.Format(_T("消息框返回 %d"), static_cast<int>(result));
+                edit->SetText(text.GetData());
+            }
         }
     }
 
@@ -218,7 +384,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     CPaintManagerUI::SetCurrentPath(CPaintManagerUI::GetInstancePath());
 
     DemoWindow* window = new DemoWindow();
-    const int code = window->Run(_T("uikit demo"), 560, 440);
+    const int code = window->Run(_T("uikit demo"), 560, 520);
     delete window;
     ::CoUninitialize();
     return code;

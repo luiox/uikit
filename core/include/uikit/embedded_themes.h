@@ -25,7 +25,10 @@ inline const char* light_json() { return R"tk({
     "divider": "#FFCFD7E0",
     "row_selected_border": "#FFCDCDCD",
     "accent": "#FF1A73E8",
-    "on_accent": "#FFFFFFFF"
+    "on_accent": "#FFFFFFFF",
+    "success": "#FF1E8E3E",
+    "warning": "#FFF9AB00",
+    "danger": "#FFD93025"
   },
   "font": [
     { "role": "default", "family": "Microsoft YaHei UI", "size_px": 12, "weight": 400 },
@@ -70,7 +73,10 @@ inline const char* dark_json() { return R"tk({
     "divider": "#FF3A424D",
     "row_selected_border": "#FF5F5F5F",
     "accent": "#FF8AB4F8",
-    "on_accent": "#FF1F1F1F"
+    "on_accent": "#FF1F1F1F",
+    "success": "#FF81C995",
+    "warning": "#FFFDD663",
+    "danger": "#FFF28B82"
   },
   "font": [
     { "role": "default", "family": "Microsoft YaHei UI", "size_px": 12, "weight": 400 },

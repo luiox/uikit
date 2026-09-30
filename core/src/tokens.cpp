@@ -10,12 +10,12 @@ namespace nj = nlohmann;
 const char* kSchemaTokens = "uikit.tokens/1";
 const char* kSchemaIcons = "uikit.icons/1";
 
-// color 节的 17 个键全部必填（缺一个主题就不完整），未知键报错。
+// color 节的 20 个键全部必填（缺一个主题就不完整），未知键报错。
 const char* const kColorKeys[] = {
     "text",    "surface",  "surface_hover", "surface_selected", "panel",
     "panel_hover", "panel_selected", "button_hover",  "icon_hot",  "icon_pressed",
     "border",  "border_strong", "border_focus",  "divider", "row_selected_border",
-    "accent",  "on_accent",
+    "accent",  "on_accent", "success", "warning", "danger",
 };
 
 const char* const kMetricKeys[] = {
@@ -115,6 +115,7 @@ bool ThemeTokens::parse(std::string_view json, ThemeTokens& out, std::string& er
         &out.color.icon_pressed,     &out.color.border,   &out.color.border_strong,
         &out.color.border_focus,     &out.color.divider,  &out.color.row_selected_border,
         &out.color.accent,      &out.color.on_accent,
+        &out.color.success,     &out.color.warning,  &out.color.danger,
     };
     static_assert(sizeof(color_slots) / sizeof(color_slots[0]) == sizeof(kColorKeys) / sizeof(kColorKeys[0]));
     for (size_t i = 0; i < sizeof(kColorKeys) / sizeof(kColorKeys[0]); ++i) {

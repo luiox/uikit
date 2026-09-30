@@ -22,7 +22,10 @@
     "divider": "#FFCFD7E0",
     "row_selected_border": "#FFCDCDCD",
     "accent": "#FF1A73E8",
-    "on_accent": "#FFFFFFFF"
+    "on_accent": "#FFFFFFFF",
+    "success": "#FF1E8E3E",
+    "warning": "#FFF9AB00",
+    "danger": "#FFD93025"
   },
   "font": [
     { "role": "default", "family": "Microsoft YaHei UI", "size_px": 12, "weight": 400 },

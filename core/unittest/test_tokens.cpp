@@ -17,7 +17,8 @@ constexpr const char* kValidTokens = R"tk({
     "panel_selected": "#FFD2D2D2", "button_hover": "#FFD5D5D5", "icon_hot": "#FFD0D0D0",
     "icon_pressed": "#FFC4C4C4", "border": "#FFD2D2D2", "border_strong": "#FFB8B8B8",
     "border_focus": "#FF8A8A8A", "divider": "#FFCFD7E0", "row_selected_border": "#FFCDCDCD",
-    "accent": "#FF1A73E8", "on_accent": "#FFFFFFFF"
+    "accent": "#FF1A73E8", "on_accent": "#FFFFFFFF",
+    "success": "#FF1E8E3E", "warning": "#FFF9AB00", "danger": "#FFD93025"
   },
   "metrics": { "control_height": 30 }
 })tk";

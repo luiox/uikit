@@ -37,6 +37,10 @@ struct ThemeColors {
     Color row_selected_border = 0;
     Color accent = 0;
     Color on_accent = 0;
+    // 状态语义色：消息级别图标/进度/告警等使用（深浅主题各自给出，不派生）。
+    Color success = 0;
+    Color warning = 0;
+    Color danger = 0;
 };
 
 // 基准值一律为 96 DPI 的逻辑像素，缩放由消费方（duilib DPIObj 等）负责。

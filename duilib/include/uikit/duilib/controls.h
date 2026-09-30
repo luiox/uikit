@@ -132,6 +132,21 @@ private:
 
 // —— 列表族 ——————————————————————————————————————————————
 
+// —— 进度 ————————————————————————————————————————————————
+
+// 横向进度条：主题色自绘——surface 胶囊轨道 + accent 填充，radius_control 圆角，
+// 高度 6 逻辑像素（细条现代样式，容器自行留行距）。min/max/value 语义沿 fork 的
+// CProgressUI（SetValue 不钳位，越界值被拒收，调用方自行夹取）。
+class ProgressBarUI : public DuiLib::CProgressUI, public ThemeableControl {
+public:
+    ProgressBarUI();
+    LPCTSTR GetClass() const override { return _T("UIKitProgressBar"); }
+
+protected:
+    // 轨道 + 比例填充一并绘制（不依赖 foreimage/bkcolor 属性）。
+    void PaintForeColor(DuiLib::UIRender* pRender) override;
+};
+
 // 分组列表：panel 底，选中条 panel_selected。构造期上色，主题切换时由
 // OnThemeChanged 重涂。
 class GroupListUI : public DuiLib::CListUI, public ThemeableControl {
@@ -172,6 +187,21 @@ public:
     SearchBoxUI();
     LPCTSTR GetClass() const override { return _T("UIKitSearchBox"); }
     void OnThemeChanged() override;
+};
+
+// 主题化输入框：surface 圆角底 + 1px 状态边框（常态 border → 悬停 border_focus
+// → 聚焦 accent → 禁用 control_disabled），占位文本走 fork 的 tip 机制（颜色
+// 实时取主题 text_secondary）。单行/密码/纯数字等原生能力由 CEditUI 承接，
+// 消费方按需 SetPasswordMode/SetNumberOnly/SetMultiLine。
+class EditUI : public DuiLib::CEditUI, public ThemeableControl {
+public:
+    EditUI();
+    LPCTSTR GetClass() const override { return _T("UIKitEdit"); }
+    void OnThemeChanged() override;
+
+protected:
+    void PaintBkColor(DuiLib::UIRender* pRender) override;
+    void PaintBorder(DuiLib::UIRender* pRender) override;
 };
 
 // 无边框窗口标题栏：panel 底、metrics.titlebar_height 高、childvalign center。
