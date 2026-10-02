@@ -730,6 +730,14 @@ void DatePicker::OpenPopup() {
     popup->OpenAt(this);
 }
 
+void DatePicker::ShowCalendar() {
+    if (popup_ != nullptr) {
+        ClosePopup();
+        return;
+    }
+    OpenPopup();
+}
+
 void DatePicker::ConfirmDay(int y, int m, int d) {
     year_ = y;
     month_ = m;

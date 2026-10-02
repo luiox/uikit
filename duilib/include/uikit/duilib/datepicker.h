@@ -46,6 +46,9 @@ public:
     int GetDay() const { return day_; }
     int GetDateYmd() const { return year_ * 10000 + month_ * 100 + day_; }
 
+    // 程序主动展开日历弹层（键盘 F4/↓ 打开惯例、测试钩子）；再调一次即收起。
+    void ShowCalendar();
+
     // 嵌套前置声明（全部实现于 datepicker.cpp，不暴露任何构造/成员）：类型名
     // 公开只是让 cpp 内的内部件（弹层/网格/按钮）能互相命名引用。
     class CalendarButton;
