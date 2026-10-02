@@ -1,0 +1,15 @@
+{
+  "schema": "uikit.icons/1",
+  "description": "语义名 → micon 图标名的映射。uikit 控件只认语义名，具体图标资产由 micon 提供；运行期由消费方按 micon 的图标解析规则取 SVG。",
+  "map": {
+    "window.close": "close",
+    "window.minimize": "minimize",
+    "window.maximize": "maximize",
+    "window.restore": "restore",
+    "action.search": "search",
+    "action.settings": "settings",
+    "action.launch": "play",
+    "action.open": "folder-open",
+    "action.refresh": "refresh"
+  }
+}
