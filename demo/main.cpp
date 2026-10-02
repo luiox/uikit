@@ -6,18 +6,28 @@
 #include <tchar.h>
 
 #include "uikit/duilib/applier.h"
+#include "uikit/duilib/combobox.h"
 #include "uikit/duilib/controls.h"
+#include "uikit/duilib/edit.h"
 #include "uikit/duilib/frameless.h"
 #include "uikit/duilib/messagebox.h"
+#include "uikit/duilib/progress.h"
+#include "uikit/duilib/slider.h"
+#include "uikit/duilib/spinbox.h"
+#include "uikit/duilib/switch.h"
+#include "uikit/duilib/toast.h"
 
 using namespace DuiLib;
 using namespace uikit;
+using namespace uikit::duilib;
 using namespace uikit::duilib;
 
 namespace {
 
 // 演示用 /msgbox 自动开框定时器基址（250ms 一次性触发，见 OnCreate/HandleMessage）
 constexpr UINT_PTR kMsgboxTimerId = 100;
+// 演示用 /toast 自动弹通知定时器 id
+constexpr UINT_PTR kToastTimerId = 110;
 
 DuiLib::CControlUI* MakeFixedSpacer(int height) {
     auto* spacer = new DuiLib::CControlUI();
@@ -116,16 +126,57 @@ public:
         input_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
         panel->Add(input_label);
 
-        auto* edit = new EditUI();
+        auto* edit = new Edit();
         edit->SetName(_T("edit"));
         edit->SetTipValue(_T("输入内容，回车确认…"));
         panel->Add(edit);
 
-        auto* edit_pwd = new EditUI();
+        auto* edit_pwd = new Edit();
         edit_pwd->SetName(_T("edit_pwd"));
         edit_pwd->SetPasswordMode(true);
         edit_pwd->SetTipValue(_T("密码"));
         panel->Add(edit_pwd);
+
+        panel->Add(MakeFixedSpacer(6));
+
+        auto* switch_label = new LabelUI();
+        switch_label->SetText(_T("开关 / 滑杆 / 选择"));
+        switch_label->SetRole(LabelUI::Role::Secondary);
+        switch_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        panel->Add(switch_label);
+
+        auto* notify_row = new DuiLib::CHorizontalLayoutUI();
+        notify_row->SetFixedHeight(t.metrics.control_height);
+        notify_row->SetAttribute(_T("childvalign"), _T("center"));
+        auto* notify_label = new LabelUI();
+        notify_label->SetText(_T("桌面通知"));
+        notify_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        notify_row->Add(notify_label);
+        notify_row->Add(new DuiLib::CControlUI());
+        auto* notify_switch = new Switch();
+        notify_switch->SetName(_T("notify_switch"));
+        notify_switch->SetChecked(true);
+        notify_row->Add(notify_switch);
+        panel->Add(notify_row);
+
+        auto* slider = new Slider();
+        slider->SetName(_T("slider"));
+        slider->SetValue(40);
+        panel->Add(slider);
+
+        auto* combo = new ComboBox();
+        combo->SetName(_T("combo"));
+        combo->AddOption(_T("自动（推荐）"));
+        combo->AddOption(_T("1920 × 1080"));
+        combo->AddOption(_T("1280 × 720"));
+        combo->SelectItem(0, false, false);
+        panel->Add(combo);
+
+        auto* spin = new SpinBox();
+        spin->SetName(_T("spin"));
+        spin->SetValueRange(1, 72);
+        spin->SetValue(12);
+        panel->Add(spin);
 
         panel->Add(MakeFixedSpacer(6));
 
@@ -135,7 +186,7 @@ public:
         progress_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
         panel->Add(progress_label);
 
-        auto* progress = new ProgressBarUI();
+        auto* progress = new ProgressBar();
         progress->SetName(_T("progress"));
         progress->SetValue(35);
         panel->Add(progress);
@@ -238,6 +289,14 @@ public:
         msg_row2->Add(MakeTextButton(_T("mb_modeless_free"), _T("非模态·独立"), 88));
         msg_row2->Add(new DuiLib::CControlUI());
         msg_box_section->Add(msg_row2);
+
+        auto* msg_row3 = new DuiLib::CHorizontalLayoutUI();
+        msg_row3->SetFixedHeight(t.metrics.control_height);
+        msg_row3->SetAttribute(_T("childpadding"), _T("8"));
+        msg_row3->Add(MakeTextButton(_T("toast_info"), _T("悬浮通知"), 88));
+        msg_row3->Add(MakeTextButton(_T("toast_warn"), _T("告警通知"), 88));
+        msg_row3->Add(new DuiLib::CControlUI());
+        msg_box_section->Add(msg_row3);
         lists->Add(msg_box_section);
 
         // 极简滚动条（轨道色随主题语境：分组区 panel、条目区 surface）。
@@ -293,6 +352,15 @@ public:
             ShowSampleMessageBox(MessageLevel::Info, MessageButtons::OkCancel, true, true);
             return;
         }
+        if (name == _T("toast_info") || name == _T("toast_warn")) {
+            ToastSpec spec;
+            spec.text = (name == _T("toast_warn"))
+                            ? _T("配置已过期，正在自动重新拉取…")
+                            : _T("设置已保存。悬浮通知不抢焦点，到时自消。");
+            spec.level = (name == _T("toast_warn")) ? MessageLevel::Warning : MessageLevel::Success;
+            Toast::Show(m_hWnd, spec);
+            return;
+        }
         if (name == _T("mb_modal_free")) {
             ShowSampleMessageBox(MessageLevel::Warning, MessageButtons::YesNo, true, false);
             return;
@@ -309,10 +377,13 @@ public:
 
     // /msgbox 验证开关：窗口建好后自动弹出示例消息框（截图验收用）。
     // 附加语义：/msgbox_free=模态·独立HWND，/msgbox_modeless=非模态·归属，
-    // /msgbox_modeless_free=非模态·独立HWND。
+    // /msgbox_modeless_free=非模态·独立HWND；/toast=自动弹一条悬浮通知。
     LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) override {
         const LRESULT ret = FramelessWindow::OnCreate(uMsg, wParam, lParam, bHandled);
-        if (__argc > 1 && __targv != nullptr && _tcsstr(__targv[1], _T("/msgbox")) != nullptr) {
+        if (__argc > 1 && __targv != nullptr && _tcsstr(__targv[1], _T("/toast")) != nullptr) {
+            ::SetTimer(m_hWnd, kToastTimerId, 250, nullptr);
+        } else if (__argc > 1 && __targv != nullptr &&
+                   _tcsstr(__targv[1], _T("/msgbox")) != nullptr) {
             // 一次性定时器触发（WM_TIMER 合并语义，杜绝排队重复）；variant 经
             // 定时器 id 传递：0=模态·归属 1=模态·独立 2=非模态·归属 3=非模态·独立。
             int variant = 0;
@@ -327,6 +398,14 @@ public:
     }
 
     LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) override {
+        if (uMsg == WM_TIMER && wParam == kToastTimerId) {
+            ::KillTimer(m_hWnd, (UINT_PTR)wParam);
+            ToastSpec spec;
+            spec.text = _T("设置已保存。悬浮通知不抢焦点，到时自消。");
+            spec.level = MessageLevel::Success;
+            Toast::Show(m_hWnd, spec);
+            return 0;
+        }
         if (uMsg == WM_TIMER && wParam >= kMsgboxTimerId && wParam < kMsgboxTimerId + 4) {
             ::KillTimer(m_hWnd, (UINT_PTR)wParam);
             switch (wParam - kMsgboxTimerId) {
@@ -358,7 +437,7 @@ public:
         spec.buttons = buttons;
         spec.modal = modal;
         spec.owned = owned;
-        const MessageResult result = MessageBoxUI::Show(m_hWnd, spec);
+        const MessageResult result = MessageBox::Show(m_hWnd, spec);
         if (modal) {
             auto* edit = paint_manager().FindControl(_T("edit"));
             if (edit != nullptr) {
@@ -384,7 +463,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     CPaintManagerUI::SetCurrentPath(CPaintManagerUI::GetInstancePath());
 
     DemoWindow* window = new DemoWindow();
-    const int code = window->Run(_T("uikit demo"), 560, 520);
+    const int code = window->Run(_T("uikit demo"), 560, 660);
     delete window;
     ::CoUninitialize();
     return code;

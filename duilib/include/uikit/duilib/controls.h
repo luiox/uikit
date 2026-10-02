@@ -1,7 +1,12 @@
 #pragma once
 
-// 统一风格常用控件（L3）。全部从 ActiveTheme() 取色，切主题 = SetActiveTheme()
-// + ApplyThemeToTree()，控件无需重建。
+// 统一风格常用控件（L3 包装层）。全部从 ActiveTheme() 取色，切主题 =
+// SetActiveTheme() + ApplyThemeToTree()，控件无需重建。
+//
+// 命名约定：本头文件是既有包装层控件（uikit::duilib 命名空间，UI 后缀）；
+// 新式控件/预制件挂 uikit 顶层命名空间、无 UI 后缀（uikit::Edit 等），
+// 头文件按控件分立——edit.h / progress.h / switch.h / slider.h /
+// combobox.h / spinbox.h / toast.h / messagebox.h。
 //
 // fork 缺口说明（准入清单项）：此 fork 的 CButtonUI 状态色只能走图片
 // （normalbkcolor 等属性不存在，静默忽略导致无底色），CCheckBoxUI 勾选态
@@ -132,21 +137,6 @@ private:
 
 // —— 列表族 ——————————————————————————————————————————————
 
-// —— 进度 ————————————————————————————————————————————————
-
-// 横向进度条：主题色自绘——surface 胶囊轨道 + accent 填充，radius_control 圆角，
-// 高度 6 逻辑像素（细条现代样式，容器自行留行距）。min/max/value 语义沿 fork 的
-// CProgressUI（SetValue 不钳位，越界值被拒收，调用方自行夹取）。
-class ProgressBarUI : public DuiLib::CProgressUI, public ThemeableControl {
-public:
-    ProgressBarUI();
-    LPCTSTR GetClass() const override { return _T("UIKitProgressBar"); }
-
-protected:
-    // 轨道 + 比例填充一并绘制（不依赖 foreimage/bkcolor 属性）。
-    void PaintForeColor(DuiLib::UIRender* pRender) override;
-};
-
 // 分组列表：panel 底，选中条 panel_selected。构造期上色，主题切换时由
 // OnThemeChanged 重涂。
 class GroupListUI : public DuiLib::CListUI, public ThemeableControl {
@@ -189,20 +179,9 @@ public:
     void OnThemeChanged() override;
 };
 
-// 主题化输入框：surface 圆角底 + 1px 状态边框（常态 border → 悬停 border_focus
-// → 聚焦 accent → 禁用 control_disabled），占位文本走 fork 的 tip 机制（颜色
-// 实时取主题 text_secondary）。单行/密码/纯数字等原生能力由 CEditUI 承接，
-// 消费方按需 SetPasswordMode/SetNumberOnly/SetMultiLine。
-class EditUI : public DuiLib::CEditUI, public ThemeableControl {
-public:
-    EditUI();
-    LPCTSTR GetClass() const override { return _T("UIKitEdit"); }
-    void OnThemeChanged() override;
-
-protected:
-    void PaintBkColor(DuiLib::UIRender* pRender) override;
-    void PaintBorder(DuiLib::UIRender* pRender) override;
-};
+// 主题化输入框（SearchBoxUI 的带边框孪生）由 edit.h 提供：uikit::Edit。
+// 新式控件（Edit/ProgressBar/Switch/Slider/ComboBox/SpinBox/Toast/MessageBox）
+// 挂 uikit 顶层命名空间，见各自头文件。
 
 // 无边框窗口标题栏：panel 底、metrics.titlebar_height 高、childvalign center。
 // 拖拽/双击最大化命中由 fork 的 caption 语义承接（配合 frameless.h 使用）。

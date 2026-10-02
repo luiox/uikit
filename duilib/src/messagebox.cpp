@@ -2,12 +2,11 @@
 
 #include <cmath>
 
+#include "message_icon.h"
 #include "uikit/duilib/compat.h"
 #include "uikit/duilib/controls.h"
 
-namespace uikit::duilib {
-
-namespace {
+namespace uikit {
 
 using DuiLib::CDuiRect;
 using DuiLib::CDuiSize;
@@ -15,11 +14,16 @@ using DuiLib::CDuiString;
 using DuiLib::CControlUI;
 using DuiLib::UIRender;
 
-// 级别图标的几何常量（96 基准）：外圈直径与字形字号。
-constexpr int kIconSize = 36;
-constexpr int kGlyphFontId = 10;  // AddFont 显式 id，避开主题字体的 1..N 段
+using uikit::duilib::ButtonUI;
+using uikit::duilib::LabelUI;
+using uikit::duilib::PanelUI;
+using uikit::duilib::TitleBarUI;
+using uikit::duilib::attr;
+using uikit::duilib::scale;
 
 // tokens 的 family 存 UTF-8 窄串；duilib UNICODE 构建要宽字符（applier 同款）。
+namespace {
+
 CDuiString Utf8ToWide(const std::string& utf8) {
     if (utf8.empty()) {
         return CDuiString();
@@ -30,36 +34,6 @@ CDuiString Utf8ToWide(const std::string& utf8) {
     MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), &wide[0], need);
     return CDuiString(wide.c_str());
 }
-
-// 级别图标：淡色圆底 + 主题状态色字形（纯绘制，无图片资产；micon SVG 语义
-// 映射接通后可无缝替换为矢量图标）。
-class MessageIconUI : public CControlUI {
-public:
-    explicit MessageIconUI(MessageLevel level) : level_(level) {
-        SetFixedWidth(kIconSize);
-        SetFixedHeight(kIconSize);
-    }
-
-    bool Paint(UIRender* pRender, const CDuiRect& rcPaint, CControlUI* pStopControl) override {
-        const ResolvedTheme& t = ActiveTheme();
-        Color main = t.color.accent;
-        LPCTSTR glyph = _T("i");
-        switch (level_) {
-            case MessageLevel::Success: main = t.color.success; glyph = _T("✓"); break;
-            case MessageLevel::Warning: main = t.color.warning; glyph = _T("!"); break;
-            case MessageLevel::Error:   main = t.color.danger;  glyph = _T("✕"); break;
-            case MessageLevel::Question: main = t.color.accent; glyph = _T("?"); break;
-            case MessageLevel::Info: break;
-        }
-        pRender->FillEllipse(m_rcItem, color::mix(main, t.color.surface, 0.85));
-        CDuiRect rc = m_rcItem;
-        pRender->DrawText(rc, glyph, main, kGlyphFontId, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-        return CControlUI::Paint(pRender, rcPaint, pStopControl);
-    }
-
-private:
-    MessageLevel level_;
-};
 
 // 文本行数估算：CJK 为主的全角字形按“字号 + 1”步进，列宽去图标区与内边距。
 int EstimateLineCount(const CDuiString& text, int text_width_px) {
@@ -74,12 +48,12 @@ int EstimateLineCount(const CDuiString& text, int text_width_px) {
 
 }  // namespace
 
-MessageBoxUI::MessageBoxUI(const MessageBoxSpec& spec) : spec_(spec) {
+MessageBox::MessageBox(const MessageBoxSpec& spec) : spec_(spec) {
     // 消息框不可缩放/最大化（OnNcHitTest 的 sizebox 由 0 值矩形自然失效）。
     sizebox_px_ = 0;
 }
 
-void MessageBoxUI::BuildButtonDefs(std::vector<ButtonDef>& out) {
+void MessageBox::BuildButtonDefs(std::vector<ButtonDef>& out) {
     using B = MessageButtons;
     using R = MessageResult;
     switch (spec_.buttons) {
@@ -117,7 +91,7 @@ void MessageBoxUI::BuildButtonDefs(std::vector<ButtonDef>& out) {
     }
 }
 
-DuiLib::CControlUI* MessageBoxUI::BuildRootUi() {
+DuiLib::CControlUI* MessageBox::BuildRootUi() {
     const ResolvedTheme& t = ActiveTheme();
     BuildButtonDefs(buttons_);
 
@@ -129,7 +103,7 @@ DuiLib::CControlUI* MessageBoxUI::BuildRootUi() {
             break;
         }
     }
-    m_pm.AddFont(kGlyphFontId, Utf8ToWide(family).GetData(), 18, TRUE, FALSE, FALSE);
+    m_pm.AddFont(detail::kLevelGlyphFontId, Utf8ToWide(family).GetData(), 18, TRUE, FALSE, FALSE);
 
     auto* root = new PanelUI();
     root->OnThemeChanged();
@@ -154,7 +128,7 @@ DuiLib::CControlUI* MessageBoxUI::BuildRootUi() {
     body->SetAttribute(_T("inset"), body_inset.GetData());
     body->SetAttribute(_T("childpadding"), _T("12"));
     body->SetAttribute(_T("childvalign"), _T("center"));
-    body->Add(new MessageIconUI(spec_.level));
+    body->Add(new detail::MessageIconUI(spec_.level));
     auto* text = new LabelUI();
     text->SetText(spec_.text);
     text->SetTextStyle(DT_LEFT | DT_WORDBREAK);
@@ -175,7 +149,7 @@ DuiLib::CControlUI* MessageBoxUI::BuildRootUi() {
     return root;
 }
 
-void MessageBoxUI::BuildButtonRow(DuiLib::CContainerUI* row, const std::vector<ButtonDef>& defs) {
+void MessageBox::BuildButtonRow(DuiLib::CContainerUI* row, const std::vector<ButtonDef>& defs) {
     // 右对齐：先放拉伸占位，再依次挂按钮。
     row->Add(new DuiLib::CControlUI());
     for (const ButtonDef& def : defs) {
@@ -194,19 +168,19 @@ void MessageBoxUI::BuildButtonRow(DuiLib::CContainerUI* row, const std::vector<B
     }
 }
 
-int MessageBoxUI::EstimateContentHeight() {
+int MessageBox::EstimateContentHeight() {
     const ResolvedTheme& t = ActiveTheme();
     // 文本列宽 = 窗宽 - 两侧 inset - 图标 - 间距。
     const int text_width =
-        scale(&m_pm, spec_.width - t.metrics.window_inset * 2 - kIconSize - 12);
+        scale(&m_pm, spec_.width - t.metrics.window_inset * 2 - detail::kLevelIconSize - 12);
     const int lines = EstimateLineCount(spec_.text, text_width);
     const int line_h = 20;  // 12px 字号的舒适行高
-    const int body_h = (lines > 1) ? lines * line_h + 8 : (kIconSize > t.metrics.control_height + 8 ? kIconSize : t.metrics.control_height + 8);
+    const int body_h = (lines > 1) ? lines * line_h + 8 : (detail::kLevelIconSize > t.metrics.control_height + 8 ? detail::kLevelIconSize : t.metrics.control_height + 8);
     return t.metrics.titlebar_height + t.metrics.window_inset + body_h +
            t.metrics.window_inset + t.metrics.control_height + t.metrics.window_inset;
 }
 
-void MessageBoxUI::Notify(DuiLib::TNotifyUI& msg) {
+void MessageBox::Notify(DuiLib::TNotifyUI& msg) {
     if (msg.sType != _T("click")) {
         return;
     }
@@ -220,7 +194,7 @@ void MessageBoxUI::Notify(DuiLib::TNotifyUI& msg) {
     }
 }
 
-LRESULT MessageBoxUI::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT MessageBox::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (uMsg == WM_KEYDOWN) {
         if (wParam == VK_ESCAPE) {
             Finish(cancel_result_);
@@ -231,21 +205,21 @@ LRESULT MessageBoxUI::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             return 0;
         }
     }
-    return FramelessWindow::HandleMessage(uMsg, wParam, lParam);
+    return duilib::FramelessWindow::HandleMessage(uMsg, wParam, lParam);
 }
 
-void MessageBoxUI::OnFinalMessage(HWND) {
+void MessageBox::OnFinalMessage(HWND) {
     if (modeless_) {
         delete this;
     }
 }
 
-void MessageBoxUI::Finish(MessageResult result) {
+void MessageBox::Finish(MessageResult result) {
     Close(static_cast<UINT>(result));
 }
 
-MessageResult MessageBoxUI::Show(HWND owner, const MessageBoxSpec& spec) {
-    auto* box = new MessageBoxUI(spec);
+MessageResult MessageBox::Show(HWND owner, const MessageBoxSpec& spec) {
+    auto* box = new MessageBox(spec);
     // 独立窗体：不设 owner，WS_EX_APPWINDOW 保有任务栏位；归属窗体相反。
     const DWORD ex_style = WS_EX_WINDOWEDGE | (spec.owned ? 0 : WS_EX_APPWINDOW);
     const DWORD style = (WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX)) | WS_VISIBLE;
@@ -273,4 +247,4 @@ MessageResult MessageBoxUI::Show(HWND owner, const MessageBoxSpec& spec) {
     return static_cast<MessageResult>(ret);
 }
 
-}  // namespace uikit::duilib
+}  // namespace uikit
