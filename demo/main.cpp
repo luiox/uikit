@@ -8,14 +8,18 @@
 #include "uikit/duilib/applier.h"
 #include "uikit/duilib/combobox.h"
 #include "uikit/duilib/controls.h"
+#include "uikit/duilib/datepicker.h"
 #include "uikit/duilib/edit.h"
 #include "uikit/duilib/frameless.h"
+#include "uikit/duilib/menu.h"
 #include "uikit/duilib/messagebox.h"
 #include "uikit/duilib/progress.h"
 #include "uikit/duilib/slider.h"
 #include "uikit/duilib/spinbox.h"
 #include "uikit/duilib/switch.h"
+#include "uikit/duilib/tabcontrol.h"
 #include "uikit/duilib/toast.h"
+#include "uikit/duilib/tooltip.h"
 
 using namespace DuiLib;
 using namespace uikit;
@@ -28,6 +32,8 @@ namespace {
 constexpr UINT_PTR kMsgboxTimerId = 100;
 // 演示用 /toast 自动弹通知定时器 id
 constexpr UINT_PTR kToastTimerId = 110;
+// 演示用 /tip /menu /date 弹层验证定时器基址
+constexpr UINT_PTR kVerifyTimerId = 120;
 
 DuiLib::CControlUI* MakeFixedSpacer(int height) {
     auto* spacer = new DuiLib::CControlUI();
@@ -178,6 +184,10 @@ public:
         spin->SetValue(12);
         panel->Add(spin);
 
+        auto* date = new DatePicker();
+        date->SetName(_T("date"));
+        panel->Add(date);
+
         panel->Add(MakeFixedSpacer(6));
 
         auto* progress_label = new LabelUI();
@@ -299,6 +309,45 @@ public:
         msg_box_section->Add(msg_row3);
         lists->Add(msg_box_section);
 
+        // —— 页签 + 弹层入口：TabControl / Tooltip / Menu ——
+        auto* tab_section = new DuiLib::CVerticalLayoutUI();
+        tab_section->SetAttribute(_T("childpadding"), _T("6"));
+        auto* tab_label = new LabelUI();
+        tab_label->SetText(_T("页签 / 弹层"));
+        tab_label->SetRole(LabelUI::Role::Secondary);
+        tab_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        tab_section->Add(tab_label);
+
+        auto* tabs = new TabControl();
+        tabs->SetName(_T("tabs"));
+        auto* page1 = new PanelUI();
+        page1->OnThemeChanged();
+        page1->SetAttribute(_T("inset"), _T("12,10,12,10"));
+        auto* page1_label = new LabelUI();
+        page1_label->SetText(_T("页签一：常规设置内容区。"));
+        page1_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        page1->Add(page1_label);
+        auto* page2 = new PanelUI();
+        page2->OnThemeChanged();
+        page2->SetAttribute(_T("inset"), _T("12,10,12,10"));
+        auto* page2_label = new LabelUI();
+        page2_label->SetText(_T("页签二：高级选项内容区。"));
+        page2_label->SetTextStyle(DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        page2->Add(page2_label);
+        tabs->AddPage(page1, _T("常规"));
+        tabs->AddPage(page2, _T("高级"));
+        tabs->SetFixedHeight(120);
+        tab_section->Add(tabs);
+
+        auto* pop_row = new DuiLib::CHorizontalLayoutUI();
+        pop_row->SetFixedHeight(t.metrics.control_height);
+        pop_row->SetAttribute(_T("childpadding"), _T("8"));
+        pop_row->Add(MakeTextButton(_T("tip_btn"), _T("悬浮提示"), 88));
+        pop_row->Add(MakeTextButton(_T("menu_btn"), _T("上下文菜单"), 88));
+        pop_row->Add(new DuiLib::CControlUI());
+        tab_section->Add(pop_row);
+        lists->Add(tab_section);
+
         // 极简滚动条（轨道色随主题语境：分组区 panel、条目区 surface）。
         groups_ = groups;
         items_ = items;
@@ -361,6 +410,27 @@ public:
             Toast::Show(m_hWnd, spec);
             return;
         }
+        if (name == _T("tip_btn")) {
+            Tooltip::Show(m_hWnd, msg.pSender,
+                          _T("主题化气泡提示：panel 底、1px 描边，超宽自动折行，到时自消。"));
+            return;
+        }
+        if (name == _T("menu_btn")) {
+            // ptMouse 即屏幕坐标（manager 维护的最近鼠标位）。
+            std::vector<MenuItem> items = {
+                {_T("打开"), 1, true, false},
+                {_T("另存为…"), 2, true, true},
+                {_T("删除"), 3, true, false},
+            };
+            const int picked = Menu::Show(m_hWnd, msg.ptMouse, items);
+            auto* edit = paint_manager().FindControl(_T("edit"));
+            if (edit != nullptr) {
+                DuiLib::CDuiString text;
+                text.Format(_T("菜单选择 %d"), picked);
+                edit->SetText(text.GetData());
+            }
+            return;
+        }
         if (name == _T("mb_modal_free")) {
             ShowSampleMessageBox(MessageLevel::Warning, MessageButtons::YesNo, true, false);
             return;
@@ -377,22 +447,31 @@ public:
 
     // /msgbox 验证开关：窗口建好后自动弹出示例消息框（截图验收用）。
     // 附加语义：/msgbox_free=模态·独立HWND，/msgbox_modeless=非模态·归属，
-    // /msgbox_modeless_free=非模态·独立HWND；/toast=自动弹一条悬浮通知。
+    // /msgbox_modeless_free=非模态·独立HWND；/toast=悬浮通知；/tip=气泡提示；
+    // /menu=上下文菜单；/date=日历弹层。
     LRESULT OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled) override {
         const LRESULT ret = FramelessWindow::OnCreate(uMsg, wParam, lParam, bHandled);
-        if (__argc > 1 && __targv != nullptr && _tcsstr(__targv[1], _T("/toast")) != nullptr) {
-            ::SetTimer(m_hWnd, kToastTimerId, 250, nullptr);
-        } else if (__argc > 1 && __targv != nullptr &&
-                   _tcsstr(__targv[1], _T("/msgbox")) != nullptr) {
-            // 一次性定时器触发（WM_TIMER 合并语义，杜绝排队重复）；variant 经
-            // 定时器 id 传递：0=模态·归属 1=模态·独立 2=非模态·归属 3=非模态·独立。
-            int variant = 0;
-            if (_tcsstr(__targv[1], _T("free")) != nullptr) {
-                variant = _tcsstr(__targv[1], _T("modeless")) != nullptr ? 3 : 1;
-            } else if (_tcsstr(__targv[1], _T("modeless")) != nullptr) {
-                variant = 2;
+        if (__argc > 1 && __targv != nullptr) {
+            LPCTSTR arg = __targv[1];
+            if (_tcsstr(arg, _T("/toast")) != nullptr) {
+                ::SetTimer(m_hWnd, kToastTimerId, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/tip")) != nullptr) {
+                ::SetTimer(m_hWnd, kVerifyTimerId, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/menu")) != nullptr) {
+                ::SetTimer(m_hWnd, kVerifyTimerId + 1, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/date")) != nullptr) {
+                ::SetTimer(m_hWnd, kVerifyTimerId + 2, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/msgbox")) != nullptr) {
+                // 一次性定时器触发（WM_TIMER 合并语义，杜绝排队重复）；variant 经
+                // 定时器 id 传递：0=模态·归属 1=模态·独立 2=非模态·归属 3=非模态·独立。
+                int variant = 0;
+                if (_tcsstr(arg, _T("free")) != nullptr) {
+                    variant = _tcsstr(arg, _T("modeless")) != nullptr ? 3 : 1;
+                } else if (_tcsstr(arg, _T("modeless")) != nullptr) {
+                    variant = 2;
+                }
+                ::SetTimer(m_hWnd, kMsgboxTimerId + variant, 250, nullptr);
             }
-            ::SetTimer(m_hWnd, kMsgboxTimerId + variant, 250, nullptr);
         }
         return ret;
     }
@@ -404,6 +483,38 @@ public:
             spec.text = _T("设置已保存。悬浮通知不抢焦点，到时自消。");
             spec.level = MessageLevel::Success;
             Toast::Show(m_hWnd, spec);
+            return 0;
+        }
+        if (uMsg == WM_TIMER && wParam >= kVerifyTimerId && wParam < kVerifyTimerId + 3) {
+            ::KillTimer(m_hWnd, (UINT_PTR)wParam);
+            switch (wParam - kVerifyTimerId) {
+                case 0: {
+                    auto* target = paint_manager().FindControl(_T("tip_btn"));
+                    if (target != nullptr) {
+                        Tooltip::Show(m_hWnd, target, _T("主题化气泡提示：panel 底、1px 描边，超宽自动折行。"));
+                    }
+                    break;
+                }
+                case 1: {
+                    RECT rc = {0, 0, 0, 0};
+                    ::GetWindowRect(m_hWnd, &rc);
+                    POINT pt{(rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2};
+                    std::vector<MenuItem> items = {
+                        {_T("打开"), 1, true, false},
+                        {_T("另存为…"), 2, true, true},
+                        {_T("删除"), 3, true, false},
+                    };
+                    Menu::Show(m_hWnd, pt, items);  // 阻塞至选择/关闭
+                    break;
+                }
+                case 2: {
+                    auto* date = paint_manager().FindControl(_T("date"));
+                    if (date != nullptr) {
+                        static_cast<DatePicker*>(date)->ShowCalendar();
+                    }
+                    break;
+                }
+            }
             return 0;
         }
         if (uMsg == WM_TIMER && wParam >= kMsgboxTimerId && wParam < kMsgboxTimerId + 4) {
@@ -463,7 +574,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     CPaintManagerUI::SetCurrentPath(CPaintManagerUI::GetInstancePath());
 
     DemoWindow* window = new DemoWindow();
-    const int code = window->Run(_T("uikit demo"), 560, 660);
+    const int code = window->Run(_T("uikit demo"), 560, 740);
     delete window;
     ::CoUninitialize();
     return code;

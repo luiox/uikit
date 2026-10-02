@@ -126,6 +126,69 @@ MessageResult r = MessageBox::Show(hwnd, spec);   // 数值同 IDOK/IDYES…
 与 Toast 共用同一实现）。ESC 返回 cancel 语义键、Enter 返回默认键；
 模态关闭后焦点归还 owner。
 
+## 页签
+
+```cpp
+#include <uikit/duilib/tabcontrol.h>
+auto* tabs = new uikit::TabControl();
+tabs->AddPage(page1, _T("常规"));   // page 为任意控件（PanelUI 等）
+tabs->AddPage(page2, _T("高级"));
+tabs->SetFixedHeight(160);
+```
+
+页签头自绘（选中 = 正文色 + accent 下划线，未选中弱化、悬停正文），
+内容区走包内 CTabLayoutUI 联动；页签宽自适应文本（下限 64）。选页内部
+自持（宿主零接线），并向窗口发 `"tabchange"` 通知（wParam = 页索引）；
+fork 的 CTabLayoutUI 自带 `"tabselect"` 通知与页内聚焦，可二选一监听。
+
+## 菜单
+
+```cpp
+#include <uikit/duilib/menu.h>
+std::vector<MenuItem> items = {
+    {_T("打开"), 1, true, false},
+    {_T("另存为…"), 2, true, true},   // separator_after
+    {_T("删除"), 3, true, false},
+};
+const int picked = Menu::Show(hwnd, screen_pt, items);  // 阻塞，未选返回 -1
+```
+
+自研弹层（fork 的 CMenuUI 是 XML+图片驱动，与无图片约束不兼容——见
+准入清单）。阻塞式（模态口径：禁用 owner + 本地循环 + 焦点归还），
+键盘 ↑/↓/Enter/Esc 可用；surface 底 1px 描边、悬停 surface_hover、
+分隔线 divider、宽度自适应最长条目（下限 160）。点击外部关闭 =
+SetCapture 外点捕获 + WM_KILLFOCUS 双保险。
+
+## 气泡提示
+
+```cpp
+#include <uikit/duilib/tooltip.h>
+Tooltip::Show(hwnd, target_control, _T("提示文本"));   // 即发即忘
+```
+
+自绘气泡（fork 原生 SetToolTip 走系统 TOOLTIPS 窗口，不可主题化）：
+panel 底 + 1px 描边、最大宽 240 自动折行、NOACTIVATE 不抢焦点，出现在
+目标控件下方 8 逻辑像素（越出工作区上翻），默认 3000ms 自消。
+悬停自动触发不内建：宿主在控件 mousehover 事件里调 Show 即可
+（后续可加 Cancel/自动挂钩，属公共头扩展）。
+
+## 日期选择
+
+```cpp
+#include <uikit/duilib/datepicker.h>
+auto* date = new uikit::DatePicker();      // 默认今天
+date->SetDate(2026, 10, 1);
+int y = date->GetYear();                   // GetMonth/GetDay/GetDateYmd
+date->ShowCalendar();                      // 程序主动展开日历（F4 惯例）
+// 确认选日发 "datechange"（wParam = yyyymmdd）；翻页不通知
+```
+
+只读显示框 + 日历按钮复合；日历弹层（NOACTIVATE+TOOLWINDOW，不抢宿主
+焦点）：‹ › 翻月、星期表头、6×7 网格——今天 accent 描边、选中 accent 底
+白字、相邻月弱化。只读实现：拦截点击/聚焦事件使原生 EDIT 子窗不创建
+（包内 CEditUI 无 readonly 能力）。Esc 不支持（NOACTIVATE 收不到键盘，
+点外部/再点按钮收起）。
+
 ## 按钮 / 勾选 / 列表 / 顶栏（包装层）
 
 见 `uikit/duilib/controls.h`：`ButtonUI`（StylePrimary/Secondary）、
@@ -134,11 +197,11 @@ accent 勾选盒/外环圆点）、`LabelUI`（正文/弱化）、`PanelUI`、
 `SearchBoxUI`、`TitleBarUI`、`GroupListUI` / `ItemListUI` / `GroupRowUI`、
 `ApplyFlatScrollbar`。无边框窗口配方见 [frameless.md](frameless.md)。
 
-## 未做（缺件路线图）
+## 剩余事项（非缺件，属增强）
 
-| 控件 | 状态 | 说明 |
-| ---- | ---- | ---- |
-| TabControl | 未做 | 页签 + CTabLayoutUI 组合；页签头自绘（选中下划线 accent） |
-| Menu / ContextMenu | 未做 | fork 有 CMenuUI/CMenuWnd 全套，缺主题化包装（弹层配色 + 分隔线） |
-| Tooltip | 未做 | fork 原生 SetToolTip 可用，缺主题化气泡（manager 级配色） |
-| DatePicker | 未做 | 日历弹层体量大，押后；先以 SpinBox/ComboBox 覆盖常用场景 |
+| 事项 | 说明 |
+| ---- | ---- |
+| Menu 子菜单 | 弹层菜单目前单层；子菜单需要级联展开与悬停延迟 |
+| Tooltip 自动挂钩 | 自动 mousehover 触发需公共头扩展（Cancel API + 挂钩约定） |
+| 图标位 | Menu/Toast/MessageBox 条目留了加图标位的余地，待接 micon SVG |
+| 高 DPI 网格 | 属性几何用逻辑值、窗口尺寸 scale 的既有约定下，scale≠1 时日历列有轻微错位，待统一 |
