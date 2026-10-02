@@ -44,8 +44,8 @@ inline const char* light_json() { return R"tk({
     "control_hpad": 8,
     "window_inset": 12,
     "scrollbar_width": 12,
-    "radius_control": 4,
-    "radius_checkbox": 3
+    "radius_control": 0,
+    "radius_checkbox": 0
   }
 }
 )tk"; }
@@ -92,8 +92,8 @@ inline const char* dark_json() { return R"tk({
     "control_hpad": 8,
     "window_inset": 12,
     "scrollbar_width": 12,
-    "radius_control": 4,
-    "radius_checkbox": 3
+    "radius_control": 0,
+    "radius_checkbox": 0
   }
 }
 )tk"; }

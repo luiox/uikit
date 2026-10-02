@@ -9,6 +9,9 @@
 //   owner 之上、随 owner 消亡；false = 独立顶层 HWND——不设 owner，可拖出
 //   owner 范围独立存活、有自己的任务栏位（duilib 面板嵌在宿主里的场景，
 //   "对话框逃出宿主表面"即此形态）。两维正交，四种组合均合法。
+//
+// 命名：面向消费方的新式控件/预制件直接挂 uikit 顶层命名空间（无 UI 后缀，
+// uikit::MessageBox）；uikit::duilib 保留给包装层细节与既有控件。
 
 #include <UIlib.h>
 
@@ -17,7 +20,7 @@
 #include "uikit/duilib/frameless.h"
 #include "uikit/theme/theme.h"
 
-namespace uikit::duilib {
+namespace uikit {
 
 enum class MessageLevel { Info, Success, Warning, Error, Question };
 enum class MessageButtons { Ok, OkCancel, YesNo, YesNoCancel, RetryCancel, AbortRetryIgnore };
@@ -44,7 +47,7 @@ struct MessageBoxSpec {
     int width = 360;  // 96 基准逻辑像素；高度按文本行数估算
 };
 
-class MessageBoxUI : public FramelessWindow {
+class MessageBox : public duilib::FramelessWindow {
 public:
     // modal 阻塞至用户选择并返回结果；modeless 立即返回 None。
     // owner 可为 NULL（此时 owned 维度无意义，窗口天然独立）。
@@ -66,7 +69,7 @@ private:
         bool primary;
     };
 
-    explicit MessageBoxUI(const MessageBoxSpec& spec);
+    explicit MessageBox(const MessageBoxSpec& spec);
     void BuildButtonDefs(std::vector<ButtonDef>& out);
     void BuildButtonRow(DuiLib::CContainerUI* row, const std::vector<ButtonDef>& defs);
     int EstimateContentHeight();
@@ -79,4 +82,4 @@ private:
     bool modeless_ = false;
 };
 
-}  // namespace uikit::duilib
+}  // namespace uikit

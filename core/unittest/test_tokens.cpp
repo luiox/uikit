@@ -33,7 +33,8 @@ TEST(Tokens, EmbeddedLightParses) {
     EXPECT_EQ(tokens.appearance, color::Appearance::Light);
     EXPECT_EQ(tokens.color.text, 0xFF1A1A1Au);
     EXPECT_EQ(tokens.color.accent, 0xFF1A73E8u);
-    EXPECT_EQ(tokens.metrics.radius_control, 4);
+    // 直角密度优先：默认主题圆角为 0（统一外观，native 质感）。
+    EXPECT_EQ(tokens.metrics.radius_control, 0);
     EXPECT_EQ(tokens.metrics.control_height, 28);
     ASSERT_FALSE(tokens.fonts.empty());
     EXPECT_EQ(tokens.fonts[0].role, "default");

@@ -64,13 +64,21 @@ MyWindow window; window.Run(_T("app"), 560, 440);
 ## 控件清单（当前）
 
 - `ButtonUI`（状态色自绘；`StylePrimary/StyleSecondary` 跟随主题）、`IconButtonUI`、`MakeTextButton`
-- `CheckBoxUI` / `RadioButtonUI`（自绘：accent 勾选盒/外环圆点，DPI 缩放，圆角）
+- `CheckBoxUI` / `RadioButtonUI`（自绘：accent 勾选盒/外环圆点，DPI 缩放）
 - `LabelUI`（正文/弱化双角色，实时取主题色）、`PanelUI`（主题化面板容器）
-- `EditUI`（surface 圆角、聚焦 accent 描边、占位提示随主题）、`ProgressBarUI`（轨道+填充自绘胶囊）
 - `SearchBoxUI`、`TitleBarUI`、`GroupListUI` / `ItemListUI` / `GroupRowUI`、`ApplyFlatScrollbar`
 - `FramelessWindow`（无边框窗口基类：剥 caption + 吞 NC 区 + sizebox 缩放 + caption 拖拽/控件放行）
-- `MessageBoxUI`（无边框消息框：modal/modeless × owned/独立 HWND 两维正交，
-  级别图标自绘，`Show(owner, spec)` 返回 Win32 同值结果；见 docs/controls.md）
+
+新式控件（`uikit` 顶层命名空间、无 UI 后缀，头文件按控件分立）：
+
+- `Edit`（直角底 + 状态边框 + 主题化占位）、`ProgressBar`（轨道+填充自绘）
+- `Switch`（滑块开关）、`Slider`（滑杆）、`ComboBox`（下拉选择）、`SpinBox`（步进器）
+- `TabControl`（自绘页签头 + CTabLayoutUI 联动）、`Menu`（阻塞式弹出菜单）、
+  `Tooltip`（主题化气泡）、`DatePicker`（日历弹层复合控件）
+- `Toast`（无焦点悬浮通知，到时自消）、`MessageBox`（模态/非模态 ×
+  归属/独立 HWND 两维正交，`Show(owner, spec)` 返回 Win32 同值结果）
+- 默认外观：直角密度优先——圆角令牌默认 0，改 `design/*.json` 的
+  `radius_*` 即全局切圆角（见 docs/controls.md）
 
 fork 缺口说明：此 fork 的 CButtonUI 状态色只能走图片、CCheckBoxUI 勾选态依赖
 图片资源，故按钮族/勾选族在 `PaintStatusImage` 按主题色自绘；其余能力
