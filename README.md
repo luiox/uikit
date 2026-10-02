@@ -75,6 +75,8 @@ MyWindow window; window.Run(_T("app"), 560, 440);
 - `Switch`（滑块开关）、`Slider`（滑杆）、`ComboBox`（下拉选择）、`SpinBox`（步进器）
 - `TabControl`（自绘页签头 + CTabLayoutUI 联动）、`Menu`（阻塞式弹出菜单）、
   `Tooltip`（主题化气泡）、`DatePicker`（日历弹层复合控件）
+- `FrameWindow`（主题配套完整无边框窗：标题栏 + 最小化/最大化/关闭自绘钮，
+  最大化 NC 修正，子类只填内容区）
 - `Toast`（无焦点悬浮通知，到时自消）、`MessageBox`（模态/非模态 ×
   归属/独立 HWND 两维正交，`Show(owner, spec)` 返回 Win32 同值结果）
 - 默认外观：直角密度优先——圆角令牌默认 0，改 `design/*.json` 的

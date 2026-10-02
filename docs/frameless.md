@@ -29,6 +29,36 @@ SettingsWindow w;
 w.Run(_T("设置"), 480, 360);   // CoInitialize 之后调用
 ```
 
+## 完整预制件：FrameWindow（带窗口钮）
+
+标题栏 + 最小化/最大化/关闭钮的整套装配，"主题配套无边框窗口"的
+一站式用法——子类只填内容区，不再手拼标题栏：
+
+```cpp
+#include <uikit/duilib/frame_window.h>
+
+class SettingsWindow : public uikit::FrameWindow {
+    LPCTSTR GetWindowClassName() const override { return _T("SettingsWindow"); }
+    void InitContent(DuiLib::CContainerUI* content) override {
+        // content = 标题栏下的空 PanelUI，吃剩余空间
+        content->Add(/* 主体控件 */);
+    }
+};
+
+SettingsWindow w;
+w.SetTitleText(_T("设置"));
+w.ShowMaximizeButton(false);   // 可选：显隐最小化/最大化钮
+w.Run(_T("设置"), 480, 360);
+```
+
+- 窗口钮自绘：悬停底 icon_hot、**close 悬停 danger + on_accent 字形**
+  （native 语义）；字形为几何线框（min 一线 / max 一框 / restore 双框 /
+  close 交叉线），随主题文字色，直角满条高。
+- 最大化/还原切换自动换字形；最大化态 NC 框厚已修正（内容不越出工作区），
+  边缘缩放命中由基类的 IsZoomed 守卫关闭。
+- `fw_min/fw_max/fw_close` 点击内部自持；模态/非模态两种宿主方式均可用
+  （模态走 `Run`/`ShowModal`，非模态堆分配 + `OnFinalMessage` 自删）。
+
 ## 边界（谁修什么）
 
 消息层修补（窗口阴影、Win11 圆角与 Snap Layout、最大化遮挡任务栏、

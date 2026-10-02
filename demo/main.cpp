@@ -10,6 +10,7 @@
 #include "uikit/duilib/controls.h"
 #include "uikit/duilib/datepicker.h"
 #include "uikit/duilib/edit.h"
+#include "uikit/duilib/frame_window.h"
 #include "uikit/duilib/frameless.h"
 #include "uikit/duilib/menu.h"
 #include "uikit/duilib/messagebox.h"
@@ -40,6 +41,25 @@ DuiLib::CControlUI* MakeFixedSpacer(int height) {
     spacer->SetFixedHeight(height);
     return spacer;
 }
+
+// FrameWindow 预制件演示窗（/frame、/frame_max 打开）：主题化标题栏 +
+// 最小化/最大化/关闭钮，内容区 InitContent 装配。
+class FrameDemoWindow : public FrameWindow {
+public:
+    LPCTSTR GetWindowClassName() const override { return _T("UIKitFrameDemo"); }
+
+protected:
+    void InitContent(DuiLib::CContainerUI* content) override {
+        content->SetAttribute(_T("inset"), _T("16,16,16,16"));
+        auto* label = new LabelUI();
+        label->SetText(
+            _T("FrameWindow 预制件：主题化标题栏（最小化/最大化/关闭）。拖拽、"
+               "双击最大化、边缘缩放沿 FramelessWindow；最大化时 NC 框厚已修正。"));
+        label->SetTextStyle(DT_LEFT | DT_WORDBREAK);
+        content->Add(label);
+    }
+    void OnFinalMessage(HWND) override { delete this; }
+};
 
 class DemoWindow : public FramelessWindow {
 public:
@@ -461,6 +481,10 @@ public:
                 ::SetTimer(m_hWnd, kVerifyTimerId + 1, 250, nullptr);
             } else if (_tcsstr(arg, _T("/date")) != nullptr) {
                 ::SetTimer(m_hWnd, kVerifyTimerId + 2, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/frame_max")) != nullptr) {
+                ::SetTimer(m_hWnd, kVerifyTimerId + 4, 250, nullptr);
+            } else if (_tcsstr(arg, _T("/frame")) != nullptr) {
+                ::SetTimer(m_hWnd, kVerifyTimerId + 3, 250, nullptr);
             } else if (_tcsstr(arg, _T("/msgbox")) != nullptr) {
                 // 一次性定时器触发（WM_TIMER 合并语义，杜绝排队重复）；variant 经
                 // 定时器 id 传递：0=模态·归属 1=模态·独立 2=非模态·归属 3=非模态·独立。
@@ -485,7 +509,7 @@ public:
             Toast::Show(m_hWnd, spec);
             return 0;
         }
-        if (uMsg == WM_TIMER && wParam >= kVerifyTimerId && wParam < kVerifyTimerId + 3) {
+        if (uMsg == WM_TIMER && wParam >= kVerifyTimerId && wParam < kVerifyTimerId + 5) {
             ::KillTimer(m_hWnd, (UINT_PTR)wParam);
             switch (wParam - kVerifyTimerId) {
                 case 0: {
@@ -514,6 +538,12 @@ public:
                     }
                     break;
                 }
+                case 3:
+                    OpenFrameDemo(false);
+                    break;
+                case 4:
+                    OpenFrameDemo(true);
+                    break;
             }
             return 0;
         }
@@ -536,6 +566,21 @@ public:
             return 0;
         }
         return FramelessWindow::HandleMessage(uMsg, wParam, lParam);
+    }
+
+    // /frame(/frame_max)：打开 FrameWindow 预制件演示窗（无主阻塞，自管理）。
+    void OpenFrameDemo(bool maximized) {
+        auto* frame = new FrameDemoWindow();
+        frame->SetTitleText(_T("uikit FrameWindow"));
+        const DWORD style = WS_OVERLAPPEDWINDOW;
+        HWND hwnd = frame->Create(m_hWnd, _T("uikit FrameWindow"), style, WS_EX_WINDOWEDGE);
+        if (hwnd == nullptr) {
+            delete frame;
+            return;
+        }
+        frame->ResizeClient(520, 320);
+        frame->CenterWindow();
+        ::ShowWindow(hwnd, maximized ? SW_SHOWMAXIMIZED : SW_SHOW);
     }
 
     void ShowSampleMessageBox(MessageLevel level, MessageButtons buttons, bool modal, bool owned) {
